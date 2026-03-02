@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => env('APP_TIMEZONE', 'Africa/Kinshasa'),
 
     /*
     |--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'fr'),
 
     'fallback_locale' => 'eng',
 

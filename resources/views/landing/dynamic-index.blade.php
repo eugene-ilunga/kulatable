@@ -32,7 +32,7 @@
             <div class="relative  max-w-screen-lg flex justify-center mx-auto">
 
                 <div>
-                    <img src="{{ $frontDetails->image_url ?? asset('landing/dashboard.png') }}" class="shadow-lg border rounded-lg " alt="">
+                    <img src="{{asset('landing/3199755.jpg') }}" class="shadow-lg border rounded-lg " alt="">
                 </div>
 
                 <!-- SVG Element -->
@@ -284,7 +284,7 @@
     @endif
 
     {{-- New Section --}}
-    {{-- @foreach ($customMenu as $menu)
+    @foreach ($customMenu as $menu)
         <div id="{{ Str::slug($menu->menu_name) }}"> </div>
 
         <div>
@@ -310,7 +310,7 @@
                 </div>
             </div>
         </div>
-    @endforeach --}}
+    @endforeach 
     {{-- End New Section --}}
     <!-- Contact -->
     <div class="max-w-7xl px-4 lg:px-8 py-12 lg:py-24 mx-auto">
@@ -328,7 +328,7 @@
                     alt="Contact Image">
             @else
                 <img class="group-hover:scale-105 group-focus:scale-105 transition-transform duration-500 ease-in-out object-cover rounded-2xl"
-                    src="https://images.unsplash.com/photo-1572021335469-31706a17aaef?q=80&w=560&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                    src="{{ asset('images/black.jpg')}}"
                     alt="Contacts Image">
             @endif
 

@@ -1,8 +1,9 @@
 <?php
 
 return array (
-  'reservation' => array (
-    'reservationConfirmation'=>'Reservation Confirmation ',
+  'reservation' => 
+  array (
+    'reservationConfirmation' => 'Reservation Confirmation ',
     'subject' => 'New Reservation Received: ',
     'text1' => 'A new reservation has been made.',
     'text2' => 'Reservation Details:',
@@ -10,7 +11,8 @@ return array (
     'text4' => 'Your reservation has been submitted successfully.',
     'action' => 'View Reservation',
   ),
-  'newOrder' => array (
+  'newOrder' => 
+  array (
     'subject' => 'New Order Received',
     'text1' => 'A new order has been placed. ',
     'text2' => 'Order Details:',
@@ -18,7 +20,8 @@ return array (
     'action' => 'View Order',
     'text4' => 'Please prepare the order accordingly.',
   ),
-'sendOrderBill' => array (
+  'sendOrderBill' => 
+  array (
     'subject' => 'We Appreciate Your Order! Receipt #:order_number from :site_name',
     'order' => 'Order',
     'dear' => 'Dear',
@@ -35,19 +38,22 @@ return array (
     'branch' => 'Branch',
     'orderType' => 'Order Type',
     'downloadReceipt' => 'Download Receipt PDF',
-),
-  'staffWelcome' => array (
+  ),
+  'staffWelcome' => 
+  array (
     'subject' => 'Welcome to ',
     'text1' => 'Your account is ready to go.',
     'text2' => 'Login Email: ',
     'text3' => 'Password: ',
     'action' => 'Click Here To Login',
   ),
-  'emailVerification' => array (
+  'emailVerification' => 
+  array (
     'subject' => 'Email Verification Code',
     'text1' => 'Your email verification code is: ',
   ),
-  'trialLicenseExpPre' => array (
+  'trialLicenseExpPre' => 
+  array (
     'subject' => 'License Expiration Notice',
     'greeting' => 'Hello :name!',
     'line1' => 'Your trial license is about to expire on **:date**.',
@@ -55,14 +61,16 @@ return array (
     'action' => 'Go to Dashboard',
     'line3' => 'Thank you for using our application!',
   ),
-  'trialLicenseExp' => array (
+  'trialLicenseExp' => 
+  array (
     'subject' => 'Your Trial License Has Expired',
     'greeting' => 'Hello :name!',
     'line1' => 'We wanted to let you know that your trial license has expired.',
     'line2' => 'Restaurant Name: :restaurant_name',
     'action' => 'Go to Dashboard',
   ),
-  'subscriptionExpire' => array (
+  'subscriptionExpire' => 
+  array (
     'subject' => 'Subscription Expiration Notice',
     'greeting' => 'Hello :name!',
     'line1' => 'We are writing to inform you that your subscription for :restaurant_name has expired.',
@@ -70,7 +78,8 @@ return array (
     'action' => 'Renew Subscription',
     'line3' => 'Thank you for using our application!',
   ),
-  'restaurantUpdatedPlan' => array (
+  'restaurantUpdatedPlan' => 
+  array (
     'subject' => 'Restaurant Plan Updated Successfully',
     'greeting' => 'Hello :name!',
     'line1' => 'A restaurant plan has been successfully updated.',
@@ -78,7 +87,8 @@ return array (
     'action' => 'View Dashboard',
     'line4' => 'Thank you for using our service!',
   ),
-  'offlineRequestReview' => array(
+  'offlineRequestReview' => 
+  array (
     'subject' => 'Request for Modification of Package - :site_name',
     'greeting' => 'Hello, :name!',
     'line1' => 'A request for an offline payment to change the package has been made.',
@@ -88,7 +98,8 @@ return array (
     'line5' => 'Please review the request and take the necessary action.',
     'line6' => 'Thank you for using our application!',
   ),
-  'welcomeRestaurant' => array (
+  'welcomeRestaurant' => 
+  array (
     'subject' => 'Welcome to :site_name! Let\'s Start Simplifying Your Restaurant Operations! 🍽️',
     'greeting' => 'Hello, :name!',
     'line1' => 'Congratulations and welcome to :site_name! We\'re thrilled to have your restaurant join our platform.',
@@ -102,19 +113,22 @@ return array (
     'line9' => 'Your password is: :password',
     'line10' => 'Your login URL is: :login_url',
   ),
-  'newRestaurantSignup' => array(
+  'newRestaurantSignup' => 
+  array (
     'subject' => 'New Restaurant Signup on :site_name! 🎉',
     'line1' => 'We\'re excited to inform you that a new restaurant has just signed up for :site_name! 🎉',
     'line2' => 'Restaurant Name: :restaurant_name',
   ),
-  'testNotification' => array(
+  'testNotification' => 
+  array (
     'subject' => 'SMTP Test Email',
     'greeting' => 'Hello!',
     'line1' => 'This is a test email to verify your SMTP settings.',
     'line2' => 'If you received this email, your SMTP settings are configured correctly.',
     'line3' => 'Thank you for using our application!',
   ),
-  'sendMenuPdf' => array(
+  'sendMenuPdf' => 
+  array (
     'subject' => 'Menu PDF from :site_name',
     'text1' => 'Please find attached the menu PDF for :menu_name.',
     'text1_general' => 'Please find attached our complete menu PDF with all available items.',
