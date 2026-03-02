@@ -88,7 +88,7 @@ class CreateModifierGroup extends Component
 
         // Load languages
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
-        $this->globalLocale = global_setting()->locale;
+        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
         $this->currentLanguage = $this->globalLocale;
 
         // Initialize translation arrays

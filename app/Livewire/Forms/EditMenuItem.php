@@ -62,7 +62,7 @@ class EditMenuItem extends Component
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
         $this->translationNames = array_fill_keys(array_keys($this->languages), '');
         $this->translationDescriptions = array_fill_keys(array_keys($this->languages), '');
-        $this->globalLocale = auth()->user()->locale;
+        $this->globalLocale = normalize_locale(auth()->user()->locale, array_key_first($this->languages) ?? 'en');
         $this->currentLanguage = $this->globalLocale;
         $this->categoryList = ItemCategory::all();
         $this->menus = Menu::all();

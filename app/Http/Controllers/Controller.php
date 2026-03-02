@@ -43,22 +43,17 @@ abstract class Controller
     {
         $this->checkMigrateStatus();
 
-        if (session('locale')) {
-            App::setLocale(session('locale'));
-        } else {
-            $user = auth()->user();
+        $user = auth()->user();
+        $preferredLocale = session('locale')
+            ?? session('customer_locale')
+            ?? $user?->locale
+            ?? global_setting()?->locale
+            ?? 'en';
 
-            if (isset($user)) {
-
-                App::setLocale($user?->locale ?? 'en');
-            } else {
-                try {
-
-                    App::setLocale(session('locale') ?? global_setting()?->locale);
-                } catch (\Exception $e) {
-                    App::setLocale('en');
-                }
-            }
+        try {
+            App::setLocale(normalize_locale($preferredLocale, global_setting()?->locale ?? config('app.fallback_locale', 'en')));
+        } catch (\Throwable $e) {
+            App::setLocale('en');
         }
     }
 

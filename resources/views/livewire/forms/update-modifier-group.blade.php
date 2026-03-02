@@ -1,11 +1,11 @@
 <div>
     @php
-        $languageSettings = collect(App\Models\LanguageSetting::LANGUAGES)
+        $languageSettings = collect(languages())
             ->keyBy('language_code')
             ->map(function ($lang) {
                 return [
-                    'flag_url' => asset('flags/1x1/' . strtolower($lang['flag_code']) . '.svg'),
-                    'name' => App\Models\LanguageSetting::LANGUAGES_TRANS[$lang['language_code']] ?? $lang['language_name']
+                    'flag_url' => $lang->flagUrl,
+                    'name' => locale_label($lang->language_code)
                 ];
             });
     @endphp

@@ -21,7 +21,7 @@ class AddItemCategory extends Component
     {
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
         $this->translations = array_fill_keys(array_keys($this->languages), '');
-        $this->globalLocale = global_setting()->locale;
+        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
         $this->currentLanguage = $this->globalLocale;
     }
 

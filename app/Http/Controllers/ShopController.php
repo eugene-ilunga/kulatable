@@ -6,9 +6,7 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\Table;
-use App\Models\LanguageSetting;
 use App\Traits\HasLanguageSettings;
-use Illuminate\Support\Facades\App;
 
 class ShopController extends Controller
 {

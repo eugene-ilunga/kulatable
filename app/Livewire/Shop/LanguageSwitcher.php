@@ -3,17 +3,20 @@
 namespace App\Livewire\Shop;
 
 use Livewire\Component;
-use App\Models\LanguageSetting;
 
 class LanguageSwitcher extends Component
 {
 
     public function setLanguage($locale)
     {
+        $locale = normalize_locale($locale, global_setting()->locale);
+        $availableLocales = languages()->pluck('language_code')->all();
+        if (!in_array($locale, $availableLocales, true)) {
+            return;
+        }
+
         session(['customer_locale' => $locale]);
-        $language = LanguageSetting::where('language_code', $locale)->first();
-        $isRtl = ($language->is_rtl == 1);
-        session(['customer_is_rtl' => $isRtl]);
+        session(['customer_is_rtl' => locale_is_rtl($locale)]);
 
         $this->js('window.location.reload()');
 
@@ -21,9 +24,9 @@ class LanguageSwitcher extends Component
 
     public function render()
     {
-        $locale = session('customer_locale') ?? global_setting()->locale;
-
-        $activeLanguage = LanguageSetting::where('language_code', $locale)->first();
+        $locale = normalize_locale(session('customer_locale'), global_setting()->locale);
+        $activeLanguage = languages()->firstWhere('language_code', $locale)
+            ?? languages()->first();
 
         return view('livewire.shop.language-switcher', [
             'activeLanguage' => $activeLanguage,

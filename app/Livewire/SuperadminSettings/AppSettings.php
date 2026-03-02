@@ -3,7 +3,6 @@
 namespace App\Livewire\SuperadminSettings;
 
 use App\Helper\Files;
-use App\Models\LanguageSetting;
 use App\Models\GlobalSetting;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Component;
@@ -44,8 +43,11 @@ class AppSettings extends Component
     {
         $this->appName = $this->settings->name;
         $this->requiresApproval = $this->settings->requires_approval_after_signup;
-        $this->defaultLanguage = $this->settings->locale;
-        $this->languageSettings = LanguageSetting::where('active', 1)->get();
+        $this->languageSettings = languages();
+        $this->defaultLanguage = normalize_locale(
+            $this->settings->locale,
+            $this->languageSettings->first()->language_code ?? config('app.locale', 'en')
+        );
         $this->globalCurrencies = GlobalCurrency::where('status', 'enable')->get();
         $this->defaultCurrency = $this->settings->default_currency_id;
         $this->mapApiKey = $this->settings->google_map_api_key;
@@ -104,6 +106,7 @@ class AppSettings extends Component
     {
         $validationRules = [
             'appName' => 'required',
+            'defaultLanguage' => 'required',
             'phoneNumber' => [
                 'required',
                 'regex:/^[0-9\s]{5,20}$/',
@@ -118,10 +121,14 @@ class AppSettings extends Component
         }
 
         $this->validate($validationRules);
+        $availableLocales = $this->languageSettings->pluck('language_code')->all();
+        if (!in_array($this->defaultLanguage, $availableLocales, true)) {
+            $this->defaultLanguage = $this->languageSettings->first()->language_code ?? 'en';
+        }
 
         $this->settings->name = $this->appName;
         $this->settings->requires_approval_after_signup = $this->requiresApproval;
-        $this->settings->locale = $this->defaultLanguage;
+        $this->settings->locale = normalize_locale($this->defaultLanguage, $this->defaultLanguage);
         $this->settings->default_currency_id = $this->defaultCurrency;
         $this->settings->google_map_api_key = $this->mapApiKey ?? null;
         $this->settings->privacy_policy_link = $this->privacyPolicyLink ?? null;

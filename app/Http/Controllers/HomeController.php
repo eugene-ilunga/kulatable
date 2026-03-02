@@ -27,16 +27,10 @@ class HomeController extends Controller
     {
         parent::__construct();
 
-        $locale = session('customer_locale') ?? (global_setting()->locale ?? 'en');
-        $languageSetting = LanguageSetting::where('language_code', $locale)->first();
-
-        if (!$languageSetting) {
-            $locale = 'en';
-            $languageSetting = LanguageSetting::where('language_code', 'en')->first();
-        }
+        $locale = normalize_locale(session('customer_locale'), global_setting()->locale ?? config('app.locale', 'en'));
 
         if (!session()->has('customer_is_rtl')) {
-            session(['customer_is_rtl' => $languageSetting->is_rtl == 1]);
+            session(['customer_is_rtl' => locale_is_rtl($locale)]);
         }
 
         app()->setLocale($locale);
@@ -45,12 +39,12 @@ class HomeController extends Controller
 
     public function changeLocale($locale)
     {
-        // Validate if the locale exists in language settings
-        $languageSetting = LanguageSetting::where('language_code', $locale)->first();
+        $locale = normalize_locale($locale, global_setting()->locale ?? config('app.locale', 'en'));
+        abort_unless(in_array($locale, languages()->pluck('language_code')->all(), true), 404);
 
         // Set the customer locale in session
         session(['customer_locale' => $locale]);
-        session(['customer_is_rtl' => $languageSetting->is_rtl == 1]);
+        session(['customer_is_rtl' => locale_is_rtl($locale)]);
         app()->setLocale($locale);
         $this->language = $locale;
         return redirect()->back()->with('success', 'Language changed successfully');
@@ -92,9 +86,30 @@ class HomeController extends Controller
         $monthlyPackages = Package::where('package_type', PackageType::STANDARD)->where('monthly_status', true)->where('is_private', false)->get();
         $annualPackages = Package::where('package_type', PackageType::STANDARD)->where('annual_status', true)->where('is_private', false)->get();
         $lifetimePackages = Package::where('package_type', PackageType::LIFETIME)->where('is_private', false)->get();
-        $language = $this->language;
+        $language = normalize_locale($this->language, global_setting()->locale ?? config('app.locale', 'en'));
 
-        $languageSetting = LanguageSetting::where('language_code', $language)->first();
+        $languageCandidates = collect([
+            $language,
+            str_replace('_', '-', $language),
+            str_replace('-', '_', $language),
+        ])->filter()->unique()->values()->all();
+
+        $languageSetting = LanguageSetting::whereIn('language_code', $languageCandidates)->first();
+
+        if (! $languageSetting) {
+            $globalLocale = normalize_locale(global_setting()->locale, 'en');
+            $globalCandidates = collect([
+                $globalLocale,
+                str_replace('_', '-', $globalLocale),
+                str_replace('-', '_', $globalLocale),
+            ])->filter()->unique()->values()->all();
+
+            $languageSetting = LanguageSetting::whereIn('language_code', $globalCandidates)->first();
+        }
+
+        if (! $languageSetting) {
+            $languageSetting = LanguageSetting::whereIn('language_code', ['en', 'eng'])->first();
+        }
         $languageId = $languageSetting ? $languageSetting->id : null;
         $frontDetails = FrontDetail::where('language_setting_id', $languageId)->first();
         $frontFeatures = FrontFeature::where('language_setting_id', $languageId)->get();

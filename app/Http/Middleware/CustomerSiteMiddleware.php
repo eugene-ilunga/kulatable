@@ -5,11 +5,8 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Restaurant;
-use App\Models\LanguageSetting;
 
 class CustomerSiteMiddleware
 {
@@ -28,26 +25,24 @@ class CustomerSiteMiddleware
     
             if ($restaurant && $restaurant->customer_site_language) {
                 // If session has locale (from language switcher), use it
-                if (session()->has('locale')) {
-                    $locale = session('locale');
-                    // Get RTL from the selected language, not from session
-                    $language = LanguageSetting::where('language_code', $locale)->first();
-                    $rtl = $language?->is_rtl ?? false;
-                    // Update session with correct RTL
-                    session(['is_rtl' => $rtl]);
+                if (session()->has('customer_locale') || session()->has('locale')) {
+                    $locale = normalize_locale(
+                        session('customer_locale') ?? session('locale'),
+                        $restaurant->customer_site_language
+                    );
+                    $rtl = locale_is_rtl($locale);
+                    session(['customer_is_rtl' => $rtl]);
                     session()->forget('isRtl'); // Clear admin session
                 } else {
                     // First visit - use restaurant's customer_site_language directly
-                    $locale = $restaurant->customer_site_language;
-                    
-                    // Get is_rtl from language settings
-                    $language = LanguageSetting::where('language_code', $locale)->first();
-                    $rtl = $language?->is_rtl ?? false;
+                    $locale = normalize_locale($restaurant->customer_site_language, global_setting()->locale);
+                    $rtl = locale_is_rtl($locale);
                     
                     // Set session for consistency
                     session([
                         'customer_site_language' => $locale,
-                        'is_rtl' => $rtl,
+                        'customer_locale' => $locale,
+                        'customer_is_rtl' => $rtl,
                     ]);
                     session()->forget('isRtl'); // Clear admin session
                 }

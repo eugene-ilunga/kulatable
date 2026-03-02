@@ -2,7 +2,6 @@
 
 use App\Models\EmailSetting;
 use App\Models\GlobalSetting;
-use App\Models\LanguageSetting;
 use App\Helper\Files;
 use App\Models\Package;
 use App\Models\PaymentGatewayCredential;
@@ -24,6 +23,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\Branch;
 use App\Models\BranchOperationalShift;
+use App\Support\LocaleManager;
 use Carbon\Carbon;
 
 
@@ -420,16 +420,15 @@ if (!function_exists('isRtl')) {
     {
 
         if (session()->has('isRtl')) {
-            return session('isRtl');
+            return (bool) session('isRtl');
         }
 
-        if (user()) {
-            $language = LanguageSetting::where('language_code', auth()->user()->locale)->first();
-            $isRtl = ($language->is_rtl == 1);
-            session(['isRtl' => $isRtl]);
-        }
+        $locale = user()?->locale ?? global_setting()?->locale ?? config('app.locale', 'en');
+        $resolvedLocale = LocaleManager::resolve($locale, global_setting()?->locale ?? config('app.fallback_locale', 'en'));
+        $isRtl = LocaleManager::isRtl($resolvedLocale);
+        session(['isRtl' => $isRtl]);
 
-        return false;
+        return $isRtl;
     }
 }
 
@@ -437,15 +436,31 @@ if (!function_exists('languages')) {
 
     function languages()
     {
+        return LocaleManager::available();
+    }
+}
 
-        if (cache()->has('languages')) {
-            return cache('languages');
-        }
+if (!function_exists('normalize_locale')) {
 
-        $languages = LanguageSetting::where('active', 1)->get();
-        cache(['languages' => $languages]);
+    function normalize_locale(?string $locale, ?string $fallback = null): string
+    {
+        return LocaleManager::resolve($locale, $fallback ?? config('app.fallback_locale', 'en'));
+    }
+}
 
-        return cache('languages');
+if (!function_exists('locale_is_rtl')) {
+
+    function locale_is_rtl(?string $locale): bool
+    {
+        return LocaleManager::isRtl($locale);
+    }
+}
+
+if (!function_exists('locale_label')) {
+
+    function locale_label(?string $locale): string
+    {
+        return LocaleManager::label($locale);
     }
 }
 

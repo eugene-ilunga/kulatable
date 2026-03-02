@@ -8,7 +8,6 @@ use App\Models\GlobalSetting;
 use DateTimeZone;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Component;
-use App\Models\LanguageSetting;
 
 class TimezoneSettings extends Component
 {
@@ -37,7 +36,7 @@ class TimezoneSettings extends Component
         $this->hideTodayOrders = (bool)$this->settings->hide_new_orders;
         $this->hideNewReservation = (bool)$this->settings->hide_new_reservations;
         $this->hideNewWaiterRequest = (bool)$this->settings->hide_new_waiter_request;
-        $this->customerLanguage = $this->settings->customer_site_language ?? 'en';
+        $this->customerLanguage = normalize_locale($this->settings->customer_site_language, global_setting()->locale ?? 'en');
         $this->timeFormat = $this->settings->time_format ?? 'h:i A';
         $this->dateFormat = $this->settings->date_format ?? 'd/m/Y';
         $this->countries = Country::all();
@@ -54,6 +53,11 @@ class TimezoneSettings extends Component
             'restaurantTimezone' => 'required',
         ]);
 
+        $customerLanguage = normalize_locale($this->customerLanguage, global_setting()->locale ?? 'en');
+        if (!in_array($customerLanguage, languages()->pluck('language_code')->all(), true)) {
+            $customerLanguage = normalize_locale(global_setting()->locale, 'en');
+        }
+
 
         $this->settings->timezone = $this->restaurantTimezone;
         $this->settings->country_id = $this->restaurantCountry;
@@ -61,7 +65,7 @@ class TimezoneSettings extends Component
         $this->settings->hide_new_orders = $this->hideTodayOrders;
         $this->settings->hide_new_reservations = $this->hideNewReservation;
         $this->settings->hide_new_waiter_request = $this->hideNewWaiterRequest;
-        $this->settings->customer_site_language = $this->customerLanguage ?? 'en';
+        $this->settings->customer_site_language = $customerLanguage;
         $this->settings->time_format = $this->timeFormat;
         $this->settings->date_format = $this->dateFormat;
         $this->settings->save();
@@ -92,4 +96,3 @@ class TimezoneSettings extends Component
     }
 
 }
-

@@ -105,11 +105,11 @@
                     </x-select>
                 </div>
 
-                 <div>
+                <div>
                     <x-label for="customerLanguage" value="{{ __('modules.settings.customerSiteLanguage') }}" />
                     <x-select id="customerLanguage" class="block mt-1 w-full" wire:model='customerLanguage'>
                         @foreach (languages() as $item)
-                            <option value="{{ $item->language_code }}">{{  isset(\App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code]) ? \App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code] . ' (' . $item->language_name . ')' : $item->language_name }}</option>
+                            <option value="{{ $item->language_code }}">{{ locale_label($item->language_code) }}</option>
                         @endforeach
                     </x-select>
 

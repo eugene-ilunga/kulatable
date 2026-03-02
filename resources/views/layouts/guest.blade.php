@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ session('customer_locale') ?? $restaurant->customer_site_language }}" dir="{{ session('customer_is_rtl') ? 'rtl' : 'ltr' }}">
+<html lang="{{ normalize_locale(session('customer_locale'), $restaurant->customer_site_language) }}" dir="{{ locale_is_rtl(session('customer_locale') ?? $restaurant->customer_site_language) ? 'rtl' : 'ltr' }}">
 
 <head>
     <link rel="manifest" href="{{ url('manifest.json') }}?url={{ urlencode(ltrim(Request::getRequestUri(), '/')) }}&hash={{ $restaurant->hash }}" crossorigin="use-credentials">

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ session('customer_locale') ?? global_setting()->locale }}" dir="{{ session('customer_is_rtl') ? 'rtl' : 'ltr' }}">
+<html lang="{{ normalize_locale(session('customer_locale'), global_setting()->locale) }}" dir="{{ locale_is_rtl(session('customer_locale') ?? global_setting()->locale) ? 'rtl' : 'ltr' }}">
 
 <head>
     <link rel="manifest" href="{{ asset('manifest.json') }}" crossorigin="use-credentials">
@@ -179,5 +179,4 @@
         })
     </script>
 @endif
-
 

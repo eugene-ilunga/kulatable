@@ -177,7 +177,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Fallback to English if the locale is not found
         try {
-            Translatable::fallback(global_setting()->locale, 'en');
+            Translatable::fallback(
+                normalize_locale(global_setting()->locale, config('app.locale', 'en')),
+                'en'
+            );
         } catch (\Exception $e) {
             Log::error('Error in Translatable fallback: ' . $e->getMessage());
         }

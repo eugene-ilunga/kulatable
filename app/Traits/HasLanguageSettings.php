@@ -5,7 +5,6 @@ namespace App\Traits;
 use App\Models\Restaurant;
 use App\Models\Table;
 use App\Models\Order;
-use App\Models\LanguageSetting;
 use Illuminate\Support\Facades\App;
 
 trait HasLanguageSettings
@@ -53,24 +52,19 @@ trait HasLanguageSettings
     private function setLanguageAndRTL(Restaurant $restaurant): void
     {
         if (session()->has('customer_locale')) {
-            $locale = session('customer_locale');
-            // Get RTL from the selected language, not from session
-            $language = LanguageSetting::where('language_code', $locale)->first();
-            $rtl = $language?->is_rtl ?? false;
-            // Update session with correct RTL
+            $locale = normalize_locale(session('customer_locale'), $restaurant->customer_site_language);
+            $rtl = locale_is_rtl($locale);
             session(['customer_is_rtl' => $rtl]);
             session()->forget('isRtl'); // Clear admin session
         } else {
             // First visit - use restaurant's customer_site_language directly
-            $locale = $restaurant->customer_site_language;
-            
-            // Get is_rtl from language settings
-            $language = LanguageSetting::where('language_code', $locale)->first();
-            $rtl = $language?->is_rtl ?? false;
-            
+            $locale = normalize_locale($restaurant->customer_site_language, global_setting()->locale);
+            $rtl = locale_is_rtl($locale);
+
             // Set session for consistency
             session([
                 'customer_site_language' => $locale,
+                'customer_locale' => $locale,
                 'customer_is_rtl' => $rtl,
             ]);
             session()->forget('isRtl'); // Clear admin session
