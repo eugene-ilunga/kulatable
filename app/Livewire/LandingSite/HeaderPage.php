@@ -25,15 +25,8 @@ class HeaderPage extends Component
     public function mount()
     {
         $this->loadLanguageContents();
-
-        $userLocale = auth()->user()?->locale;
-
-        if ($userLocale) {
-            $language = LanguageSetting::where('language_code', $userLocale)->where('active', 1)->first();
-            if ($language) {
-                $this->languageSettingid = $language->id;
-            }
-        }
+        $language = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
+        $this->languageSettingid = $language?->id;
 
         $this->loadSelectedLanguageContent();
     }
@@ -127,7 +120,8 @@ class HeaderPage extends Component
 
     public function render()
     {
-        $languageEnable = LanguageSetting::where('active', 1)->get();
+        $languageEnable = LanguageSetting::availableForSelection();
+
         return view('livewire.landing-site.header-page', [
             'languageEnable' => $languageEnable
         ]);
