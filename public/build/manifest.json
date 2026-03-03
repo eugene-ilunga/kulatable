@@ -1,0 +1,64 @@
+{
+  "_apexcharts-D6nuVMnM.js": {
+    "file": "assets/apexcharts-D6nuVMnM.js",
+    "name": "apexcharts"
+  },
+  "_datepicker-CksuuEqD.css": {
+    "file": "assets/datepicker-CksuuEqD.css",
+    "src": "_datepicker-CksuuEqD.css"
+  },
+  "_datepicker-DzqgMedP.js": {
+    "file": "assets/datepicker-DzqgMedP.js",
+    "name": "datepicker",
+    "css": [
+      "assets/datepicker-CksuuEqD.css"
+    ]
+  },
+  "_sweetalert2-Cj9UHshf.js": {
+    "file": "assets/sweetalert2-Cj9UHshf.js",
+    "name": "sweetalert2"
+  },
+  "_ui-Cd_Co5VB.js": {
+    "file": "assets/ui-Cd_Co5VB.js",
+    "name": "ui",
+    "imports": [
+      "_vendor-GiXGcCKn.js"
+    ]
+  },
+  "_vendor-GiXGcCKn.js": {
+    "file": "assets/vendor-GiXGcCKn.js",
+    "name": "vendor"
+  },
+  "_vue-DHHfDJAh.js": {
+    "file": "assets/vue-DHHfDJAh.js",
+    "name": "vue"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CpaiknJ_.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BtFzvVi4.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_vendor-GiXGcCKn.js",
+      "_ui-Cd_Co5VB.js",
+      "_apexcharts-D6nuVMnM.js",
+      "_sweetalert2-Cj9UHshf.js",
+      "_datepicker-DzqgMedP.js"
+    ]
+  },
+  "resources/js/pos-app.js": {
+    "file": "assets/pos-app-DZrITWn1.js",
+    "name": "pos-app",
+    "src": "resources/js/pos-app.js",
+    "isEntry": true,
+    "imports": [
+      "_vue-DHHfDJAh.js",
+      "_vendor-GiXGcCKn.js"
+    ]
+  }
+}
