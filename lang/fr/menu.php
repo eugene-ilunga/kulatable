@@ -58,6 +58,7 @@ return array (
   'superadminPaymentSetting' => 'Paramètres de paiement',
   'adminPaymentSetting' => 'Paramètres de paiement des restaurants',
   'customerDisplay' => 'Affichage client',
+  'customerOrderBoard' => 'Tableau des commandes clients',
   'wifi' => 'Wi-Fi',
   'refundReport' => 'Rapport de remboursement',
   'duePaymentsReceivedReport' => 'Rapport sur les paiements dus reçus',

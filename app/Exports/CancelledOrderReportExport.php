@@ -56,7 +56,7 @@ class CancelledOrderReportExport implements WithMapping, FromCollection, WithHea
                 'Customer',
                 'Customer Phone',
                 'Table',
-                'Waiter',
+                __('modules.report.waiter'),
                 'Cancellation Reason',
                 'Custom Reason',
                 'Cancelled By',
@@ -137,4 +137,3 @@ class CancelledOrderReportExport implements WithMapping, FromCollection, WithHea
         return $query->orderBy('updated_at', 'desc')->get();
     }
 }
-

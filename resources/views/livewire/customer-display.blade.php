@@ -157,13 +157,14 @@
                 document.addEventListener('DOMContentLoaded', function () {
                     const userId = {{ auth()->id() }};
                     const channelName = 'customer-display-user-' + userId;
+                    const customerDisplayLabel = @json(__('menu.customerDisplay'));
                     const channel = PUSHER.subscribe(channelName);
                     channel.bind('customer-display.updated', function(data) {
                         @this.call('refreshCustomerDisplay');
                         console.log('✅ Pusher received data for customer display user ' + userId + '!. Refreshing...');
                     });
                     PUSHER.connection.bind('connected', () => {
-                        console.log('✅ Pusher connected for Customer Display!');
+                        console.log('✅ Pusher connected for ' + customerDisplayLabel + '!');
                     });
                     channel.bind('pusher:subscription_succeeded', () => {
                         console.log('✅ Subscribed to ' + channelName + ' channel!');

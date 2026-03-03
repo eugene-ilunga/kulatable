@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Package;
 
 class PosController extends Controller
 {
@@ -68,13 +69,13 @@ class PosController extends Controller
 
     public function customerDisplay()
     {
-        abort_if((!in_array('Customer Display', restaurant_modules())), 403);
+        abort_if((!in_array(Package::FEATURE_CUSTOMER_DISPLAY, restaurant_modules(), true)), 403);
         return view('pos.customer-display');
     }
 
     public function customerOrderBoard()
     {
-        abort_if((!in_array('Customer Display', restaurant_modules())), 403);
+        abort_if((!in_array(Package::FEATURE_CUSTOMER_DISPLAY, restaurant_modules(), true)), 403);
         return view('pos.customer-order-board');
     }
 }

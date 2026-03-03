@@ -230,7 +230,7 @@
             id="dropdown-3">
 
             <ul class="py-1" role="none">
-              @if (in_array('Customer Display', restaurant_modules()))
+              @if (in_array(\App\Models\Package::FEATURE_CUSTOMER_DISPLAY, restaurant_modules(), true))
               <li>
                 <a href="{{ route('customer.display') }}" target="_blank"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -239,7 +239,7 @@
               <li>
                 <a href="{{ route('customer.order-board') }}" target="_blank"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-                  role="menuitem">@lang('modules.order.customerOrderBoard')</a>
+                  role="menuitem">@lang('menu.customerOrderBoard')</a>
               </li>
               @endif
 

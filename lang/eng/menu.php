@@ -58,6 +58,7 @@ return array (
   'superadminPaymentSetting' => 'Payment Settings',
   'adminPaymentSetting' => 'Restaurant Payment Settings',
   'customerDisplay' => 'Customer Display',
+  'customerOrderBoard' => 'Customer Order Board',
   'wifi' => 'WiFi',
   'refundReport' => 'Refund Report',
   'duePaymentsReceivedReport' => 'Due Payments Received Report',

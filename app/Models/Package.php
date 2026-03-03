@@ -19,13 +19,15 @@ class Package extends BaseModel
         'trial_notification_before_days' => 'integer',
     ];
 
+    public const FEATURE_CUSTOMER_DISPLAY = 'Customer Display';
+
     const ADDITIONAL_FEATURES = [
         'Change Branch',
         'Export Report',
         'Table Reservation',
         'Payment Gateway Integration',
         'Theme Setting',
-        'Customer Display',
+        self::FEATURE_CUSTOMER_DISPLAY,
     ];
 
     public function modules()
