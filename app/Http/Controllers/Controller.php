@@ -44,8 +44,8 @@ abstract class Controller
         $this->checkMigrateStatus();
 
         $user = auth()->user();
-        $preferredLocale = session('locale')
-            ?? session('customer_locale')
+        $preferredLocale = session('customer_locale')
+            ?? session('locale')
             ?? $user?->locale
             ?? global_setting()?->locale
             ?? 'en';

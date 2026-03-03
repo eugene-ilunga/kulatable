@@ -245,7 +245,7 @@
                                             'text-gray-800 dark:text-gray-200' => $menuId != $item->id,
                                             'text-white group-hover:text-white' => $menuId == $item->id,
                                         ])>
-                                            {{ $item->getTranslation('menu_name', session('locale', app()->getLocale())) }}
+                                            {{ $item->getTranslation('menu_name', session('customer_locale', app()->getLocale())) }}
                                         </h3>
                                         <p @class([
                                             'text-sm dark:text-neutral-500 hidden sm:block',
@@ -289,7 +289,7 @@
                 <button @click="open = !open" @click.away="open = false"
                     class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg px-4 py-2.5 flex items-center justify-between shadow-sm hover:bg-gray-50 transition-colors duration-200">
                     <span class="text-sm font-medium truncate">
-                        {{ is_null($filterCategories) ? __('app.showAll') : $this->categoryList->firstWhere('id', $filterCategories)?->getTranslation('category_name', session('locale', app()->getLocale())) }}
+                        {{ is_null($filterCategories) ? __('app.showAll') : $this->categoryList->firstWhere('id', $filterCategories)?->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}
                     </span>
                     <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +314,7 @@
                         @foreach ($this->categoryList as $item)
                             <button wire:click="filterMenu({{ $item->id }}); $nextTick(() => { open = false })"
                                 class="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-between {{ $filterCategories == $item->id ? 'bg-gray-50 dark:bg-gray-600 text-skin-base' : 'text-gray-700 dark:text-gray-200' }}">
-                                <span>{{ $item->getTranslation('category_name', session('locale', app()->getLocale())) }}</span>
+                                <span>{{ $item->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}</span>
                                 <span
                                     class="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded-full dark:bg-gray-600 dark:text-gray-300">
                                     {{ $item->items_count }}
@@ -347,7 +347,7 @@
                             'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' =>
                                 $filterCategories != $item->id,
                         ])>
-                            <span>{{ $item->getTranslation('category_name', session('locale', app()->getLocale())) }}</span>
+                            <span>{{ $item->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}</span>
                             <span
                                 class="px-2 py-0.5 text-xs rounded-full {{ $filterCategories == $item->id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
                                 {{ $item->items_count }}
@@ -453,12 +453,12 @@
                                         class="inline-flex items-center text-sm font-semibold text-gray-900 lg:text-base dark:text-white">
                                         <img src="{{ asset('img/' . $item->type . '.svg') }}" class="h-4 mr-1"
                                             title="@lang('modules.menu.' . $item->type)" alt="" />
-                                        {{ $item->getTranslatedValue('item_name', session('locale')) }}
+                                        {{ $item->getTranslatedValue('item_name', session('customer_locale', app()->getLocale())) }}
                                     </div>
                                     @if ($item->description)
                                         <div class="w-full text-xs font-normal text-gray-500 cursor-pointer lg:text-sm dark:text-gray-400"
                                             wire:click="showItemDetail({{ $item->id }})">
-                                            {{ str($item->getTranslatedValue('description', session('locale')))->limit(50) }}
+                                            {{ str($item->getTranslatedValue('description', session('customer_locale', app()->getLocale())))->limit(50) }}
                                         </div>
                                     @endif
 

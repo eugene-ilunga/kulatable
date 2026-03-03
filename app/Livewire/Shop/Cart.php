@@ -3046,7 +3046,7 @@ class Cart extends Component
     #[Computed]
     public function getMenuItemsProperty()
     {
-        $locale = session('locale', app()->getLocale());
+        $locale = session('customer_locale', app()->getLocale());
 
         $query = MenuItem::select('menu_items.*', 'item_categories.category_name')
             ->join('item_categories', 'menu_items.item_category_id', '=', 'item_categories.id')

@@ -79,21 +79,23 @@ Route::get('/menus/pdf/{restaurant}', [MenuController::class, 'downloadPdf'])
     ->where('restaurant', '[0-9]+')
     ->middleware('signed');
 
-Route::get('/qr/table/{hash}', [ShopController::class, 'qrTableLanding'])->name('qr_table_landing');
+Route::middleware([CustomerSiteMiddleware::class])->group(function () {
+    Route::get('/qr/table/{hash}', [ShopController::class, 'qrTableLanding'])->name('qr_table_landing');
 
-Route::group(['prefix' => 'restaurant'], function () {
-    Route::get('/table/{hash}', [ShopController::class, 'tableOrder'])->name('table_order')->where('id', '.*');
-    Route::get('/my-orders/{hash}', [ShopController::class, 'myOrders'])->name('my_orders');
-    Route::get('/my-bookings/{hash}', [ShopController::class, 'myBookings'])->name('my_bookings');
-    Route::get('/my-addresses/{hash}',  [ShopController::class, 'myAddresses'])->name('my_addresses');
-    Route::get('/book-a-table/{hash}', [ShopController::class, 'bookTable'])->name('book_a_table');
-    Route::get('/contact/{hash}', [ShopController::class, 'contact'])->name('contact');
-    Route::get('/about-us/{hash}', [ShopController::class, 'about'])->name('about');
-    Route::get('/profile/{hash}', [ShopController::class, 'profile'])->name('profile');
-    Route::get('/orders-success/{id}', [ShopController::class, 'orderSuccess'])->name('order_success');
+    Route::group(['prefix' => 'restaurant'], function () {
+        Route::get('/table/{hash}', [ShopController::class, 'tableOrder'])->name('table_order')->where('id', '.*');
+        Route::get('/my-orders/{hash}', [ShopController::class, 'myOrders'])->name('my_orders');
+        Route::get('/my-bookings/{hash}', [ShopController::class, 'myBookings'])->name('my_bookings');
+        Route::get('/my-addresses/{hash}',  [ShopController::class, 'myAddresses'])->name('my_addresses');
+        Route::get('/book-a-table/{hash}', [ShopController::class, 'bookTable'])->name('book_a_table');
+        Route::get('/contact/{hash}', [ShopController::class, 'contact'])->name('contact');
+        Route::get('/about-us/{hash}', [ShopController::class, 'about'])->name('about');
+        Route::get('/profile/{hash}', [ShopController::class, 'profile'])->name('profile');
+        Route::get('/orders-success/{id}', [ShopController::class, 'orderSuccess'])->name('order_success');
+    });
+
+    Route::get('/restaurant/{hash}', [ShopController::class, 'cart'])->name('shop_restaurant');
 });
-
-Route::get('/restaurant/{hash}', [ShopController::class, 'cart'])->name('shop_restaurant');
 
 
 // Only register the root route if Subdomain module is not enabled

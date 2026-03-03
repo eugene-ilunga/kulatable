@@ -12,8 +12,8 @@ trait HasLanguageSettings
     protected function applyLanguageSettings(): void
     {
         $restaurant = $this->getRestaurantForLanguage();
-        
-        if ($restaurant && $restaurant->customer_site_language) {
+
+        if ($restaurant) {
             $this->setLanguageAndRTL($restaurant);
         }
     }
@@ -51,19 +51,21 @@ trait HasLanguageSettings
     
     private function setLanguageAndRTL(Restaurant $restaurant): void
     {
+        $defaultLocale = normalize_locale(global_setting()?->locale, config('app.fallback_locale', 'en'));
+
         if (session()->has('customer_locale')) {
-            $locale = normalize_locale(session('customer_locale'), $restaurant->customer_site_language);
+            $locale = normalize_locale(session('customer_locale'), $defaultLocale);
             $rtl = locale_is_rtl($locale);
             session(['customer_is_rtl' => $rtl]);
             session()->forget('isRtl'); // Clear admin session
         } else {
-            // First visit - use restaurant's customer_site_language directly
-            $locale = normalize_locale($restaurant->customer_site_language, global_setting()->locale);
+            // First visit - use file-based default locale
+            $locale = $defaultLocale;
             $rtl = locale_is_rtl($locale);
 
             // Set session for consistency
             session([
-                'customer_site_language' => $locale,
+                'customer_site_language' => $defaultLocale,
                 'customer_locale' => $locale,
                 'customer_is_rtl' => $rtl,
             ]);
