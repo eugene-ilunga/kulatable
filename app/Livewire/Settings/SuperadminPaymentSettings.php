@@ -863,7 +863,8 @@ class SuperadminPaymentSettings extends Component
 
         $configError = $this->saveFreshpaySettings();
 
-        $this->paymentGateway->fresh();
+        $this->paymentGateway = $this->paymentGateway->fresh();
+        $this->setCredentials();
         $this->dispatch('settingsUpdated');
         cache()->forget('superadminPaymentGateway');
 

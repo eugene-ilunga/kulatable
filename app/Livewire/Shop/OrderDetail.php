@@ -2831,8 +2831,14 @@ class OrderDetail extends Component
                 return redirect()->route('order_success', $order->uuid);
             }
 
-            [$firstName, $lastName] = $this->splitName($order->customer?->name ?? 'Guest Customer');
-            $email = $order->customer?->email ?: ($this->restaurant->email ?? 'no-email@example.com');
+            [$firstName, $lastName] = $this->splitName((string) ($order->customer?->name ?: $this->restaurant->name ?: ''));
+            $email = trim((string) ($order->customer?->email ?: $this->restaurant->email ?: ''));
+
+            if ($firstName === '' || $lastName === '' || $email === '') {
+                session()->flash('flash.banner', 'FreshPay requires real customer identity data: firstname, lastname and email.');
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
+            }
             $amount = number_format((float) $this->total, 2, '.', '');
             $reference = 'fp_' . $order->id . '_' . Str::upper(Str::random(8));
 
@@ -2894,8 +2900,8 @@ class OrderDetail extends Component
     private function splitName(string $fullName): array
     {
         $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? 'Guest';
-        $lastName = $nameParts[1] ?? 'Customer';
+        $firstName = $nameParts[0] ?? '';
+        $lastName = $nameParts[1] ?? $firstName;
 
         return [$firstName, $lastName];
     }

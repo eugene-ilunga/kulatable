@@ -648,8 +648,13 @@ class AddPayment extends Component
                 return false;
             }
 
-            [$firstName, $lastName] = $this->splitName($this->order->customer?->name ?? 'Walk-in Customer');
-            $email = $this->order->customer?->email ?: ($restaurant->email ?? 'no-email@example.com');
+            [$firstName, $lastName] = $this->splitName((string) ($this->order->customer?->name ?: $restaurant->name ?: ''));
+            $email = trim((string) ($this->order->customer?->email ?: $restaurant->email ?: ''));
+
+            if ($firstName === '' || $lastName === '' || $email === '') {
+                $this->alert('error', 'FreshPay requires real customer identity data: firstname, lastname and email.', ['toast' => true]);
+                return false;
+            }
             $formattedAmount = number_format($amount, 2, '.', '');
             $reference = 'fp_pos_' . $this->order->id . '_' . Str::upper(Str::random(8));
             $currency = strtoupper((string) ($restaurant->currency?->currency_code ?? 'CDF'));
@@ -734,8 +739,8 @@ class AddPayment extends Component
     private function splitName(string $fullName): array
     {
         $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? 'Guest';
-        $lastName = $nameParts[1] ?? 'Customer';
+        $firstName = $nameParts[0] ?? '';
+        $lastName = $nameParts[1] ?? $firstName;
 
         return [$firstName, $lastName];
     }

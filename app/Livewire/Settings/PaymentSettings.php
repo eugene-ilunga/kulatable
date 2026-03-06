@@ -435,6 +435,8 @@ class PaymentSettings extends Component
         }
 
         if ($this->saveFreshpaySettings() === 0) {
+            $this->paymentGateway = $this->paymentGateway->fresh();
+            $this->setCredentials();
             $this->updatePaymentStatus();
             $this->alertSuccess();
         }

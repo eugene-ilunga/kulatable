@@ -1260,14 +1260,15 @@ class PlanList extends Component
                 return;
             }
 
-            [$firstName, $lastName] = $this->splitName((string) (user()->name ?? $this->restaurant->name ?? 'Restaurant Owner'));
-            $email = (string) (user()->email ?? $this->restaurant->email ?? 'no-email@example.com');
+            [$firstName, $lastName] = $this->splitName((string) (user()->name ?? $this->restaurant->name ?? ''));
+            $email = trim((string) (user()->email ?? $this->restaurant->email ?? ''));
 
-            // Temporary test identity for FreshPay test mode.
-            if (($gateway->freshpay_mode ?? 'test') === 'test') {
-                $firstName = 'ZAA';
-                $lastName = 'ZAA';
-                $email = 'kasisrael@gmail.com';
+            if ($firstName === '' || $lastName === '' || $email === '') {
+                $this->alert('error', 'FreshPay requires real customer identity data: firstname, lastname and email.', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
             }
             $formattedAmount = number_format((float) $amount, 2, '.', '');
             $reference = 'fp_plan_' . $this->restaurant->id . '_' . str(str()->random(10))->upper();
@@ -1365,8 +1366,8 @@ class PlanList extends Component
     private function splitName(string $fullName): array
     {
         $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? 'Guest';
-        $lastName = $nameParts[1] ?? 'Customer';
+        $firstName = $nameParts[0] ?? '';
+        $lastName = $nameParts[1] ?? $firstName;
 
         return [$firstName, $lastName];
     }
