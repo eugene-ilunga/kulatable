@@ -1260,16 +1260,10 @@ class PlanList extends Component
                 return;
             }
 
-            [$firstName, $lastName] = $this->splitName((string) (user()->name ?? $this->restaurant->name ?? ''));
-            $email = trim((string) (user()->email ?? $this->restaurant->email ?? ''));
-
-            if ($firstName === '' || $lastName === '' || $email === '') {
-                $this->alert('error', 'FreshPay requires real customer identity data: firstname, lastname and email.', [
-                    'toast' => true,
-                    'position' => 'top-end',
-                ]);
-                return;
-            }
+            // Temporary diagnostic override to match the working manual FreshPay request.
+            $firstName = 'AFRYA';
+            $lastName = 'AFRYA';
+            $email = 'kasisrael@gmail.com';
             $formattedAmount = number_format((float) $amount, 2, '.', '');
             $reference = 'fp_plan_' . $this->restaurant->id . '_' . str(str()->random(10))->upper();
             $currency = strtoupper((string) ($plan->currency->currency_code ?? 'CDF'));
