@@ -22,6 +22,7 @@ use App\Models\OrderItem;
 use App\Models\OrderType;
 use App\Models\TapPayment;
 use App\Models\EpayPayment;
+use App\Models\FreshpayPayment;
 use App\Models\OrderCharge;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -52,6 +53,7 @@ use Illuminate\Support\Facades\Http;
 use App\Scopes\AvailableMenuItemScope;
 use App\Models\PaymentGatewayCredential;
 use App\Models\OfflinePaymentMethod;
+use App\Support\FreshpayNetworkDetector;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 
 class Cart extends Component
@@ -2799,6 +2801,114 @@ class Cart extends Component
             session()->flash('flash.bannerStyle', 'danger');
             return redirect()->route('order_success', $id);
         }
+    }
+
+    public function initiateFreshpayPayment($id)
+    {
+        $order = null;
+
+        try {
+            $order = Order::with('customer')->find($id);
+
+            if (!$order) {
+                session()->flash('flash.banner', 'Order not found.');
+                session()->flash('flash.bannerStyle', 'danger');
+                return redirect()->back();
+            }
+
+            $paymentGateway = $this->restaurant->paymentGateways;
+            $merchantId = trim((string) ($paymentGateway->freshpay_merchant_id ?? ''));
+            $merchantSecret = trim((string) ($paymentGateway->freshpay_merchant_secret ?? ''));
+            $endpoint = $paymentGateway->freshpay_endpoint;
+
+            if ($merchantId === '' || $merchantSecret === '') {
+                session()->flash('flash.banner', 'FreshPay credentials are not configured.');
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
+            }
+
+            $phoneNumber = FreshpayNetworkDetector::normalize((string) ($order->customer?->phone ?? ''));
+
+            if ($phoneNumber === '') {
+                session()->flash('flash.banner', 'FreshPay exige un numéro de téléphone client.');
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
+            }
+
+            $method = FreshpayNetworkDetector::detectMethod($phoneNumber);
+            if (!$method) {
+                session()->flash('flash.banner', 'Préfixe non pris en charge. Impossible de détecter le réseau mobile.');
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
+            }
+
+            [$firstName, $lastName] = $this->splitName($order->customer?->name ?? 'Guest Customer');
+            $email = $order->customer?->email ?: ($this->restaurant->email ?? 'no-email@example.com');
+            $amount = number_format((float) $this->total, 2, '.', '');
+            $reference = 'fp_' . $order->id . '_' . Str::upper(Str::random(8));
+
+            $freshpayPayment = FreshpayPayment::create([
+                'order_id' => $order->id,
+                'amount' => $amount,
+                'payment_status' => 'pending',
+                'freshpay_reference' => $reference,
+                'freshpay_action' => 'debit',
+                'freshpay_method' => $method,
+                'customer_number' => $phoneNumber,
+            ]);
+
+            $payload = [
+                'merchant_id' => $merchantId,
+                'merchant_secrete' => $merchantSecret,
+                'amount' => $amount,
+                'currency' => strtoupper((string) $this->restaurant->currency->currency_code),
+                'action' => 'debit',
+                'customer_number' => $phoneNumber,
+                'firstname' => $firstName,
+                'lastname' => $lastName,
+                'email' => $email,
+                'reference' => $reference,
+                'method' => $method,
+                'callback_url' => route('freshpay.webhook', ['hash' => $this->restaurant->hash]),
+            ];
+
+            $response = Http::timeout(30)->acceptJson()->post($endpoint, $payload);
+            $responseData = $response->json();
+
+            $freshpayPayment->freshpay_payment_id = $responseData['Transaction_id'] ?? null;
+            $freshpayPayment->payment_error_response = is_array($responseData) ? $responseData : ['body' => $response->body()];
+            $freshpayPayment->save();
+
+            if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
+                session()->flash('flash.banner', 'FreshPay request submitted. Please confirm payment on the customer phone.');
+                session()->flash('flash.bannerStyle', 'success');
+                return redirect()->route('order_success', $order->uuid);
+            }
+
+            $freshpayPayment->payment_status = 'failed';
+            $freshpayPayment->save();
+
+            session()->flash('flash.banner', $responseData['Comment'] ?? 'FreshPay payment initiation failed.');
+            session()->flash('flash.bannerStyle', 'danger');
+
+            return redirect()->route('order_success', $order->uuid);
+        } catch (\Exception $e) {
+            Log::error('FreshPay Payment Initiation Error: ' . $e->getMessage());
+            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
+            session()->flash('flash.bannerStyle', 'danger');
+            return $order
+                ? redirect()->route('order_success', $order->uuid)
+                : redirect()->back();
+        }
+    }
+
+    private function splitName(string $fullName): array
+    {
+        $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
+        $firstName = $nameParts[0] ?? 'Guest';
+        $lastName = $nameParts[1] ?? 'Customer';
+
+        return [$firstName, $lastName];
     }
 
     public function hidePaymentModal()

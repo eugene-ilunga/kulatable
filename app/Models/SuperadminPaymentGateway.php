@@ -114,4 +114,11 @@ class SuperadminPaymentGateway extends BaseModel
         return ($this->tap_mode == 'sandbox' ? $this->test_tap_public_key : $this->live_tap_public_key);
     }
 
+    public function getFreshpayEndpointAttribute()
+    {
+        return ($this->freshpay_mode === 'live')
+            ? 'https://paydrc.gofreshbakery.net/api/v5/'
+            : 'https://api.gofreshpay.com/api/v1/gateway';
+    }
+
 }

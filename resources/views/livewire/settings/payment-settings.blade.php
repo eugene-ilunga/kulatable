@@ -234,6 +234,25 @@
                     </li>
                 @endif
 
+                @if ($isGlobalFreshpayEnabled)
+                    <li wire:click="activeSetting('freshpay')" class="me-2">
+                        <span @class([
+                            'inline-flex items-center gap-x-1 cursor-pointer select-none p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300',
+                            'border-transparent' => $activePaymentSetting != 'freshpay',
+                            'active border-skin-base dark:text-skin-base dark:border-skin-base text-skin-base' =>
+                                $activePaymentSetting == 'freshpay',
+                        ])>
+                            <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-14 h-14" />
+                            @lang('modules.billing.freshpay')
+                            <span @class([
+                                'flex w-3 h-3 me-3 rounded-full',
+                                'bg-green-500' => $isFreshpayEnabled,
+                                'bg-red-500' => !$isFreshpayEnabled,
+                            ])></span>
+                        </span>
+                    </li>
+                @endif
+
                     <li class="me-2">
                         <span wire:click="activeSetting('offline')" @class([
                             'inline-flex items-center gap-x-1 cursor-pointer select-none p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300',
@@ -1017,6 +1036,79 @@
             </form>
         @endif
 
+        @if($activePaymentSetting == 'freshpay')
+            <form wire:submit="submitFormFreshpay">
+                <div class="grid gap-6">
+                    <div class="my-3">
+                        <x-label for="freshpayStatus">
+                            <div class="flex items-center cursor-pointer">
+                                <x-checkbox name="freshpayStatus" id="freshpayStatus" wire:model.live='freshpayStatus' />
+                                <div class="ms-2">
+                                    @lang('modules.settings.enableFreshpay')
+                                </div>
+                            </div>
+                        </x-label>
+                    </div>
+
+                    @if ($freshpayStatus)
+                        <div>
+                            <x-label for="freshpayMode" :value="__('modules.settings.selectEnvironment')" required/>
+                            <x-select id="freshpayMode" class="block w-full mt-1" wire:model.live="freshpayMode">
+                                <option value="test">@lang('app.test')</option>
+                                <option value="live">@lang('app.live')</option>
+                            </x-select>
+                            <x-input-error for="freshpayMode" class="mt-2"/>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-x-4">
+                            <div>
+                                <x-label for="freshpayMerchantId" :value="__('modules.settings.freshpayMerchantId')" required/>
+                                <x-input id="freshpayMerchantId" class="block w-full mt-1" type="text" wire:model='freshpayMerchantId'/>
+                                <x-input-error for="freshpayMerchantId" class="mt-2"/>
+                            </div>
+
+                            <div>
+                                <x-label for="freshpayMerchantSecret" :value="__('modules.settings.freshpayMerchantSecret')" required/>
+                                <x-input-password id="freshpayMerchantSecret" class="block w-full mt-1" type="text" wire:model='freshpayMerchantSecret'/>
+                                <x-input-error for="freshpayMerchantSecret" class="mt-2"/>
+                            </div>
+                        </div>
+
+                        <div class="p-3 text-sm text-blue-700 border border-blue-200 rounded-lg bg-blue-50">
+                            Le reseau mobile est detecte automatiquement a partir du numero client (prefixe).
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-x-4">
+                            <div>
+                                <x-label for="freshpayCallbackSecretKey" :value="__('modules.settings.freshpayCallbackSecretKey')"/>
+                                <x-input-password id="freshpayCallbackSecretKey" class="block w-full mt-1" type="text" wire:model='freshpayCallbackSecretKey'/>
+                                <x-input-error for="freshpayCallbackSecretKey" class="mt-2"/>
+                            </div>
+                            <div>
+                                <x-label for="freshpayCallbackHmacKey" :value="__('modules.settings.freshpayCallbackHmacKey')"/>
+                                <x-input-password id="freshpayCallbackHmacKey" class="block w-full mt-1" type="text" wire:model='freshpayCallbackHmacKey'/>
+                                <x-input-error for="freshpayCallbackHmacKey" class="mt-2"/>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <x-label :value="__('modules.settings.webhookUrl')" class="mb-1"/>
+                            <div class="flex items-center">
+                                <x-input id="webhook-url" class="block w-full" type="text" value="{{ $webhookUrl }}" readonly/>
+                                <button id="copy-button" type="button" onclick="copyWebhookUrl()" class="px-3 py-2 ml-2 text-white bg-gray-800 rounded-lg hover:bg-gray-700">
+                                    @lang('modules.settings.copyWebhookUrl')
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div>
+                        <x-button>@lang('app.save')</x-button>
+                    </div>
+                </div>
+            </form>
+        @endif
+
         <!-- Offline Form -->
         @if ($activePaymentSetting == 'offline')
             <div class="mt-4">
@@ -1111,7 +1203,7 @@
         @endif
         <!-- general Form -->
         @if ($activePaymentSetting == 'serviceSpecific')
-            @if ($isRazorpayEnabled || $isStripeEnabled || $isFlutterwaveEnabled || $isPaypalEnabled || $isPayfastEnabled || $isPaystackEnabled || $isXenditEnabled || $isEpayEnabled || $isMollieEnabled || $hasAnyOfflinePaymentEnabled || $enableQrPayment)
+            @if ($isRazorpayEnabled || $isStripeEnabled || $isFlutterwaveEnabled || $isPaypalEnabled || $isPayfastEnabled || $isPaystackEnabled || $isXenditEnabled || $isEpayEnabled || $isMollieEnabled || $isTapEnabled || $isFreshpayEnabled || $hasAnyOfflinePaymentEnabled || $enableQrPayment)
                 <div class="mt-4 space-y-6">
                     <x-alert type="info" class="flex items-center">
                         <svg class="flex-shrink-0 w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">

@@ -1095,6 +1095,7 @@
                                             $paymentGateway->epay_status ||
                                             $paymentGateway->mollie_status ||
                                             $paymentGateway->tap_status ||
+                                            $paymentGateway->freshpay_status ||
                                             count($offlinePaymentMethods) > 0;
 
                                         $loadingSpinner = '
@@ -1517,7 +1518,7 @@
                                 wire:click="initiateStripePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 468 222.5"
                                         xml:space="preserve">
@@ -1534,7 +1535,7 @@
                                 wire:click="initiatePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" version="1.1" id="Layer_1"
                                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -1569,7 +1570,7 @@
                                 wire:click="initiateFlutterwavePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="h-5 dark:mix-blend-plus-lighter" xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 916.7 144.7">
@@ -1598,7 +1599,7 @@
                                 wire:click="initiatePaypalPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" viewBox="0 0 916.7 144.7" class="h-6 w-22"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -1639,7 +1640,7 @@
                                 wire:click="initiatePayfastPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg width="24" height="24" viewBox="0 0 24 24"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -1657,7 +1658,7 @@
                                 wire:click="initiatePaystackPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                         width="24" height="24" fill="#0AA5FF">
@@ -1676,7 +1677,7 @@
                                 wire:click="initiateXenditPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="Xendit--Streamline-Simple-Icons" height="24" width="24">
                                             <desc>
@@ -1695,7 +1696,7 @@
                                 wire:click="initiateEpayPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1720,7 +1721,7 @@
                                 wire:click="initiateMolliePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 ltr:mr-1 rtl:ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#C6D300">
                                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 1.5c5.799 0 10.5 4.701 10.5 10.5S17.799 22.5 12 22.5 1.5 17.799 1.5 12 6.201 1.5 12 1.5z"/>
@@ -1737,13 +1738,26 @@
                                 wire:click="initiateTapPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 mr-2 text-current" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                                         <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="8" />
                                         <circle cx="60" cy="60" r="30" fill="none" stroke="currentColor" stroke-width="8" />
                                     </svg>
                                     @lang('modules.billing.tap')
+                                </span>
+                            </x-secondary-button>
+                        @endif
+
+                        @if ($paymentGateway->freshpay_status)
+                            <x-secondary-button
+                                wire:click="initiateFreshpayPayment({{ $paymentOrder?->id ?: 'null' }})"
+                                wire:loading.attr="disabled"
+                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                <span class="inline-flex items-center">
+                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-14 h-14 mr-2" />
+                                    @lang('modules.billing.freshpay')
                                 </span>
                             </x-secondary-button>
                         @endif
@@ -1776,7 +1790,7 @@
                                     wire:click="placeOrder(false, {{ $paymentOrder->id }}, '{{ $offlineMethod->name }}')"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-50 cursor-not-allowed"
-                                    wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
+                                    wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
                                     <span class="inline-flex items-center">
                                         <svg class="w-4 h-4" width="24" height="24" viewBox="0 0 24 24"
                                             fill="none" xmlns="http://www.w3.org/2000/svg">

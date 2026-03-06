@@ -33,6 +33,7 @@ use App\Http\Controllers\CustomMenuController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\TapPaymentController;
 use App\Http\Controllers\EpayPaymentController;
+use App\Http\Controllers\FreshpayPaymentController;
 use App\Http\Controllers\LandingSiteController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Middleware\CheckRestaurantPackage;
@@ -64,6 +65,7 @@ use App\Http\Controllers\FlutterwavePaymentController;
 use App\Http\Controllers\SuperAdmin\PayfastController;
 use App\Http\Controllers\SuperAdmin\PaystackController;
 use App\Http\Controllers\SuperAdmin\FlutterwaveController;
+use App\Http\Controllers\SuperAdmin\FreshpayController as SuperAdminFreshpayController;
 use App\Http\Controllers\SuperAdmin\StripeWebhookController;
 use App\Http\Controllers\SuperAdmin\XenditWebhookController;
 use App\Http\Controllers\SuperAdmin\PayFastWebhookController;
@@ -293,6 +295,7 @@ Route::match(["get", "post"], "/xendit/subscription/failed", [XenditController::
 
 // Xendit Webhook Routes
 Route::post('/webhook/save-xendit-webhook/{hash}', [XenditWebhookController::class, 'handleSubscriptionWebhook'])->name('billing.save-xendit-webhook');
+Route::post('/webhook/save-freshpay-webhook/{hash?}', [SuperAdminFreshpayController::class, 'webhook'])->name('billing.save-freshpay-webhook');
 
 // Tap Plan Payment Routes
 Route::post('/tap/initiate-payment', [TapController::class, 'initiatePayment'])->name('tap.initiate-payment');
@@ -312,6 +315,7 @@ Route::post('/mollie/plan/webhook', [MollieController::class, 'handleWebhook'])-
 Route::match(['get', 'post'], '/tap/success', [TapPaymentController::class, 'success'])->name('tap.success');
 Route::match(['get', 'post'], '/tap/cancel', [TapPaymentController::class, 'cancel'])->name('tap.cancel');
 Route::post('/webhook/tap-webhook/{hash}', [TapPaymentController::class, 'webhook'])->name('tap.webhook');
+Route::post('/webhook/freshpay-webhook/{hash}', [FreshpayPaymentController::class, 'webhook'])->name('freshpay.webhook');
 
 // Mollie Payment Routes
 Route::post('/webhook/mollie-webhook/{hash}', [MolliePaymentController::class, 'handleGatewayWebhook'])->name('mollie.webhook');

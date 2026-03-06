@@ -48,11 +48,7 @@
                         </div>
 
                         <!-- Payment Methods -->
-                        <div @class([
-                            'grid gap-3',
-                            'grid-cols-2 sm:grid-cols-4' => !$canAddTip,
-                            'grid-cols-2 sm:grid-cols-5' => $canAddTip
-                        ])>
+                        <div class="grid grid-cols-2 gap-3 {{ $canAddTip ? ($isFreshpayEnabled ? 'sm:grid-cols-6' : 'sm:grid-cols-5') : ($isFreshpayEnabled ? 'sm:grid-cols-5' : 'sm:grid-cols-4') }}">
                             <button wire:click="setPaymentMethod('cash')"
                                 class="p-3 text-center border rounded-lg {{ $paymentMethod === 'cash' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
                                 <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2m2 4h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2m7-5a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/></svg>
@@ -64,6 +60,14 @@
                                 <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3"/></svg>
                                 <span class="text-sm">@lang('modules.order.card')</span>
                             </button>
+
+                            @if($isFreshpayEnabled)
+                                <button wire:click="setPaymentMethod('freshpay')"
+                                    class="p-3 text-center border rounded-lg {{ $paymentMethod === 'freshpay' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
+                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-6 h-6 mx-auto mb-1" />
+                                    <span class="text-sm">FreshPay</span>
+                                </button>
+                            @endif
 
                             <button wire:click="setPaymentMethod('upi')"
                                 class="p-3 text-center border rounded-lg {{ $paymentMethod === 'upi' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
@@ -116,9 +120,24 @@
                             </button>
                             @endif
                         </div>
+                        @if($isFreshpayEnabled)
+                            <p class="mt-2 text-xs text-gray-500">
+                                Carte = enregistrement manuel, FreshPay = paiement mobile.
+                            </p>
+                        @endif
 
                         <!-- Amount Input and Summary -->
                         <div class="mt-4 space-y-4">
+                            @if($paymentMethod === 'freshpay')
+                                <div>
+                                    <label class="block text-sm mb-1">Numéro client (FreshPay)</label>
+                                    <input type="text"
+                                        wire:model.live="freshpayCustomerNumber"
+                                        placeholder="Ex: 0972148867"
+                                        class="w-full p-3 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
+                                </div>
+                            @endif
+
                             <div>
                                 <label class="block text-sm mb-1">{{ __('modules.order.amount') }}</label>
                                 <input type="text" wire:model.live="paymentAmount"

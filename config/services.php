@@ -46,4 +46,15 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o'),
     ],
 
+    'freshpay' => [
+        'allowed_ips' => env('FRESHPAY_ALLOWED_IPS', ''),
+        'network_prefixes' => [
+            'airtel' => ['097', '098', '099', '090'],
+            'orange' => ['089'],
+            'mtn' => ['083'],
+            'mpesa' => ['081', '082', '084', '085'],
+            'afrimoney' => ['080'],
+        ],
+    ],
+
 ];

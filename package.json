@@ -24,7 +24,7 @@
     "flatpickr": "^4.6.13",
     "flowbite": "^2.4.1",
     "pikaday": "^1.8.2",
-    "preline": "^2.clear3.0",
+    "preline": "^2.3.0",
     "sweetalert2": "^11.12.1",
     "vue": "^3.5.24"
   }

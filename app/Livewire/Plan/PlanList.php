@@ -24,6 +24,7 @@ use App\Models\GlobalSubscription;
 use Illuminate\Support\Facades\DB;
 use App\Models\OfflinePaymentMethod;
 use App\Models\SuperadminPaymentGateway;
+use App\Support\FreshpayNetworkDetector;
 use App\Notifications\RestaurantUpdatedPlan;
 use Illuminate\Support\Facades\Notification;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
@@ -67,6 +68,7 @@ class PlanList extends Component
     public $selectedCurrencyCode;
     public $currentCurrencyName;
     public $globalCurrencyName;
+    public $freshpayCustomerNumber = '';
 
     public function mount()
     {
@@ -89,6 +91,7 @@ class PlanList extends Component
             $this->stripeSettings->xendit_status,
             $this->stripeSettings->paddle_status,
             $this->stripeSettings->tap_status ?? false,
+            $this->stripeSettings->freshpay_status ?? false,
         ])) {
             $this->paymentGatewayActive = true;
         }
@@ -138,6 +141,7 @@ class PlanList extends Component
             ->where('status', 'active')
             ->whereNull('restaurant_id')
             ->get();
+        $this->freshpayCustomerNumber = (string) (user()->phone_number ?? $this->restaurant->phone_number ?? '');
         $this->free = $this->selectedPlan->payment_type == PackageType::DEFAULT || $this->selectedPlan->is_free;
 
         // Switching payment method based on the selected plan and modal.
@@ -167,6 +171,7 @@ class PlanList extends Component
             'paddle' => $this->stripeSettings->paddle_status,
             'mollie' => $this->stripeSettings->mollie_status,
             'tap' => $this->stripeSettings->tap_status ?? false,
+            'freshpay' => $this->stripeSettings->freshpay_status ?? false,
 
 
         ])->filter();
@@ -177,6 +182,12 @@ class PlanList extends Component
         }
 
         $gateway = $activeGateways->keys()->first();
+
+        // FreshPay requires customer phone confirmation. Always show modal for this gateway.
+        if ($gateway === 'freshpay') {
+            $this->showPaymentMethodModal = true;
+            return;
+        }
 
         match ($gateway) {
             'stripe' => $this->initiateStripePayment(),
@@ -189,6 +200,7 @@ class PlanList extends Component
             'paddle' => $this->initiatePaddlePayment(),
             'mollie' => $this->initiateMolliePayment(),
             'tap' => $this->initiateTapPayment(),
+            'freshpay' => $this->initiateFreshpayPayment(),
             default => $this->showPaymentMethodModal = true,
         };
     }
@@ -1170,6 +1182,193 @@ class PlanList extends Component
                 'position' => 'top-end',
             ]);
         }
+    }
+
+    public function initiateFreshpayPayment()
+    {
+        try {
+            $plan = Package::find($this->selectedPlan->id);
+
+            if (!$plan) {
+                $this->alert('error', __('messages.noPlanIdFound'), [
+                    'toast' => true,
+                    'position' => 'top-end',
+                    'showCancelButton' => false,
+                    'cancelButtonText' => __('app.close')
+                ]);
+                return;
+            }
+
+            $type = $plan->package_type === PackageType::LIFETIME ? 'lifetime' : ($this->isAnnual ? 'annual' : 'monthly');
+            $currency_id = $plan->currency_id;
+
+            if ($plan->package_type == PackageType::LIFETIME) {
+                $amount = $plan->price;
+            } else {
+                $amount = $this->isAnnual ? $plan->annual_price : $plan->monthly_price;
+            }
+
+            if (!$amount) {
+                $this->alert('error', __('messages.noPlanIdFound'), [
+                    'toast' => true,
+                    'position' => 'top-end',
+                    'showCancelButton' => false,
+                    'cancelButtonText' => __('app.close')
+                ]);
+                return;
+            }
+
+            $gateway = SuperadminPaymentGateway::first();
+            if (!$gateway || !($gateway->freshpay_status ?? false)) {
+                $this->alert('error', 'FreshPay payment gateway is not configured', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+
+            $merchantId = trim((string) ($gateway->freshpay_merchant_id ?? ''));
+            $merchantSecret = trim((string) ($gateway->freshpay_merchant_secret ?? ''));
+            $endpoint = $gateway->freshpay_endpoint;
+
+            if ($merchantId === '' || $merchantSecret === '') {
+                $this->alert('error', 'FreshPay credentials are not configured', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+
+            $phoneInput = $this->freshpayCustomerNumber ?: (string) (user()->phone_number ?? $this->restaurant->phone_number ?? '');
+            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
+            $this->freshpayCustomerNumber = $phoneNumber;
+
+            if ($phoneNumber === '') {
+                $this->alert('error', 'FreshPay requires a valid local number (example: 0972148867).', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+
+            $method = FreshpayNetworkDetector::detectMethod($phoneNumber);
+            if (!$method) {
+                $this->alert('error', 'Unsupported prefix for FreshPay. Use a local number starting with 0 (ex: 097..., 098..., 099...).', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+
+            [$firstName, $lastName] = $this->splitName((string) (user()->name ?? $this->restaurant->name ?? 'Restaurant Owner'));
+            $email = (string) (user()->email ?? $this->restaurant->email ?? 'no-email@example.com');
+
+            // Temporary test identity for FreshPay test mode.
+            if (($gateway->freshpay_mode ?? 'test') === 'test') {
+                $firstName = 'ZAA';
+                $lastName = 'ZAA';
+                $email = 'kasisrael@gmail.com';
+            }
+            $formattedAmount = number_format((float) $amount, 2, '.', '');
+            $reference = 'fp_plan_' . $this->restaurant->id . '_' . str(str()->random(10))->upper();
+            $currency = strtoupper((string) ($plan->currency->currency_code ?? 'CDF'));
+
+            $payment = RestaurantPayment::create([
+                'restaurant_id' => $this->restaurant->id,
+                'amount' => $amount,
+                'package_id' => $plan->id,
+                'package_type' => $type,
+                'currency_id' => $currency_id,
+                'status' => 'pending',
+                'reference_id' => $reference,
+            ]);
+
+            $payload = [
+                'merchant_id' => $merchantId,
+                'merchant_secrete' => $merchantSecret,
+                'amount' => $formattedAmount,
+                'currency' => $currency,
+                'action' => 'debit',
+                'customer_number' => $phoneNumber,
+                'firstname' => $firstName,
+                'lastname' => $lastName,
+                'email' => $email,
+                'reference' => $reference,
+                'method' => $method,
+                'callback_url' => route('billing.save-freshpay-webhook', ['hash' => global_setting()->hash]),
+            ];
+
+            $payloadForLog = $payload;
+            $payloadForLog['merchant_secrete'] = str_repeat('*', max(strlen($merchantSecret) - 4, 0)) . substr($merchantSecret, -4);
+
+            Log::info('FreshPay subscription request payload', [
+                'endpoint' => $endpoint,
+                'restaurant_id' => $this->restaurant->id,
+                'plan_id' => $plan->id,
+                'payload' => $payloadForLog,
+            ]);
+
+            $response = Http::timeout(30)->acceptJson()->post($endpoint, $payload);
+            $responseData = $response->json();
+
+            Log::info('FreshPay subscription response', [
+                'endpoint' => $endpoint,
+                'restaurant_id' => $this->restaurant->id,
+                'plan_id' => $plan->id,
+                'http_status' => $response->status(),
+                'successful' => $response->successful(),
+                'json' => $responseData,
+                'raw_body' => $response->body(),
+            ]);
+
+            if (is_array($responseData) && !empty($responseData['Transaction_id'])) {
+                $payment->transaction_id = (string) $responseData['Transaction_id'];
+                $payment->save();
+            }
+
+            if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
+                $this->showPaymentMethodModal = false;
+                $this->alert('success', 'FreshPay request submitted. Confirm payment on your phone.', [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+
+            $payment->status = 'failed';
+            $payment->save();
+
+            Log::warning('FreshPay subscription initiation failed', [
+                'restaurant_id' => $this->restaurant->id,
+                'plan_id' => $plan->id,
+                'http_status' => $response->status(),
+                'response' => $responseData,
+            ]);
+
+            $this->alert('error', $responseData['Comment'] ?? 'FreshPay payment initiation failed.', [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('FreshPay subscription initiation error: ' . $e->getMessage(), [
+                'restaurant_id' => $this->restaurant->id ?? null,
+                'plan_id' => $this->selectedPlan->id ?? null,
+            ]);
+
+            $this->alert('error', 'Failed to initiate payment: ' . $e->getMessage(), [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+        }
+    }
+
+    private function splitName(string $fullName): array
+    {
+        $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
+        $firstName = $nameParts[0] ?? 'Guest';
+        $lastName = $nameParts[1] ?? 'Customer';
+
+        return [$firstName, $lastName];
     }
 
     /**

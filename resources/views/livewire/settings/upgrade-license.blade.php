@@ -47,47 +47,65 @@
 
 @script
 <script>
+    const razorpayKey = @js($credential?->razorpay_key ?? '');
+    const licenseCurrency = @js(package()->currency->currency_code ?? 'USD');
+    const licenseLogo = @js(global_setting()->logoUrl ?? '');
+
     $wire.on('paymentInitiated', (payment) => {
         payViaRazorpay(payment);
     });
 
     $wire.on('stripeLicensePaymentInitiated', (payment) => {
+        if (!payment?.payment?.id) {
+            console.error('Invalid stripe license payment payload', payment);
+            return;
+        }
+
         document.getElementById('license_payment').value = payment.payment.id;
         document.getElementById('license-payment-form').submit();
     });
 
-    @if ($credential)
-        function payViaRazorpay(payment) {
-            var options = {
-                "key": "{{ $credential->razorpay_key }}",
-                "amount": (parseFloat(payment.payment.amount) * 100),
-                "currency": "{{ package()->currency->currency_code }}",
-                "description": "License Payment",
-                "image": "{{ global_setting()->logoUrl }}",
-                "order_id": payment.payment.razorpay_order_id,
-                "handler": function(response) {
-                    Livewire.dispatch('razorpayPaymentCompleted', [
-                        response.razorpay_payment_id,
-                        response.razorpay_order_id,
-                        response.razorpay_signature
-                    ]);
-                },
-                "modal": {
-                    "ondismiss": function() {
-                        if (confirm("Are you sure, you want to close the form?")) {
-                            console.log("Checkout form closed by the user");
-                        } else {
-                            console.log("Complete the Payment")
-                        }
+    function payViaRazorpay(payload) {
+        if (!payload?.payment?.amount || !payload?.payment?.razorpay_order_id) {
+            console.error('Invalid razorpay payload', payload);
+            return;
+        }
+
+        if (!razorpayKey) {
+            console.error('Razorpay key is missing in superadmin settings.');
+            return;
+        }
+
+        var options = {
+            "key": razorpayKey,
+            "amount": (parseFloat(payload.payment.amount) * 100),
+            "currency": licenseCurrency,
+            "description": "License Payment",
+            "image": licenseLogo,
+            "order_id": payload.payment.razorpay_order_id,
+            "handler": function(response) {
+                Livewire.dispatch('razorpayPaymentCompleted', [
+                    response.razorpay_payment_id,
+                    response.razorpay_order_id,
+                    response.razorpay_signature
+                ]);
+            },
+            "modal": {
+                "ondismiss": function() {
+                    if (confirm("Are you sure, you want to close the form?")) {
+                        console.log("Checkout form closed by the user");
+                    } else {
+                        console.log("Complete the Payment")
                     }
                 }
-            };
-            var rzp1 = new Razorpay(options);
-            rzp1.on('payment.failed', function(response) {
-                console.log(response);
-            });
-            rzp1.open();
-        }
-    @endif
+            }
+        };
+
+        var rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function(response) {
+            console.log(response);
+        });
+        rzp1.open();
+    }
 </script>
 @endscript

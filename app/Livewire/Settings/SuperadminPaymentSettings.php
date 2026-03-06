@@ -103,6 +103,12 @@ class SuperadminPaymentSettings extends Component
     public $liveTapPublicKey;
     public $testTapSecretKey;
     public $testTapPublicKey;
+    public $freshpayStatus;
+    public $freshpayMode;
+    public $freshpayMerchantId;
+    public $freshpayMerchantSecret;
+    public $freshpayCallbackSecretKey;
+    public $freshpayCallbackHmacKey;
 
     public function mount()
     {
@@ -214,6 +220,14 @@ class SuperadminPaymentSettings extends Component
         $this->testTapSecretKey = $this->paymentGateway->test_tap_secret_key ?? null;
         $this->testTapPublicKey = $this->paymentGateway->test_tap_public_key ?? null;
 
+        // FreshPay credentials
+        $this->freshpayStatus = (bool)($this->paymentGateway->freshpay_status ?? false);
+        $this->freshpayMode = $this->paymentGateway->freshpay_mode ?? 'test';
+        $this->freshpayMerchantId = $this->paymentGateway->freshpay_merchant_id ?? null;
+        $this->freshpayMerchantSecret = $this->paymentGateway->freshpay_merchant_secret ?? null;
+        $this->freshpayCallbackSecretKey = $this->paymentGateway->freshpay_callback_secret_key ?? null;
+        $this->freshpayCallbackHmacKey = $this->paymentGateway->freshpay_callback_hmac_key ?? null;
+
         if ($this->activePaymentSetting === 'stripe') {
             $this->webhookUrl = route('billing.verify-webhook', ['hash' => $hash]);
         }
@@ -249,6 +263,11 @@ class SuperadminPaymentSettings extends Component
         if ($this->activePaymentSetting === 'tap') {
             $hash = global_setting()->hash;
             // $this->webhookUrl = route('billing.save-tap-webhook', ['hash' => $hash]);
+        }
+
+        if ($this->activePaymentSetting === 'freshpay') {
+            $hash = global_setting()->hash;
+            $this->webhookUrl = route('billing.save-freshpay-webhook', ['hash' => $hash]);
         }
 
 
@@ -830,6 +849,55 @@ class SuperadminPaymentSettings extends Component
     public function render()
     {
         return view('livewire.settings.superadmin-payment-settings');
+    }
+
+    public function submitFormFreshpay()
+    {
+        if ($this->freshpayStatus) {
+            $this->validate([
+                'freshpayMode' => 'required|in:test,live',
+                'freshpayMerchantId' => 'required|string',
+                'freshpayMerchantSecret' => 'required|string',
+            ]);
+        }
+
+        $configError = $this->saveFreshpaySettings();
+
+        $this->paymentGateway->fresh();
+        $this->dispatch('settingsUpdated');
+        cache()->forget('superadminPaymentGateway');
+
+        if ($configError == 0) {
+            $this->alert('success', __('messages.settingsUpdated'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+        }
+    }
+
+    private function saveFreshpaySettings()
+    {
+        if (!$this->freshpayStatus) {
+            $this->paymentGateway->update([
+                'freshpay_status' => false,
+            ]);
+
+            return 0;
+        }
+
+        $this->paymentGateway->update([
+            'freshpay_status' => $this->freshpayStatus,
+            'freshpay_mode' => $this->freshpayMode,
+            'freshpay_merchant_id' => $this->freshpayMerchantId,
+            'freshpay_merchant_secret' => $this->freshpayMerchantSecret,
+            'freshpay_method' => null,
+            'freshpay_callback_secret_key' => $this->freshpayCallbackSecretKey,
+            'freshpay_callback_hmac_key' => $this->freshpayCallbackHmacKey,
+        ]);
+
+        return 0;
     }
 
     public function submitFormTap()

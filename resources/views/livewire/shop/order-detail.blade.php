@@ -1006,6 +1006,9 @@
                                             @case('epay')
                                             <svg class="w-5 h-5" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><g fill="#000000"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-.5-13h1v6h-1v-6zm0 8h1v2h-1v-2z"/></g></svg>
                                             @break
+                                            @case('freshpay')
+                                            <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-15 h-15" />
+                                            @break
                                             @case('upi')
                                                 <svg class="w-5 h-5 text-gray-700 dark:text-gray-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zm10 10h6v6h-6zm0-10h6v6h-6zm-4 10h.01v.01H10zm0 4h.01v.01H10zm-3 2h.01v.01H7zm0-4h.01v.01H7zm-3 2h.01v.01H4zm0-4h.01v.01H4z"/><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M7 7h.01v.01H7zm10 10h.01v.01H17z"/></svg>
                                             @break
@@ -1081,7 +1084,7 @@
                     @else
                         <div class="grid w-full grid-cols-3 gap-4">
                             @php
-                                $showPayNow = $paymentGateway->is_qr_payment_enabled || $paymentGateway->stripe_status || $paymentGateway->razorpay_status || $paymentGateway->flutterwave_status || $paymentGateway->paypal_status || $paymentGateway->payfast_status || $paymentGateway->paystack_status || $paymentGateway->xendit_status || $paymentGateway->epay_status || $paymentGateway->mollie_status || $paymentGateway->tap_status || count($offlinePaymentMethods) > 0;
+                                $showPayNow = $paymentGateway->is_qr_payment_enabled || $paymentGateway->stripe_status || $paymentGateway->razorpay_status || $paymentGateway->flutterwave_status || $paymentGateway->paypal_status || $paymentGateway->payfast_status || $paymentGateway->paystack_status || $paymentGateway->xendit_status || $paymentGateway->epay_status || $paymentGateway->mollie_status || $paymentGateway->tap_status || $paymentGateway->freshpay_status || count($offlinePaymentMethods) > 0;
                             @endphp
                             @if ($showPayNow)
                                 @if ($order && $order->order_status->value !== 'cancelled' && $order->status !== 'pending_verification')
@@ -1275,6 +1278,15 @@
                                     </svg>
 
                                     @lang('modules.billing.tap')
+                                </span>
+                            </x-secondary-button>
+                        @endif
+
+                        @if ($paymentGateway->freshpay_status)
+                            <x-secondary-button wire:click='initiateFreshpayPayment({{ $paymentOrder->id }})'>
+                                <span class="inline-flex items-center">
+                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-4 h-4 mr-2" />
+                                    @lang('modules.billing.freshpay')
                                 </span>
                             </x-secondary-button>
                         @endif
