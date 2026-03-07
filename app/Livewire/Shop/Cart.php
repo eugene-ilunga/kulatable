@@ -2888,6 +2888,12 @@ class Cart extends Component
             $freshpayPayment->save();
 
             if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
+                $order->update([
+                    'status' => 'pending_verification',
+                ]);
+
+                $this->sendNotifications($order);
+
                 session()->flash('flash.banner', 'FreshPay request submitted. Please confirm payment on the customer phone.');
                 session()->flash('flash.bannerStyle', 'success');
                 return redirect()->route('order_success', $order->uuid);

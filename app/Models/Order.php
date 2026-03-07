@@ -99,6 +99,11 @@ class Order extends BaseModel
         return $this->hasMany(Payment::class);
     }
 
+    public function freshpayPayments(): HasMany
+    {
+        return $this->hasMany(FreshpayPayment::class)->latest('id');
+    }
+
     public function splitOrders(): HasMany
     {
         return $this->hasMany(SplitOrder::class, 'order_id');

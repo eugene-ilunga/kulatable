@@ -910,6 +910,95 @@
                     </div>
                 @endif
 
+                @if ($order->freshpayPayments->count())
+                    <div class="mt-4">
+                        <div class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Historique FreshPay
+                        </div>
+
+                        <div class="flex flex-col rounded w-full max-w-full min-w-0 overflow-x-hidden">
+                            <div class="w-full max-w-full min-w-0 overflow-x-auto">
+                                <table class="w-full max-w-full min-w-[720px] divide-y divide-gray-200 table-auto dark:divide-gray-600">
+                                    <thead class="bg-gray-100 dark:bg-gray-700">
+                                        <tr>
+                                            <th scope="col" class="p-2 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 rtl:text-right ltr:text-left">
+                                                @lang('modules.order.amount')
+                                            </th>
+                                            <th scope="col" class="p-2 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 rtl:text-right ltr:text-left">
+                                                Reseau
+                                            </th>
+                                            <th scope="col" class="p-2 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 rtl:text-right ltr:text-left">
+                                                Reference
+                                            </th>
+                                            <th scope="col" class="p-2 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 rtl:text-right ltr:text-left">
+                                                Statut
+                                            </th>
+                                            <th scope="col" class="p-2 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 rtl:text-right ltr:text-left">
+                                                Numero client
+                                            </th>
+                                            <th scope="col" class="p-2 text-xs font-medium text-right text-gray-500 uppercase dark:text-gray-400">
+                                                @lang('app.dateTime')
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                                        @foreach ($order->freshpayPayments as $freshpayPayment)
+                                            <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <td class="p-2 text-sm text-gray-900 whitespace-nowrap dark:text-gray-300">
+                                                    {{ currency_format($freshpayPayment->amount, $currencyId) }}
+                                                </td>
+
+                                                <td class="p-2 text-sm text-gray-900 whitespace-nowrap dark:text-gray-300">
+                                                    <div class="inline-flex items-center gap-2">
+                                                        <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="w-4 h-4 object-contain" />
+                                                        <span>{{ $freshpayPayment->freshpay_method ? ucfirst($freshpayPayment->freshpay_method) : '--' }}</span>
+                                                    </div>
+                                                </td>
+
+                                                <td class="p-2 text-sm text-gray-900 dark:text-gray-300">
+                                                    <div class="font-medium">{{ $freshpayPayment->freshpay_reference ?: '--' }}</div>
+                                                    @if ($freshpayPayment->freshpay_payment_id)
+                                                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                            ID: {{ $freshpayPayment->freshpay_payment_id }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+
+                                                <td class="p-2 text-sm whitespace-nowrap">
+                                                    <span @class([
+                                                        'inline-flex items-center px-2 py-1 rounded text-xs font-medium border',
+                                                        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border-green-300 dark:border-green-700' => $freshpayPayment->payment_status === 'completed',
+                                                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700' => $freshpayPayment->payment_status === 'pending',
+                                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 border-red-300 dark:border-red-700' => $freshpayPayment->payment_status === 'failed',
+                                                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600' => !in_array($freshpayPayment->payment_status, ['completed', 'pending', 'failed']),
+                                                    ])>
+                                                        {{ ucfirst($freshpayPayment->payment_status ?? 'unknown') }}
+                                                    </span>
+
+                                                    @if ($freshpayPayment->trans_status_description)
+                                                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                            {{ $freshpayPayment->trans_status_description }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+
+                                                <td class="p-2 text-sm text-gray-900 whitespace-nowrap dark:text-gray-300">
+                                                    {{ $freshpayPayment->customer_number ?: '--' }}
+                                                </td>
+
+                                                <td class="p-2 text-xs sm:text-sm text-right text-gray-900 whitespace-nowrap dark:text-gray-400">
+                                                    {{ optional($freshpayPayment->payment_date ?? $freshpayPayment->created_at)->timezone(timezone())->translatedFormat(dateFormat() . ' ' . timeFormat()) }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 @if ($order->order_type == 'delivery' && $order->delivery_address)
                     <div class="p-3 mt-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                         <div class="flex items-center justify-between mb-2">
