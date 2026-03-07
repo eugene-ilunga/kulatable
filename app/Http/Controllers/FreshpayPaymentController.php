@@ -15,19 +15,31 @@ class FreshpayPaymentController extends Controller
 {
     public function webhook(Request $request, string $hash)
     {
+        Log::info('FreshPay callback received', $this->buildCallbackLogContext($request, $hash));
+
         $restaurant = Restaurant::where('hash', $hash)->first();
 
         if (!$restaurant) {
+            Log::warning('FreshPay callback rejected: restaurant not found', [
+                'hash' => $hash,
+            ]);
             return response()->json(['error' => 'Restaurant not found'], 404);
         }
 
         $paymentGateway = $restaurant->paymentGateways;
 
         if (!$paymentGateway || !($paymentGateway->freshpay_status ?? false)) {
+            Log::warning('FreshPay callback rejected: gateway disabled', [
+                'restaurant_id' => $restaurant->id,
+            ]);
             return response()->json(['error' => 'FreshPay is not enabled'], 400);
         }
 
         if (!$this->validateIp($request)) {
+            Log::warning('FreshPay callback rejected: unauthorized IP', [
+                'restaurant_id' => $restaurant->id,
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Unauthorized IP'], 403);
         }
 
@@ -35,6 +47,11 @@ class FreshpayPaymentController extends Controller
         $signature = (string) $request->header('X-Signature', '');
 
         if ($encryptedData === '' || $signature === '') {
+            Log::warning('FreshPay callback rejected: invalid payload', [
+                'restaurant_id' => $restaurant->id,
+                'has_data' => $encryptedData !== '',
+                'has_signature' => $signature !== '',
+            ]);
             return response()->json(['error' => 'Invalid callback payload'], 400);
         }
 
@@ -45,10 +62,18 @@ class FreshpayPaymentController extends Controller
             Log::warning('FreshPay callback rejected: invalid signature', [
                 'restaurant_id' => $restaurant->id,
                 'ip' => $request->ip(),
+                'received_signature_prefix' => $this->maskSignature($signature),
+                'expected_signature_prefix' => $this->maskSignature($expectedSignature),
             ]);
 
             return response()->json(['error' => 'Invalid signature'], 401);
         }
+
+        Log::info('FreshPay callback signature validated', [
+            'restaurant_id' => $restaurant->id,
+            'ip' => $request->ip(),
+            'data_length' => strlen($encryptedData),
+        ]);
 
         $decryptedPayload = $this->decryptPayload(
             $encryptedData,
@@ -56,8 +81,17 @@ class FreshpayPaymentController extends Controller
         );
 
         if ($decryptedPayload === null || !is_array($decryptedPayload)) {
+            Log::warning('FreshPay callback rejected: invalid encryption', [
+                'restaurant_id' => $restaurant->id,
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Invalid encryption'], 400);
         }
+
+        Log::info('FreshPay callback decrypted payload', [
+            'restaurant_id' => $restaurant->id,
+            'payload' => $decryptedPayload,
+        ]);
 
         $reference = (string) ($decryptedPayload['Reference'] ?? $decryptedPayload['reference'] ?? '');
         $transactionId = (string) ($decryptedPayload['Transaction_id'] ?? $decryptedPayload['transaction_id'] ?? '');
@@ -79,6 +113,7 @@ class FreshpayPaymentController extends Controller
 
         if (!$freshpayPayment) {
             Log::warning('FreshPay callback: payment not found', [
+                'restaurant_id' => $restaurant->id,
                 'reference' => $reference,
                 'transaction_id' => $transactionId,
             ]);
@@ -93,6 +128,11 @@ class FreshpayPaymentController extends Controller
         }
 
         if (($order->branch->restaurant_id ?? null) !== $restaurant->id) {
+            Log::warning('FreshPay callback rejected: restaurant mismatch', [
+                'restaurant_id' => $restaurant->id,
+                'order_id' => $order->id,
+                'order_restaurant_id' => $order->branch->restaurant_id ?? null,
+            ]);
             return response()->json(['error' => 'Restaurant mismatch'], 403);
         }
 
@@ -151,6 +191,17 @@ class FreshpayPaymentController extends Controller
             $freshpayPayment->save();
         }
 
+        Log::info('FreshPay callback processed', [
+            'restaurant_id' => $restaurant->id,
+            'order_id' => $order->id,
+            'freshpay_payment_id' => $freshpayPayment->id,
+            'reference' => $reference,
+            'transaction_id' => $transactionId,
+            'payment_status' => $freshpayPayment->payment_status,
+            'trans_status' => $freshpayPayment->trans_status,
+            'order_status' => $order->fresh()->status,
+        ]);
+
         return response()->json([
             'status' => 'Callback received successfully',
             'data' => [
@@ -173,6 +224,30 @@ class FreshpayPaymentController extends Controller
         }
 
         return in_array($request->ip(), $allowedIps, true);
+    }
+
+    private function buildCallbackLogContext(Request $request, ?string $hash = null): array
+    {
+        return [
+            'hash' => $hash,
+            'ip' => $request->ip(),
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'user_agent' => $request->userAgent(),
+            'has_signature' => $request->hasHeader('X-Signature'),
+            'signature_prefix' => $this->maskSignature((string) $request->header('X-Signature', '')),
+            'body' => $request->all(),
+            'raw_body' => $request->getContent(),
+        ];
+    }
+
+    private function maskSignature(string $signature): ?string
+    {
+        if ($signature === '') {
+            return null;
+        }
+
+        return substr($signature, 0, 12) . '...';
     }
 
     private function decryptPayload(string $encryptedData, string $key): ?array

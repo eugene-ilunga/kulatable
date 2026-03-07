@@ -20,17 +20,26 @@ class FreshpayController extends Controller
 {
     public function webhook(Request $request, ?string $hash = null)
     {
+        Log::info('FreshPay plan callback received', $this->buildCallbackLogContext($request, $hash));
+
         $paymentGateway = SuperadminPaymentGateway::first();
 
         if (!$paymentGateway || !($paymentGateway->freshpay_status ?? false)) {
+            Log::warning('FreshPay plan callback rejected: gateway disabled');
             return response()->json(['error' => 'FreshPay is not enabled'], 400);
         }
 
         if ($hash && $hash !== global_setting()->hash) {
+            Log::warning('FreshPay plan callback rejected: unauthorized hash', [
+                'hash' => $hash,
+            ]);
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         if (!$this->validateIp($request)) {
+            Log::warning('FreshPay plan callback rejected: unauthorized IP', [
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Unauthorized IP'], 403);
         }
 
@@ -38,6 +47,10 @@ class FreshpayController extends Controller
         $signature = (string) $request->header('X-Signature', '');
 
         if ($encryptedData === '' || $signature === '') {
+            Log::warning('FreshPay plan callback rejected: invalid payload', [
+                'has_data' => $encryptedData !== '',
+                'has_signature' => $signature !== '',
+            ]);
             return response()->json(['error' => 'Invalid callback payload'], 400);
         }
 
@@ -47,10 +60,17 @@ class FreshpayController extends Controller
         if (!hash_equals(strtolower($expectedSignature), strtolower($signature))) {
             Log::warning('FreshPay plan callback rejected: invalid signature', [
                 'ip' => $request->ip(),
+                'received_signature_prefix' => $this->maskSignature($signature),
+                'expected_signature_prefix' => $this->maskSignature($expectedSignature),
             ]);
 
             return response()->json(['error' => 'Invalid signature'], 401);
         }
+
+        Log::info('FreshPay plan callback signature validated', [
+            'ip' => $request->ip(),
+            'data_length' => strlen($encryptedData),
+        ]);
 
         $decryptedPayload = $this->decryptPayload(
             $encryptedData,
@@ -58,8 +78,15 @@ class FreshpayController extends Controller
         );
 
         if ($decryptedPayload === null || !is_array($decryptedPayload)) {
+            Log::warning('FreshPay plan callback rejected: invalid encryption', [
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Invalid encryption'], 400);
         }
+
+        Log::info('FreshPay plan callback decrypted payload', [
+            'payload' => $decryptedPayload,
+        ]);
 
         $reference = (string) ($decryptedPayload['Reference'] ?? $decryptedPayload['reference'] ?? '');
         $transactionId = (string) ($decryptedPayload['Transaction_id'] ?? $decryptedPayload['transaction_id'] ?? '');
@@ -109,6 +136,14 @@ class FreshpayController extends Controller
         } else {
             $restaurantPayment->save();
         }
+
+        Log::info('FreshPay plan callback processed', [
+            'restaurant_payment_id' => $restaurantPayment->id,
+            'reference' => $reference,
+            'transaction_id' => $transactionId,
+            'status' => $restaurantPayment->status,
+            'trans_status' => $transStatus,
+        ]);
 
         return response()->json([
             'status' => 'Callback received',
@@ -232,6 +267,30 @@ class FreshpayController extends Controller
         return in_array($request->ip(), $allowedIps, true);
     }
 
+    private function buildCallbackLogContext(Request $request, ?string $hash = null): array
+    {
+        return [
+            'hash' => $hash,
+            'ip' => $request->ip(),
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'user_agent' => $request->userAgent(),
+            'has_signature' => $request->hasHeader('X-Signature'),
+            'signature_prefix' => $this->maskSignature((string) $request->header('X-Signature', '')),
+            'body' => $request->all(),
+            'raw_body' => $request->getContent(),
+        ];
+    }
+
+    private function maskSignature(string $signature): ?string
+    {
+        if ($signature === '') {
+            return null;
+        }
+
+        return substr($signature, 0, 12) . '...';
+    }
+
     private function decryptPayload(string $encryptedData, string $key): ?array
     {
         $decoded = base64_decode($encryptedData, true);
@@ -273,4 +332,3 @@ class FreshpayController extends Controller
         return ['AES-128-CBC', substr(hash('sha256', $rawKey, true), 0, 16)];
     }
 }
-
