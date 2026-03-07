@@ -69,6 +69,9 @@ class PlanList extends Component
     public $currentCurrencyName;
     public $globalCurrencyName;
     public $freshpayCustomerNumber = '';
+    public $freshpayPendingPaymentId = null;
+    public $freshpayPendingReference = null;
+    public $freshpayAwaitingConfirmation = false;
 
     public function mount()
     {
@@ -154,6 +157,49 @@ class PlanList extends Component
             $this->offlinePaymentGateways == 0 ? $this->handleOnlinePayments() : $this->showPaymentMethodModal = true;
         } else {
             $this->showPaymentMethodModal = true;
+        }
+    }
+
+    public function pollFreshpaySubscriptionStatus()
+    {
+        if (!$this->freshpayAwaitingConfirmation || !$this->freshpayPendingPaymentId) {
+            return;
+        }
+
+        $payment = RestaurantPayment::find($this->freshpayPendingPaymentId);
+
+        if (!$payment) {
+            $this->freshpayAwaitingConfirmation = false;
+            $this->freshpayPendingPaymentId = null;
+            $this->freshpayPendingReference = null;
+            return;
+        }
+
+        if ($payment->status === 'paid') {
+            $this->restaurant = Restaurant::find($this->restaurant->id);
+            $this->stripeSettings = SuperadminPaymentGateway::first();
+            $this->freshpayAwaitingConfirmation = false;
+            $this->freshpayPendingPaymentId = null;
+            $this->freshpayPendingReference = null;
+            $this->showPaymentMethodModal = false;
+            $this->selectedPlan = null;
+
+            $this->alert('success', 'FreshPay payment confirmed. Your subscription has been updated.', [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+            return;
+        }
+
+        if ($payment->status === 'failed') {
+            $this->freshpayAwaitingConfirmation = false;
+            $this->freshpayPendingPaymentId = null;
+            $this->freshpayPendingReference = null;
+
+            $this->alert('error', 'FreshPay payment failed.', [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
         }
     }
 
@@ -1322,7 +1368,9 @@ class PlanList extends Component
             }
 
             if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
-                $this->showPaymentMethodModal = false;
+                $this->freshpayPendingPaymentId = $payment->id;
+                $this->freshpayPendingReference = $reference;
+                $this->freshpayAwaitingConfirmation = true;
                 $this->alert('success', 'FreshPay request submitted. Confirm payment on your phone.', [
                     'toast' => true,
                     'position' => 'top-end',

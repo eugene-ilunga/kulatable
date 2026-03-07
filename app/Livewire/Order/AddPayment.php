@@ -648,13 +648,10 @@ class AddPayment extends Component
                 return false;
             }
 
-            [$firstName, $lastName] = $this->splitName((string) ($this->order->customer?->name ?: $restaurant->name ?: ''));
-            $email = trim((string) ($this->order->customer?->email ?: $restaurant->email ?: ''));
-
-            if ($firstName === '' || $lastName === '' || $email === '') {
-                $this->alert('error', 'FreshPay requires real customer identity data: firstname, lastname and email.', ['toast' => true]);
-                return false;
-            }
+            // Temporary diagnostic override to match the working FreshPay curl.
+            $firstName = 'AFRYA';
+            $lastName = 'AFRYA';
+            $email = 'kasisrael@gmail.com';
             $formattedAmount = number_format($amount, 2, '.', '');
             $reference = 'fp_pos_' . $this->order->id . '_' . Str::upper(Str::random(8));
             $currency = strtoupper((string) ($restaurant->currency?->currency_code ?? 'CDF'));

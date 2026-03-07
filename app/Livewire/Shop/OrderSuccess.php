@@ -15,6 +15,7 @@ class OrderSuccess extends Component
     public $shopBranch;
     public $dateFormat;
     public $timeFormat;
+    public $freshpayConfirmed = false;
 
     public function mount()
     {
@@ -43,5 +44,15 @@ class OrderSuccess extends Component
     public function refreshOrderSuccess()
     {
         $this->dispatch('$refresh');
+    }
+
+    public function pollOrderStatus()
+    {
+        $previousStatus = $this->order->status;
+        $this->order = Order::with('taxes.tax', 'items.menuItem')->where('id', $this->id)->firstOrFail();
+
+        if ($previousStatus === 'pending_verification' && $this->order->status === 'paid') {
+            $this->freshpayConfirmed = true;
+        }
     }
 }
