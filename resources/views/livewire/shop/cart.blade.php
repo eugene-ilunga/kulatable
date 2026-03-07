@@ -1760,6 +1760,18 @@
                                     @lang('modules.billing.freshpay')
                                 </span>
                             </x-secondary-button>
+
+                            <div class="w-full mt-3">
+                                <label for="freshpay_customer_number_cart" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Numero de telephone FreshPay
+                                </label>
+                                <input
+                                    id="freshpay_customer_number_cart"
+                                    type="text"
+                                    wire:model.live="freshpayCustomerNumber"
+                                    placeholder="Ex: 0972148867"
+                                    class="w-full rounded-lg border-gray-300 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200" />
+                            </div>
                         @endif
 
                         @if ($paymentGateway->is_qr_payment_enabled && $paymentGateway->qr_code_image_url)

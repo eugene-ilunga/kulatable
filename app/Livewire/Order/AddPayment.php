@@ -332,6 +332,11 @@ class AddPayment extends Component
     public function setPaymentMethod($method)
     {
         $this->paymentMethod = $method;
+
+        if ($method === 'freshpay' && $this->freshpayCustomerNumber === '') {
+            $this->freshpayCustomerNumber = (string) ($this->order?->customer?->phone ?? '');
+        }
+
         $this->updatedPaymentAmount();
     }
 

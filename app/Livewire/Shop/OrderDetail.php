@@ -50,6 +50,7 @@ class OrderDetail extends Component
     public $flutterwaveStatus;
     public $showPaymentModal = false;
     public $paymentOrder;
+    public $freshpayCustomerNumber = '';
     public $showQrCode = false;
     public $showPaymentDetail = false;
     public $qrCodeImage;
@@ -124,6 +125,7 @@ class OrderDetail extends Component
         $this->customer = $customer;
         $this->orderType = $this->order->order_type;
         $this->paymentOrder = $this->order;
+        $this->freshpayCustomerNumber = (string) ($this->order->customer?->phone ?? '');
 
         $this->paymentGateway = PaymentGatewayCredential::withoutGlobalScopes()->where('restaurant_id', $this->restaurant->id)->first();
         $this->razorpayStatus = (bool)$this->paymentGateway->razorpay_status;
@@ -1990,6 +1992,7 @@ class OrderDetail extends Component
     public function InitializePayment()
     {
         $this->total = floatval($this->paymentOrder->total) - floatval($this->paymentOrder->amount_paid ?: 0);
+        $this->freshpayCustomerNumber = (string) ($this->paymentOrder?->customer?->phone ?? '');
         $this->showPaymentModal = true;
     }
 
@@ -2816,7 +2819,11 @@ class OrderDetail extends Component
                 return redirect()->route('order_success', $order->uuid);
             }
 
-            $phoneNumber = FreshpayNetworkDetector::normalize((string) ($order->customer?->phone ?? ''));
+            $phoneInput = $this->freshpayCustomerNumber !== ''
+                ? $this->freshpayCustomerNumber
+                : (string) ($order->customer?->phone ?? '');
+
+            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
 
             if ($phoneNumber === '') {
                 session()->flash('flash.banner', 'FreshPay exige un numéro de téléphone client.');

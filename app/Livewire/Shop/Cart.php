@@ -98,6 +98,7 @@ class Cart extends Component
     public $orderNumber;
     public $paymentGateway;
     public $paymentOrder;
+    public $freshpayCustomerNumber = '';
     public $showVeg;
     public $razorpayStatus;
     public $stripeStatus;
@@ -2116,6 +2117,7 @@ class Cart extends Component
         if ($pay) {
             $this->showPaymentModal = true;
             $this->paymentOrder = $order;
+            $this->freshpayCustomerNumber = (string) ($order->customer?->phone ?? '');
         } else {
             Order::where('id', $order->id)->update([
                 'status' => 'kot'
@@ -2827,7 +2829,11 @@ class Cart extends Component
                 return redirect()->route('order_success', $order->uuid);
             }
 
-            $phoneNumber = FreshpayNetworkDetector::normalize((string) ($order->customer?->phone ?? ''));
+            $phoneInput = $this->freshpayCustomerNumber !== ''
+                ? $this->freshpayCustomerNumber
+                : (string) ($order->customer?->phone ?? '');
+
+            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
 
             if ($phoneNumber === '') {
                 session()->flash('flash.banner', 'FreshPay exige un numéro de téléphone client.');
