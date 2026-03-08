@@ -43,58 +43,15 @@ class FreshpayPaymentController extends Controller
             return response()->json(['error' => 'Unauthorized IP'], 403);
         }
 
-        $encryptedData = (string) $request->input('data', '');
-        $signature = (string) $request->header('X-Signature', '');
+        $payload = $this->resolveCallbackPayload($request, $paymentGateway, $restaurant->id);
 
-        if ($encryptedData === '' || $signature === '') {
-            Log::warning('FreshPay callback rejected: invalid payload', [
-                'restaurant_id' => $restaurant->id,
-                'has_data' => $encryptedData !== '',
-                'has_signature' => $signature !== '',
-            ]);
-            return response()->json(['error' => 'Invalid callback payload'], 400);
+        if ($payload['response'] !== null) {
+            return $payload['response'];
         }
 
-        $hmacKey = $paymentGateway->freshpay_callback_hmac_key ?: $paymentGateway->freshpay_merchant_secret;
-        $expectedSignature = hash_hmac('sha256', $encryptedData, (string) $hmacKey);
-
-        if (!hash_equals(strtolower($expectedSignature), strtolower($signature))) {
-            Log::warning('FreshPay callback rejected: invalid signature', [
-                'restaurant_id' => $restaurant->id,
-                'ip' => $request->ip(),
-                'received_signature_prefix' => $this->maskSignature($signature),
-                'expected_signature_prefix' => $this->maskSignature($expectedSignature),
-            ]);
-
-            return response()->json(['error' => 'Invalid signature'], 401);
-        }
-
-        Log::info('FreshPay callback signature validated', [
-            'restaurant_id' => $restaurant->id,
-            'ip' => $request->ip(),
-            'data_length' => strlen($encryptedData),
-        ]);
-
-        $decryptedPayload = $this->decryptPayload(
-            $encryptedData,
-            (string) ($paymentGateway->freshpay_callback_secret_key ?: $paymentGateway->freshpay_merchant_secret)
-        );
-
-        if ($decryptedPayload === null || !is_array($decryptedPayload)) {
-            Log::warning('FreshPay callback rejected: invalid encryption', [
-                'restaurant_id' => $restaurant->id,
-                'ip' => $request->ip(),
-            ]);
-            return response()->json(['error' => 'Invalid encryption'], 400);
-        }
-
-        Log::info('FreshPay callback decrypted payload', [
-            'restaurant_id' => $restaurant->id,
-            'payload' => $decryptedPayload,
-        ]);
-
+        $decryptedPayload = $payload['payload'];
         $reference = (string) ($decryptedPayload['Reference'] ?? $decryptedPayload['reference'] ?? '');
-        $transactionId = (string) ($decryptedPayload['Transaction_id'] ?? $decryptedPayload['transaction_id'] ?? '');
+        $transactionId = (string) ($decryptedPayload['PayDRC_Reference'] ?? $decryptedPayload['paydrc_reference'] ?? $decryptedPayload['Transaction_id'] ?? $decryptedPayload['transaction_id'] ?? '');
 
         $freshpayPayment = FreshpayPayment::query()
             ->when($reference !== '' || $transactionId !== '', function ($query) use ($reference, $transactionId) {
@@ -147,7 +104,7 @@ class FreshpayPaymentController extends Controller
             'customer_number' => $decryptedPayload['Customer_Details'] ?? $decryptedPayload['customer_number'] ?? $freshpayPayment->customer_number,
             'financial_institution_id' => $decryptedPayload['Financial_Institution_id'] ?? $decryptedPayload['financial_institution_id'] ?? $freshpayPayment->financial_institution_id,
             'trans_status' => $decryptedPayload['Trans_Status'] ?? $decryptedPayload['trans_status'] ?? $freshpayPayment->trans_status,
-            'trans_status_description' => $decryptedPayload['Trans_Status_Description'] ?? $decryptedPayload['trans_status_description'] ?? $freshpayPayment->trans_status_description,
+            'trans_status_description' => $decryptedPayload['Trans_Status_Description'] ?? $decryptedPayload['trans_status_description'] ?? $decryptedPayload['Status_Description'] ?? $decryptedPayload['status_description'] ?? $freshpayPayment->trans_status_description,
             'payment_error_response' => $decryptedPayload,
             'callback_payload' => $decryptedPayload,
         ]);
@@ -224,6 +181,83 @@ class FreshpayPaymentController extends Controller
         }
 
         return in_array($request->ip(), $allowedIps, true);
+    }
+
+    private function resolveCallbackPayload(Request $request, $paymentGateway, int $restaurantId): array
+    {
+        $encryptedData = (string) $request->input('data', '');
+        $signature = (string) $request->header('X-Signature', '');
+        $rawPayload = $request->all();
+
+        if ($encryptedData !== '' || $signature !== '') {
+            if ($encryptedData === '' || $signature === '') {
+                Log::warning('FreshPay callback rejected: invalid payload', [
+                    'restaurant_id' => $restaurantId,
+                    'has_data' => $encryptedData !== '',
+                    'has_signature' => $signature !== '',
+                ]);
+
+                return ['payload' => null, 'response' => response()->json(['error' => 'Invalid callback payload'], 400)];
+            }
+
+            $hmacKey = $paymentGateway->freshpay_callback_hmac_key ?: $paymentGateway->freshpay_merchant_secret;
+            $expectedSignature = hash_hmac('sha256', $encryptedData, (string) $hmacKey);
+
+            if (!hash_equals(strtolower($expectedSignature), strtolower($signature))) {
+                Log::warning('FreshPay callback rejected: invalid signature', [
+                    'restaurant_id' => $restaurantId,
+                    'ip' => $request->ip(),
+                    'received_signature_prefix' => $this->maskSignature($signature),
+                    'expected_signature_prefix' => $this->maskSignature($expectedSignature),
+                ]);
+
+                return ['payload' => null, 'response' => response()->json(['error' => 'Invalid signature'], 401)];
+            }
+
+            Log::info('FreshPay callback signature validated', [
+                'restaurant_id' => $restaurantId,
+                'ip' => $request->ip(),
+                'data_length' => strlen($encryptedData),
+            ]);
+
+            $decryptedPayload = $this->decryptPayload(
+                $encryptedData,
+                (string) ($paymentGateway->freshpay_callback_secret_key ?: $paymentGateway->freshpay_merchant_secret)
+            );
+
+            if ($decryptedPayload === null || !is_array($decryptedPayload)) {
+                Log::warning('FreshPay callback rejected: invalid encryption', [
+                    'restaurant_id' => $restaurantId,
+                    'ip' => $request->ip(),
+                ]);
+
+                return ['payload' => null, 'response' => response()->json(['error' => 'Invalid encryption'], 400)];
+            }
+
+            Log::info('FreshPay callback decrypted payload', [
+                'restaurant_id' => $restaurantId,
+                'payload' => $decryptedPayload,
+            ]);
+
+            return ['payload' => $decryptedPayload, 'response' => null];
+        }
+
+        if (empty($rawPayload)) {
+            Log::warning('FreshPay callback rejected: invalid payload', [
+                'restaurant_id' => $restaurantId,
+                'has_data' => false,
+                'has_signature' => false,
+            ]);
+
+            return ['payload' => null, 'response' => response()->json(['error' => 'Invalid callback payload'], 400)];
+        }
+
+        Log::info('FreshPay callback accepted in plain JSON mode', [
+            'restaurant_id' => $restaurantId,
+            'payload' => $rawPayload,
+        ]);
+
+        return ['payload' => $rawPayload, 'response' => null];
     }
 
     private function buildCallbackLogContext(Request $request, ?string $hash = null): array
