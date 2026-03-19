@@ -321,7 +321,7 @@ class NewReservation extends Component
             $parsedDate = Carbon::parse($this->date, $currentTimezone);
         }
         $dbDate = $parsedDate->format('Y-m-d');
-        Reservation::create([
+        $reservation = Reservation::create([
             'reservation_date_time' => $dbDate . ' ' . $this->availableTimeSlots,
             'customer_id' => $customer->id,
             'party_size' => $this->numberOfGuests,
