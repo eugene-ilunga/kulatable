@@ -12,8 +12,8 @@
                     </p>
                 </div>
 
-                <article class="px-6 sm:px-10 py-8 space-y-10 text-gray-700 dark:text-gray-300 leading-relaxed">
-                    <section class="space-y-4">
+                <article class="px-6 sm:px-10 py-8 space-y-12 text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Editeur du site</h2>
                         <p>
                             Le site Kulatable est edite par une societe specialisee dans le developpement et l'exploitation
@@ -62,7 +62,7 @@
                         </div>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Hebergement du site</h2>
                         <p>
                             Le site Kulatable est heberge par un prestataire technique specialise dans l'hebergement securise
@@ -80,7 +80,7 @@
                         </p>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Objet du site</h2>
                         <p>
                             Le site Kulatable a pour objet de presenter et de fournir une plateforme numerique permettant aux
@@ -96,7 +96,7 @@
                         </ul>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Propriete intellectuelle</h2>
                         <p>L'ensemble des contenus presents sur le site Kulatable, incluant notamment :</p>
                         <ul class="list-disc list-inside space-y-1">
@@ -123,7 +123,7 @@
                         </p>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Responsabilite</h2>
                         <p>
                             Kulatable met tout en oeuvre afin d'assurer l'exactitude et la mise a jour des informations
@@ -144,7 +144,7 @@
                         </ul>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Protection des donnees</h2>
                         <p>
                             Kulatable attache une importance particuliere a la protection des donnees personnelles des
@@ -166,7 +166,7 @@
                         </p>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Droit applicable</h2>
                         <p>
                             Les presentes mentions legales sont regies par le droit applicable en Republique Democratique du
@@ -178,7 +178,7 @@
                         </p>
                     </section>
 
-                    <section class="space-y-4">
+                    <section class="space-y-4 pt-2 first:pt-0">
                         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Contact</h2>
                         <p>
                             Pour toute question relative aux presentes mentions legales ou au fonctionnement du site, les
