@@ -39,26 +39,16 @@ document.addEventListener('livewire:load', () => {
 
 
 function initializeThemeToggle() {
-  document.documentElement.classList.remove('dark');
-  localStorage.setItem('color-theme', 'light');
-  return; // stop ici
-}
-
-/*/ Initialize theme toggle safely and idempotently
-function initializeThemeToggle() {
     const themeToggleBtn = document.getElementById("theme-toggle");
     const themeToggleDarkIcon = document.getElementById("theme-toggle-dark-icon");
     const themeToggleLightIcon = document.getElementById("theme-toggle-light-icon");
 
-    // Ensure html has correct theme class before manipulating icons
-    if (localStorage.getItem('color-theme') === 'dark' ||
-        (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    // Keep light as default unless user explicitly chose dark previously.
+    if (localStorage.getItem('color-theme') === 'dark') {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
     }
-   document.documentElement.classList.remove('dark');
-localStorage.setItem('color-theme', 'light');
 
     // If required elements aren't present yet, do nothing
     if (!themeToggleBtn || !themeToggleDarkIcon || !themeToggleLightIcon) {
@@ -113,7 +103,7 @@ localStorage.setItem('color-theme', 'light');
         document.dispatchEvent(event);
     });
 }
-*/
+
 // Observe for the theme toggle button being (re)inserted by Livewire and init once
 function observeThemeToggleMount() {
     // Initialize now if present
