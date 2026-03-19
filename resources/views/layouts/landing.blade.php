@@ -95,6 +95,11 @@
                                     class="block py-2 pr-4 pl-3 text-gray-700 rounded dark:text-white">@lang('landing.pricing')</a>
                             </li>
 
+                            <li>
+                                <a href="{{ route('legal.notice') }}" wire:navigate
+                                    class="block py-2 pr-4 pl-3 text-gray-700 rounded dark:text-white">Mentions legales</a>
+                            </li>
+
                             @php
                                 $customMenu = App\Models\CustomMenu::orderBy('sort_order')->get();
                             @endphp
@@ -223,6 +228,15 @@
                                     aria-current="page">@lang('landing.faq')</a>
                             </li>
 
+                            <li>
+                                <a href="{{ route('legal.notice') }}" wire:navigate @class([
+                                    'transition-all duration-300 block py-2 pr-4 pl-3 rounded lg:bg-transparent lg:p-0',
+                                    'dark:text-white text-gray-700' => !request()->routeIs(['legal.notice']),
+                                    'dark:text-skin-base text-skin-base' => request()->routeIs(['legal.notice']),
+                                ])
+                                    aria-current="page">Mentions legales</a>
+                            </li>
+
                             @foreach ($customMenu as $menu)
                                 @if ($menu->is_active && $menu->position == 'header')
                                     <li>
@@ -258,6 +272,17 @@
                         href="" class="hover:underline">{{ global_setting()->name }}</a>. @lang('landing.rightsReserved')
                 </span>
                 <ul class="flex flex-col mt-4 font-medium lg:flex-row lg:space-x-8 lg:mt-0 rtl:space-x-reverse">
+                    <li>
+                        <a href="{{ route('legal.notice') }}" wire:navigate @class([
+                            'transition-all duration-300 block py-2 pr-4 pl-3 rounded lg:bg-transparent lg:p-0',
+                            'dark:text-white text-gray-700' => !request()->routeIs(['legal.notice']),
+                            'dark:text-skin-base text-skin-base' => request()->routeIs(['legal.notice']),
+                        ])
+                            aria-current="page">
+                            Mentions legales
+                        </a>
+                    </li>
+
                     @foreach ($customMenu as $menu)
                         @if ($menu->is_active && $menu->position == 'footer')
                             <li>
