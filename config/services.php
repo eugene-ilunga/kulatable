@@ -46,4 +46,13 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o'),
     ],
 
+    'freshpay' => [
+        'allowed_ips' => env('FRESHPAY_ALLOWED_IPS', ''),
+        'network_prefixes' => [
+            'airtel' => array_filter(array_map('trim', explode(',', env('FRESHPAY_AIRTEL_PREFIXES', '097,098,099,090')))),
+            'orange' => array_filter(array_map('trim', explode(',', env('FRESHPAY_ORANGE_PREFIXES', '089')))),
+            'mpesa' => array_filter(array_map('trim', explode(',', env('FRESHPAY_MPESA_PREFIXES', '081,082,084,085')))),
+        ],
+    ],
+
 ];

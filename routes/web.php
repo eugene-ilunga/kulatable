@@ -62,6 +62,7 @@ use App\Http\Controllers\RestaurantSettingController;
 use App\Http\Controllers\SuperAdmin\MollieController;
 use App\Http\Controllers\SuperAdmin\PaypalController;
 use App\Http\Controllers\SuperAdmin\XenditController;
+use App\Http\Controllers\SuperAdmin\FreshpayController as SuperAdminFreshpayController;
 use App\Http\Controllers\SuperadminSettingController;
 use App\Http\Controllers\FlutterwavePaymentController;
 use App\Http\Controllers\SuperAdmin\PayfastController;
@@ -325,6 +326,9 @@ Route::match(["get", "post"], "/xendit/subscription/failed", [XenditController::
 
 // Xendit Webhook Routes
 Route::post('/webhook/save-xendit-webhook/{hash}', [XenditWebhookController::class, 'handleSubscriptionWebhook'])->name('billing.save-xendit-webhook');
+
+// FreshPay Subscription Webhook Route
+Route::match(['get', 'post'], '/webhook/save-freshpay-webhook/{hash?}', [SuperAdminFreshpayController::class, 'webhook'])->name('billing.save-freshpay-webhook');
 
 // Tap Plan Payment Routes
 Route::post('/tap/initiate-payment', [TapController::class, 'initiatePayment'])->name('tap.initiate-payment');

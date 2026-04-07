@@ -205,6 +205,9 @@
                         @case('authorize')
                             @include('plans.authorize-payment-method-form')
                             @break
+                        @case('freshpay')
+                            @include('plans.freshpay-payment-method-form')
+                            @break
                         @default
                             <!-- Default case if no match -->
                             <p>@lang('modules.billing.noPaymentMethodSelected')</p>
@@ -226,7 +229,11 @@
                     @lang('app.cancel')
                 </x-secondary-button>
 
-                @if($offlineMethodId)
+                @if($show === 'freshpay' && !$freshpayPendingPaymentId)
+                <x-button class="order-1 w-full sm:w-auto sm:order-2 sm:ml-3" wire:click="submitFreshpayPayment" wire:loading.attr="disabled">
+                    @lang('modules.billing.payWithFreshpay')
+                </x-button>
+                @elseif($offlineMethodId)
                 <x-button class="order-1 w-full sm:w-auto sm:order-2 sm:ml-3" wire:click="{{ $show === 'authorize' ? 'offlinePaymentSubmit' : 'switchPaymentMethod(\'authorize\')' }}" wire:loading.attr="disabled">
                     @lang($show === 'authorize' ? 'app.save' : 'app.select')
                 </x-button>
@@ -507,5 +514,4 @@
     @endif
 
 </div>
-
 

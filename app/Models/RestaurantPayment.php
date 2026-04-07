@@ -17,6 +17,9 @@ class RestaurantPayment extends BaseModel
 
     protected $casts = [
         'payment_date_time' => 'datetime',
+        'freshpay_request_payload' => 'array',
+        'freshpay_response_payload' => 'array',
+        'freshpay_callback_payload' => 'array',
     ];
 
     public function restaurant(): BelongsTo

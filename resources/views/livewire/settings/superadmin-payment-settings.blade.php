@@ -104,6 +104,16 @@
                     </span>
                 </li>
 
+                <li wire:click="activeSetting('freshpay')" class="me-2">
+                    <span @class(["inline-flex items-center gap-x-1 cursor-pointer select-none p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300", 'border-transparent' => ($activePaymentSetting != 'freshpay'), 'active border-skin-base dark:text-skin-base dark:border-skin-base text-skin-base' => ($activePaymentSetting == 'freshpay')])>
+                        <svg class="w-4 h-4 mr-2 text-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 7h16M4 12h10M4 17h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        @lang('modules.billing.freshpay')
+                        <span @class(['flex w-3 h-3 me-3 rounded-full','bg-green-500' => $freshpayStatus, 'bg-red-500' => !$freshpayStatus ])></span>
+                    </span>
+                </li>
+
                 <!-- Offline Payment -->
                 <li wire:click="activeSetting('offline_payment_method')" class="me-2">
                     <span @class(["inline-flex items-center gap-x-2 cursor-pointer select-none p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300", 'border-transparent' => ($activePaymentSetting != 'offline_payment_method'), 'active border-skin-base dark:text-skin-base dark:border-skin-base text-skin-base' => ($activePaymentSetting == 'offline_payment_method')])>
@@ -1010,6 +1020,105 @@
                             </div>
                         </div>
 
+                    @endif
+
+                    <div>
+                        <x-button>@lang('app.save')</x-button>
+                    </div>
+                </div>
+            </form>
+        @endif
+
+        @if($activePaymentSetting == 'freshpay')
+            <form wire:submit="submitFormFreshpay">
+                <div class="grid gap-6">
+                    <div class="my-3">
+                        <x-label for="freshpayStatus">
+                            <div class="flex items-center cursor-pointer">
+                                <x-checkbox name="freshpayStatus" id="freshpayStatus" wire:model.live='freshpayStatus'/>
+
+                                <div class="ms-2">
+                                    @lang('modules.settings.enableFreshpay')
+                                </div>
+                            </div>
+                        </x-label>
+                    </div>
+
+                    @if ($freshpayStatus)
+                        <div>
+                            <x-label for="freshpayMode" :value="__('modules.settings.selectEnvironment')" required/>
+                            <x-select id="freshpayMode" class="block w-full mt-1" wire:model.live="freshpayMode">
+                                <option value="test">@lang('app.test')</option>
+                                <option value="live">@lang('app.live')</option>
+                            </x-select>
+                            <x-input-error for="freshpayMode" class="mt-2"/>
+                        </div>
+
+                        <div>
+                            <x-label for="freshpayApiUrl" :value="__('modules.settings.freshpayApiUrl')" required/>
+                            <x-input id="freshpayApiUrl" class="block w-full mt-1" type="url" wire:model='freshpayApiUrl'/>
+                            <x-input-error for="freshpayApiUrl" class="mt-2"/>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <x-label for="freshpayMerchantId" :value="__('modules.settings.freshpayMerchantId')" required/>
+                                <x-input id="freshpayMerchantId" class="block w-full mt-1" type="text" wire:model='freshpayMerchantId'/>
+                                <x-input-error for="freshpayMerchantId" class="mt-2"/>
+                            </div>
+
+                            <div>
+                                <x-label for="freshpayMerchantSecret" :value="__('modules.settings.freshpayMerchantSecret')" required/>
+                                <x-input-password id="freshpayMerchantSecret" class="block w-full mt-1" type="text" wire:model='freshpayMerchantSecret'/>
+                                <x-input-error for="freshpayMerchantSecret" class="mt-2"/>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div>
+                                <x-label for="freshpayFirstname" :value="__('modules.settings.freshpayFirstname')" required/>
+                                <x-input id="freshpayFirstname" class="block w-full mt-1" type="text" wire:model='freshpayFirstname'/>
+                                <x-input-error for="freshpayFirstname" class="mt-2"/>
+                            </div>
+
+                            <div>
+                                <x-label for="freshpayLastname" :value="__('modules.settings.freshpayLastname')" required/>
+                                <x-input id="freshpayLastname" class="block w-full mt-1" type="text" wire:model='freshpayLastname'/>
+                                <x-input-error for="freshpayLastname" class="mt-2"/>
+                            </div>
+
+                            <div>
+                                <x-label for="freshpayEmail" :value="__('modules.settings.freshpayEmail')" required/>
+                                <x-input id="freshpayEmail" class="block w-full mt-1" type="email" wire:model='freshpayEmail'/>
+                                <x-input-error for="freshpayEmail" class="mt-2"/>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <x-label for="freshpayCallbackSecretKey" :value="__('modules.settings.freshpayCallbackSecretKey')"/>
+                                <x-input-password id="freshpayCallbackSecretKey" class="block w-full mt-1" type="text" wire:model='freshpayCallbackSecretKey'/>
+                                <x-input-error for="freshpayCallbackSecretKey" class="mt-2"/>
+                            </div>
+
+                            <div>
+                                <x-label for="freshpayCallbackHmacKey" :value="__('modules.settings.freshpayCallbackHmacKey')"/>
+                                <x-input-password id="freshpayCallbackHmacKey" class="block w-full mt-1" type="text" wire:model='freshpayCallbackHmacKey'/>
+                                <x-input-error for="freshpayCallbackHmacKey" class="mt-2"/>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <x-label :value="__('modules.settings.webhookUrl')" class="mb-1"/>
+                            <div class="flex items-center">
+                                <span class="relative px-1 py-1 font-medium transition duration-300 bg-gray-100 rounded cursor-pointer purchase-code dark:text-white group" id="webhook-url-freshpay">
+                                    {{$webhookUrl}}
+                                </span>
+                                <button id="copy-button" type="button" onclick="copyWebhookUrl('webhook-url-freshpay')" class="px-3 py-2 ml-2 text-white bg-gray-800 rounded-lg hover:bg-gray-700">
+                                    @lang('modules.settings.copyWebhookUrl')
+                                </button>
+                            </div>
+                        </div>
                     @endif
 
                     <div>

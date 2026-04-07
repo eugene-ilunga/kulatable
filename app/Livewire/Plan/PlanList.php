@@ -20,6 +20,7 @@ use App\Models\GlobalCurrency;
 use App\Scopes\RestaurantScope;
 use App\Models\OfflinePlanChange;
 use App\Models\RestaurantPayment;
+use App\Services\Freshpay\FreshpaySubscriptionService;
 use App\Models\GlobalSubscription;
 use Illuminate\Support\Facades\DB;
 use App\Models\OfflinePaymentMethod;
@@ -67,6 +68,10 @@ class PlanList extends Component
     public $selectedCurrencyCode;
     public $currentCurrencyName;
     public $globalCurrencyName;
+    public $freshpayCustomerNumber;
+    public $freshpayMethod;
+    public $freshpayPendingPaymentId;
+    public $freshpayPendingReference;
 
     public function mount()
     {
@@ -89,6 +94,7 @@ class PlanList extends Component
             $this->stripeSettings->xendit_status,
             $this->stripeSettings->paddle_status,
             $this->stripeSettings->tap_status ?? false,
+            $this->stripeSettings->freshpay_status ?? false,
         ])) {
             $this->paymentGatewayActive = true;
         }
@@ -129,6 +135,7 @@ class PlanList extends Component
     {
         $this->resetValidation();
         $this->reset(['show', 'offlineMethodId', 'offlineUploadFile', 'offlineDescription']);
+        $this->resetFreshpayState();
 
         $this->selectedPlan = Package::findOrFail($id);
         $this->stripeSettings = SuperadminPaymentGateway::first();
@@ -167,6 +174,7 @@ class PlanList extends Component
             'paddle' => $this->stripeSettings->paddle_status,
             'mollie' => $this->stripeSettings->mollie_status,
             'tap' => $this->stripeSettings->tap_status ?? false,
+            'freshpay' => $this->stripeSettings->freshpay_status ?? false,
 
 
         ])->filter();
@@ -189,8 +197,17 @@ class PlanList extends Component
             'paddle' => $this->initiatePaddlePayment(),
             'mollie' => $this->initiateMolliePayment(),
             'tap' => $this->initiateTapPayment(),
+            'freshpay' => $this->openFreshpayPaymentMethod(),
             default => $this->showPaymentMethodModal = true,
         };
+    }
+
+    public function openFreshpayPaymentMethod()
+    {
+        $this->resetValidation();
+        $this->resetFreshpayState();
+        $this->show = 'freshpay';
+        $this->showPaymentMethodModal = true;
     }
 
     // Offline Payment Submit
@@ -776,6 +793,113 @@ class PlanList extends Component
         }
     }
 
+    public function submitFreshpayPayment()
+    {
+        $this->validate([
+            'freshpayCustomerNumber' => 'required|string|min:8|max:20',
+            'freshpayMethod' => 'required|in:airtel,orange,mpesa',
+        ]);
+
+        $plan = Package::with('currency')->find($this->selectedPlan->id);
+
+        if (!$plan) {
+            $this->alert('error', __('messages.noPlanIdFound'));
+            return;
+        }
+
+        $type = $this->resolvePackageType($plan);
+        $currencyId = $plan->currency_id;
+        $amount = $this->resolvePlanAmount($plan);
+
+        if (!$amount) {
+            $this->alert('error', __('messages.noPlanIdFound'));
+            return;
+        }
+
+        $payment = RestaurantPayment::create([
+            'restaurant_id' => $this->restaurant->id,
+            'amount' => $amount,
+            'package_id' => $plan->id,
+            'package_type' => $type,
+            'currency_id' => $currencyId,
+        ]);
+
+        try {
+            $payment = app(FreshpaySubscriptionService::class)->initiate(
+                $this->stripeSettings,
+                $payment,
+                $plan,
+                preg_replace('/\s+/', '', (string) $this->freshpayCustomerNumber),
+                $this->freshpayMethod
+            );
+
+            $this->freshpayPendingPaymentId = $payment->id;
+            $this->freshpayPendingReference = $payment->reference_id;
+
+            $this->alert('success', __('messages.freshpayPaymentRequestSent'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+        } catch (\Throwable $e) {
+            $payment->update([
+                'status' => 'failed',
+                'payment_date_time' => now(),
+                'freshpay_status_description' => $e->getMessage(),
+            ]);
+
+            $this->alert('error', $e->getMessage() ?: __('messages.freshpayPaymentRequestFailed'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+        }
+    }
+
+    public function refreshFreshpayPaymentStatus()
+    {
+        if (!$this->freshpayPendingPaymentId) {
+            return;
+        }
+
+        $payment = RestaurantPayment::where('id', $this->freshpayPendingPaymentId)
+            ->where('restaurant_id', $this->restaurant->id)
+            ->first();
+
+        if (!$payment) {
+            $this->resetFreshpayState();
+            return;
+        }
+
+        if ($payment->status === 'paid') {
+            session()->forget('restaurant');
+            $this->showPaymentMethodModal = false;
+            $this->resetFreshpayState();
+
+            request()->session()->flash('flash.banner', __('messages.planUpgraded'));
+            request()->session()->flash('flash.bannerStyle', 'success');
+            request()->session()->flash('flash.link', route('settings.index', ['tab' => 'billing']));
+
+            $this->redirect(route('dashboard'), navigate: true);
+            return;
+        }
+
+        if ($payment->status === 'failed') {
+            $message = $payment->freshpay_status_description ?: __('messages.freshpayPaymentFailed');
+
+            $this->resetFreshpayState();
+
+            $this->alert('error', $message, [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+        }
+    }
+
 
     public function initiatePaypalPayment()
     {
@@ -1205,6 +1329,32 @@ class PlanList extends Component
         $restaurant->save();
 
         return $customer->id;
+    }
+
+    private function resolvePackageType(Package $plan): string
+    {
+        return $plan->package_type === PackageType::LIFETIME
+            ? 'lifetime'
+            : ($this->isAnnual ? 'annual' : 'monthly');
+    }
+
+    private function resolvePlanAmount(Package $plan): ?float
+    {
+        if ($plan->package_type === PackageType::LIFETIME) {
+            return (float) $plan->price;
+        }
+
+        return (float) ($this->isAnnual ? $plan->annual_price : $plan->monthly_price);
+    }
+
+    private function resetFreshpayState(): void
+    {
+        $this->reset([
+            'freshpayCustomerNumber',
+            'freshpayMethod',
+            'freshpayPendingPaymentId',
+            'freshpayPendingReference',
+        ]);
     }
 
     public function render()

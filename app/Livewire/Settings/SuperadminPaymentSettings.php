@@ -104,6 +104,18 @@ class SuperadminPaymentSettings extends Component
     public $testTapSecretKey;
     public $testTapPublicKey;
 
+    // FreshPay properties
+    public $freshpayStatus;
+    public $freshpayMode;
+    public $freshpayApiUrl;
+    public $freshpayMerchantId;
+    public $freshpayMerchantSecret;
+    public $freshpayFirstname;
+    public $freshpayLastname;
+    public $freshpayEmail;
+    public $freshpayCallbackSecretKey;
+    public $freshpayCallbackHmacKey;
+
     public function mount()
     {
         $this->paymentGateway = SuperadminPaymentGateway::first();
@@ -214,6 +226,18 @@ class SuperadminPaymentSettings extends Component
         $this->testTapSecretKey = $this->paymentGateway->test_tap_secret_key ?? null;
         $this->testTapPublicKey = $this->paymentGateway->test_tap_public_key ?? null;
 
+        // FreshPay credentials
+        $this->freshpayStatus = (bool) ($this->paymentGateway->freshpay_status ?? false);
+        $this->freshpayMode = $this->paymentGateway->freshpay_mode ?? 'test';
+        $this->freshpayApiUrl = $this->paymentGateway->freshpay_api_url ?? null;
+        $this->freshpayMerchantId = $this->paymentGateway->freshpay_merchant_id ?? null;
+        $this->freshpayMerchantSecret = $this->paymentGateway->freshpay_merchant_secret ?? null;
+        $this->freshpayFirstname = $this->paymentGateway->freshpay_firstname ?? null;
+        $this->freshpayLastname = $this->paymentGateway->freshpay_lastname ?? null;
+        $this->freshpayEmail = $this->paymentGateway->freshpay_email ?? null;
+        $this->freshpayCallbackSecretKey = $this->paymentGateway->freshpay_callback_secret_key ?? null;
+        $this->freshpayCallbackHmacKey = $this->paymentGateway->freshpay_callback_hmac_key ?? null;
+
         if ($this->activePaymentSetting === 'stripe') {
             $this->webhookUrl = route('billing.verify-webhook', ['hash' => $hash]);
         }
@@ -249,6 +273,11 @@ class SuperadminPaymentSettings extends Component
         if ($this->activePaymentSetting === 'tap') {
             $hash = global_setting()->hash;
             // $this->webhookUrl = route('billing.save-tap-webhook', ['hash' => $hash]);
+        }
+
+        if ($this->activePaymentSetting === 'freshpay') {
+            $hash = global_setting()->hash;
+            $this->webhookUrl = route('billing.save-freshpay-webhook', ['hash' => $hash]);
         }
 
 
@@ -830,6 +859,45 @@ class SuperadminPaymentSettings extends Component
     public function render()
     {
         return view('livewire.settings.superadmin-payment-settings');
+    }
+
+    public function submitFormFreshpay()
+    {
+        if ($this->freshpayStatus) {
+            $this->validate([
+                'freshpayMode' => 'required|in:test,live',
+                'freshpayApiUrl' => 'required|url',
+                'freshpayMerchantId' => 'required|string',
+                'freshpayMerchantSecret' => 'required|string',
+                'freshpayFirstname' => 'required|string',
+                'freshpayLastname' => 'required|string',
+                'freshpayEmail' => 'required|email',
+            ]);
+        }
+
+        $this->paymentGateway->update([
+            'freshpay_status' => $this->freshpayStatus,
+            'freshpay_mode' => $this->freshpayMode ?: 'test',
+            'freshpay_api_url' => $this->freshpayApiUrl,
+            'freshpay_merchant_id' => $this->freshpayMerchantId,
+            'freshpay_merchant_secret' => $this->freshpayMerchantSecret,
+            'freshpay_firstname' => $this->freshpayFirstname,
+            'freshpay_lastname' => $this->freshpayLastname,
+            'freshpay_email' => $this->freshpayEmail,
+            'freshpay_callback_secret_key' => $this->freshpayCallbackSecretKey,
+            'freshpay_callback_hmac_key' => $this->freshpayCallbackHmacKey,
+        ]);
+
+        $this->paymentGateway->fresh();
+        $this->dispatch('settingsUpdated');
+        cache()->forget('superadminPaymentGateway');
+
+        $this->alert('success', __('messages.settingsUpdated'), [
+            'toast' => true,
+            'position' => 'top-end',
+            'showCancelButton' => false,
+            'cancelButtonText' => __('app.close')
+        ]);
     }
 
     public function submitFormTap()

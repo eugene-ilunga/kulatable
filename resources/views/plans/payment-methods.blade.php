@@ -82,6 +82,15 @@
                 </button>
             @endif
 
+            @if($stripeSettings->freshpay_status === 1)
+                <button wire:click="openFreshpayPaymentMethod" class="flex items-center w-full px-4 py-3 border rounded btn-light hover:shadow hover:bg-indigo-50 dark:hover:bg-gray-500 f-15 btn">
+                    <svg class="w-4 h-4 mr-2 text-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 7h16M4 12h10M4 17h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    @lang('modules.billing.freshpay')
+                </button>
+            @endif
+
 
             @if($offlinePaymentGateways > 0)
                 <button wire:click="togglePaymentOptions('0')" class="flex items-center w-full px-4 py-3 border rounded btn-light hover:shadow hover:bg-indigo-50 dark:hover:bg-gray-500 f-15 btn gap-x-1">
