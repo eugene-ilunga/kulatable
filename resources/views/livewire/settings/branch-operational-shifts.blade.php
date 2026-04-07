@@ -23,95 +23,76 @@
 
         <!-- Shifts List -->
         <div class="mb-6">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <h4 class="text-lg font-medium dark:text-white">
                     @lang('modules.settings.shiftsForBranch', ['branch' => $branchName])
                 </h4>
-                <div class="flex items-center gap-3">
-                    <!-- Business Day Info -->
+                <div class="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+                    <!-- Business Day Information Alert (Inline) - Only show if today is selected -->
                     @if(count($shifts) > 0 && $businessDayInfo)
-                    <div class="relative inline-block" x-data="{ showTooltip: false }">
-                        @if($businessDayInfo['extends_to_next_day'])
-                        <div
-                            class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-help whitespace-nowrap"
-                            @mouseenter="showTooltip = true"
-                            @mouseleave="showTooltip = false"
-                        >
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
-                                    @lang('modules.settings.businessDayInfo')
-                                </span>
-                            </div>
-                            <!-- Hover Tooltip -->
+                        <div class="relative inline-block" x-data="{ showTooltip: false }">
+                            @if($businessDayInfo['extends_to_next_day'])
                             <div
-                                x-show="showTooltip"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0"
-                                x-transition:enter-end="opacity-100"
-                                x-transition:leave="transition ease-in duration-150"
-                                x-transition:leave-start="opacity-100"
-                                x-transition:leave-end="opacity-0"
-                                class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                                style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                                x-cloak
+                                class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-help whitespace-nowrap"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
                             >
-                                <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                    <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                    <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
-                                        @lang('app.to') {{ $businessDayInfo['end'] }}
-                                        (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
-                                    </p>
-                                    <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayExtendsInfo')
-                                    </p>
+                            @else
+                            <div
+                                class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/20 dark:border-gray-800 cursor-help whitespace-nowrap"
+                                @mouseenter="showTooltip = true"
+                                @mouseleave="showTooltip = false"
+                            >
+                            @endif
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
+                                        @lang('modules.settings.businessDayInfo')
+                                    </span>
                                 </div>
-                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                <!-- Hover Tooltip -->
+                                <div
+                                    x-show="showTooltip"
+                                    x-transition:enter="transition ease-out duration-200"
+                                    x-transition:enter-start="opacity-0"
+                                    x-transition:enter-end="opacity-100"
+                                    x-transition:leave="transition ease-in duration-150"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
+                                    style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
+                                    x-cloak
+                                >
+                                    <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
+                                        <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
+                                        <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                            @if($businessDayInfo['extends_to_next_day'])
+                                            @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                                            @lang('app.to') {{ $businessDayInfo['end'] }}
+                                            (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
+                                            @else
+                                            @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                                            @if($businessDayInfo['start'] != $businessDayInfo['end'])
+                                                @lang('app.to') {{ $businessDayInfo['end'] }}
+                                            @endif
+                                            @endif
+                                        </p>
+                                        <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                            @lang('modules.settings.businessDayExtendsInfo')
+                                        </p>
+                                    </div>
+                                    @if($businessDayInfo['extends_to_next_day'])
+                                    <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                    @else
+                                    <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                        @else
-                        <div
-                            class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 cursor-help whitespace-nowrap"
-                            @mouseenter="showTooltip = true"
-                            @mouseleave="showTooltip = false"
-                        >
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-gray-600 dark:text-gray-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <span class="text-xs font-medium text-gray-900 dark:text-gray-200">
-                                    @lang('modules.settings.businessDayInfo')
-                                </span>
-                            </div>
-                            <!-- Hover Tooltip -->
-                            <div
-                                x-show="showTooltip"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0"
-                                x-transition:enter-end="opacity-100"
-                                x-transition:leave="transition ease-in duration-150"
-                                x-transition:leave-start="opacity-100"
-                                x-transition:leave-end="opacity-0"
-                                class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                                style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                            >
-                                <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                    <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                    <p class="leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
-                                        @lang('app.to') {{ $businessDayInfo['end'] }}
-                                    </p>
-                                </div>
-                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
-                            </div>
-                        </div>
-                        @endif
-                    </div>
                     @endif
-                    <x-button type="button" wire:click="openAddModal" class="inline-flex items-center whitespace-nowrap min-w-[140px]">
+                    <x-button type="button" wire:click="openAddModal" class="inline-flex w-full items-center justify-center whitespace-nowrap sm:w-auto sm:min-w-[140px]">
                         <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -162,15 +143,11 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                {{ \Carbon\Carbon::parse($shift['start_time'])->format(restaurant()->time_format ?? 'h:i A') }}
+                                {{ $shift['start_time_display'] ?? $shift['start_time_local'] ?? $shift['start_time'] }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                {{ \Carbon\Carbon::parse($shift['end_time'])->format(restaurant()->time_format ?? 'h:i A') }}
-                                @php
-                                    $startTime = \Carbon\Carbon::parse($shift['start_time']);
-                                    $endTime = \Carbon\Carbon::parse($shift['end_time']);
-                                @endphp
-                                @if($endTime->lessThan($startTime))
+                                {{ $shift['end_time_display'] ?? $shift['end_time_local'] ?? $shift['end_time'] }}
+                                @if($shift['is_overnight_local'] ?? false)
                                     <span class="text-xs text-gray-500 dark:text-gray-400">(@lang('modules.settings.nextDay'))</span>
                                 @endif
                             </td>
@@ -273,7 +250,7 @@
                     <div>
                         <x-label for="startTime" value="{{ __('modules.settings.startTime') }}" />
                         <div>
-                            <x-time-picker wire:model.live="startTime" value="{{ $startTime }}" />
+                            <x-time-picker wire:model.live="startTime" value="{{ $startTime }}" :restaurant="$branch->restaurant" />
                         </div>
                         <x-input-error for="startTime" class="mt-2" />
                     </div>
@@ -287,11 +264,7 @@
                     </div>
                 </div>
 
-                @php
-                    $startTimeObj = \Carbon\Carbon::parse($startTime);
-                    $endTimeObj = \Carbon\Carbon::parse($endTime);
-                    $isOvernight = $endTimeObj->lessThan($startTimeObj);
-                @endphp
+                @php($isOvernight = $endTime < $startTime)
                 @if($isOvernight)
                 <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-800">
                     <p class="text-sm text-yellow-800 dark:text-yellow-200">

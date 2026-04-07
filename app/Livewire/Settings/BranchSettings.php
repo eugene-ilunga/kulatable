@@ -19,6 +19,8 @@ class BranchSettings extends Component
     // Form fields
     public $branchName;
     public $branchAddress;
+    public $branchCrNumber;
+    public $branchVatNumber;
     public $branchLat = '26.9125';
     public $branchLng = '75.7875';
     public $isEditing = false;
@@ -47,6 +49,8 @@ class BranchSettings extends Component
     {
         $this->branchName = '';
         $this->branchAddress = '';
+        $this->branchCrNumber = '';
+        $this->branchVatNumber = '';
         $this->branchLat = '26.9125';
         $this->branchLng = '75.7875';
         $this->activeBranchId = null;
@@ -115,6 +119,8 @@ class BranchSettings extends Component
         $this->activeBranch = $branch;
         $this->branchName = $branch->name;
         $this->branchAddress = $branch->address;
+        $this->branchCrNumber = $branch->cr_number ?? '';
+        $this->branchVatNumber = $branch->vat_number ?? '';
         $this->branchLat = $branch->lat ?? '26.9125';
         $this->branchLng = $branch->lng ?? '75.7875';
         $this->formMode = 'edit';
@@ -199,6 +205,8 @@ class BranchSettings extends Component
                 'name'          => $this->branchName,
                 'restaurant_id' => restaurant()->id,
                 'address'       => $this->branchAddress,
+                'cr_number'     => $this->branchCrNumber ?: null,
+                'vat_number'    => $this->branchVatNumber ?: null,
                 'lat'           => $this->branchLat,
                 'lng'           => $this->branchLng,
                 'cloned_branch_name' => $this->cloneData ? Branch::find($this->cloneData)->name : null,
@@ -252,6 +260,8 @@ class BranchSettings extends Component
                 'name'          => $this->branchName,
                 'restaurant_id' => restaurant()->id,
                 'address'       => $this->branchAddress,
+                'cr_number'     => $this->branchCrNumber ?: null,
+                'vat_number'    => $this->branchVatNumber ?: null,
                 'lat'           => $this->branchLat,
                 'lng'           => $this->branchLng,
                 'cloned_branch_name' => $this->cloneData ? Branch::find($this->cloneData)->name : null,
@@ -266,12 +276,9 @@ class BranchSettings extends Component
                 'is_clone_kot_setting' => $this->cloneKotSettings,
             ]);
             $this->activeBranch = Branch::find($this->activeBranchId);
-            // dd($this->activeBranch);
             if ($this->cloneData) {
                 $this->cloneBranchData($this->cloneData, $this->activeBranch);
             }
-
-            session()->forget(['restaurant', 'branch']);
 
             $this->alert('success', __('messages.branchUpdated'), [
             'toast' => true,

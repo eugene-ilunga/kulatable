@@ -26,6 +26,7 @@ class AddStaff extends Component
     public $phoneCodeIsOpen = false;
     public $allPhoneCodes;
     public $filteredPhoneCodes;
+    public $customerPhoneCode;
 
     public function mount()
     {
@@ -33,8 +34,10 @@ class AddStaff extends Component
         $this->memberRole = $this->roles->first()->name;
 
         // Initialize phone codes
+        $this->restaurantPhoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
         $this->allPhoneCodes = collect(Country::pluck('phonecode')->unique()->filter()->values());
         $this->filteredPhoneCodes = $this->allPhoneCodes;
+
     }
 
     public function updatedPhoneCodeIsOpen($value)
@@ -90,7 +93,7 @@ class AddStaff extends Component
         }
 
         if ($user->restaurant_id) {
-            cache()->forget('restaurant_' . $user->restaurant_id . '_staff_stats');    
+            cache()->forget('restaurant_' . $user->restaurant_id . '_staff_stats');
         }
 
         cache()->forget('waiters_' . $user->restaurant_id);

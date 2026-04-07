@@ -1,0 +1,11 @@
+{
+    "name": "Whatsapp",
+    "alias": "whatsapp",
+    "description": "WhatsApp Business API integration for sending automated notifications to customers, admins, staff, and delivery executives",
+    "keywords": ["whatsapp", "notifications", "messaging", "business-api"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Whatsapp\\Providers\\WhatsappServiceProvider"
+    ],
+    "files": []
+}

@@ -49,7 +49,7 @@
 
                             @forelse ($currencies as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 {{ $item->id == $defaultCurrencyId ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : '' }}" wire:key='member-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <div class="flex items-center gap-2">
                                         {{ $item->currency_name }}
                                         @if($item->id == $defaultCurrencyId)
@@ -60,11 +60,11 @@
                                     </div>
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->currency_code }} ({{ $item->currency_symbol }})
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ global_currency_format(12345.6789, $item->id) }}
                                 </td>
 

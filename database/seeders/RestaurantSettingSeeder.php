@@ -69,6 +69,7 @@ class RestaurantSettingSeeder extends Seeder
             $setting->facebook_link = 'https://www.facebook.com/';
             $setting->instagram_link = 'https://www.instagram.com/';
             $setting->twitter_link = 'https://www.twitter.com/';
+            $setting->google_business_link = 'https://business.google.com/';
             $setting->customer_site_language = 'en';
             $setting->save();
 

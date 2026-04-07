@@ -14,6 +14,7 @@ class OrderType extends Model
 
     protected $casts = [
         'enable_token_number' => 'boolean',
+        'show_order_number_on_board' => 'boolean',
         'enable_from_customer_site' => 'boolean',
     ];
 
@@ -35,5 +36,24 @@ class OrderType extends Model
 
         // Fallback to order_type_name
         return $this->order_type_name;
+    }
+    
+    /**
+     * Scope to filter order types based on module availability
+     * Filters out room_service if Hotel module is not enabled
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeAvailableForRestaurant($query)
+    {
+        $isHotelModuleEnabled = isHotelModuleEnabled();
+        
+        // If Hotel module is not enabled, exclude room_service
+        if (!$isHotelModuleEnabled) {
+            $query->where('slug', '!=', 'room_service');
+        }
+        
+        return $query;
     }
 }

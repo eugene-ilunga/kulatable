@@ -6,9 +6,11 @@ use App\Models\Branch;
 use App\Models\MenuItem;
 use App\Models\OrderType;
 use App\Models\OnboardingStep;
+use App\Models\Tax;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\ExpenseCategory;
+use App\Events\NewBranchCreatedEvent;
 
 class BranchObserver
 {
@@ -30,6 +32,12 @@ class BranchObserver
 
         // Add Onboarding Steps
         OnboardingStep::create(['branch_id' => $branch->id]);
+
+        // Add Receipt Settings
+        $branch->receiptSetting()->create([
+            'restaurant_id' => $branch->restaurant_id,
+            'branch_id'     => $branch->id,
+        ]);
 
         $branch->generateQrCode();
 
@@ -125,6 +133,30 @@ class BranchObserver
         $kotPlace->printer_id = $printer->id;
         $kotPlace->save();
 
+        // Copy taxes from other branches of the same restaurant to this new branch
+        $sourceBranch = Branch::withoutGlobalScopes()
+            ->where('restaurant_id', $branch->restaurant_id)
+            ->where('id', '!=', $branch->id)
+            ->orderBy('id')
+            ->first();
+
+        if ($sourceBranch) {
+            $sourceTaxes = Tax::withoutGlobalScopes()
+                ->where('branch_id', $sourceBranch->id)
+                ->get();
+
+            foreach ($sourceTaxes as $sourceTax) {
+                Tax::withoutEvents(function () use ($sourceTax, $branch) {
+                    Tax::create([
+                        'restaurant_id' => $sourceTax->restaurant_id,
+                        'branch_id'     => $branch->id,
+                        'tax_name'      => $sourceTax->tax_name,
+                        'tax_percent'   => $sourceTax->tax_percent,
+                    ]);
+                });
+            }
+        }
+
         /**
          * ✅ Create Default Expense Categories
          */
@@ -193,5 +225,8 @@ class BranchObserver
                 'updated_at'  => now(),
             ]);
         }
+
+        event(new NewBranchCreatedEvent($branch));
+
     }
 }

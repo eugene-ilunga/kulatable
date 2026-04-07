@@ -1,7 +1,7 @@
 <div @if(!pusherSettings()->is_enabled_pusher_broadcast) wire:poll.10s @endif>
-    <div class="block p-4 bg-white dark:bg-gray-800 dark:border-gray-700">
+    <div class="block p-4  dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-4">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white flex justify-between items-center">
+            <h1 class="text-lg font-semibold text-gray-900  dark:text-white flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     @if($showAllKitchens)
                         {{ __('kitchen::modules.menu.allKitchenKot') }}
@@ -87,14 +87,14 @@
             </div>
 
             <div @class([
-                'grid grid-cols-1 gap-2 w-full lg:w-auto sm:grid-cols-4',
+                'flex gap-2 w-full lg:w-auto flex-col lg:flex-row',
                 ])>
                 <div wire:click="$set('filterOrders', 'pending_confirmation')" @class([
                     'whitespace-nowrap items-center font-medium
-                                                        cursor-pointer p-2 text-center rounded-md text-sm border hover:text-gray-900 bg-white
+                                                        cursor-pointer p-2 text-center rounded-md text-xs border hover:text-gray-900 bg-white
                                                         hover:bg-gray-200 w-full dark:bg-gray-800 dark:hover:bg-gray-700 cols
                                                         dark:hover:text-white dark:text-neutral-400',
-                    ' border-2 border-skin-base dark:border-skin-base' =>
+                    ' border-1 border-skin-base dark:border-skin-base' =>
                         $filterOrders == 'pending_confirmation',
                 ])>
                     @lang('modules.reservation.Pending') ({{ $pendingConfirmationCount }})
@@ -102,30 +102,30 @@
 
                 <div wire:click="$set('filterOrders', 'in_kitchen')" @class([
                     'whitespace-nowrap items-center font-medium
-                                                    cursor-pointer p-2 text-center rounded-md text-sm border hover:text-gray-900 bg-white
+                                                    cursor-pointer p-2 text-center rounded-md text-xs border hover:text-gray-900 bg-white
                                                     hover:bg-gray-200 w-full dark:bg-gray-800 dark:hover:bg-gray-700
                                                     dark:hover:text-white dark:text-neutral-400',
-                    ' border-2 border-skin-base dark:border-skin-base' =>
+                    ' border-1 border-skin-base dark:border-skin-base' =>
                         $filterOrders == 'in_kitchen',
                 ])>
                     @lang('modules.order.in_kitchen') ({{ $inKitchenCount }})
                 </div>
                 <div wire:click="$set('filterOrders', 'food_ready')" @class([
                     'whitespace-nowrap items-center font-medium
-                                                    cursor-pointer p-2 text-center rounded-md text-sm border hover:text-gray-900 bg-white
+                                                    cursor-pointer p-2 text-center rounded-md text-xs border hover:text-gray-900 bg-white
                                                     hover:bg-gray-200 w-full dark:bg-gray-800 dark:hover:bg-gray-700
                                                     dark:hover:text-white dark:text-neutral-400',
-                    ' border-2 border-skin-base dark:border-skin-base' =>
+                    ' border-1 border-skin-base dark:border-skin-base' =>
                         $filterOrders == 'food_ready',
                 ])>
                     @lang('modules.order.food_ready') ({{ $foodReadyCount }})
                 </div>
                 <div wire:click="$set('filterOrders', 'cancelled')" @class([
                     'whitespace-nowrap items-center font-medium
-                                                    cursor-pointer p-2 text-center rounded-md text-sm border hover:text-gray-900 bg-white
+                                                    cursor-pointer p-2 text-center rounded-md text-xs border hover:text-gray-900 bg-white
                                                     hover:bg-gray-200 w-full dark:bg-gray-800 dark:hover:bg-gray-700
                                                     dark:hover:text-white dark:text-neutral-400',
-                    ' border-2 border-skin-base dark:border-skin-base' =>
+                    ' border-1 border-skin-base dark:border-skin-base' =>
                         $filterOrders == 'cancelled',
                 ])>
                     @lang('modules.order.cancelled') ({{ $cancelledCount }})
@@ -142,7 +142,7 @@
             <div class="space-y-4">
                 <div class="grid sm:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4" wire:key="kots-grid" wire:loading.class.delay="opacity-50">
                     @foreach ($kots as $item)
-                        @livewire('kot.kot-card', ['kot' => $item, 'kotSettings' => $kotSettings, 'cancelReasons' => $cancelReasons, 'kotPlace' => $kotPlace, 'showAllKitchens' => $showAllKitchens], key('kot-' . $item->id))
+                            @livewire('kot.kot-card', ['kot' => $item, 'kotSettings' => $kotSettings, 'cancelReasons' => $cancelReasons, 'kotPlace' => $kotPlace, 'showAllKitchens' => $showAllKitchens], key('kot-' . $item->id . '-' . $kotsGridKey))
                     @endforeach
                 </div>
                 @if($hasMore)
@@ -173,7 +173,7 @@
             <x-slot name="title">
                 <div>
                     <h3 class="text-xl font-bold text-gray-900 dark:text-white">@lang('modules.order.cancelKot')</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">This action cannot be undone</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">@lang('modules.order.cancelOrderMessageUndone')</p>
                 </div>
             </x-slot>
 
@@ -303,34 +303,3 @@
         </x-confirmation-modal>
 
     </div>
-
-    @push('scripts')
-
-
-    @if(pusherSettings()->is_enabled_pusher_broadcast)
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-
-                const channel = PUSHER.subscribe('kots');
-                channel.bind('kot.updated', function(data) {
-
-                    try {
-                        @this.dispatch('refreshKots');
-                    } catch (error) {
-                        console.error('❌ Error in Pusher refreshKots:', error);
-                    }
-
-                    console.log('✅ Pusher received data for kots!. Refreshing...');
-                });
-                PUSHER.connection.bind('connected', () => {
-                    console.log('✅ Pusher connected for Kots!');
-                });
-                channel.bind('pusher:subscription_succeeded', () => {
-                    console.log('✅ Subscribed to kots channel!');
-                });
-            });
-        </script>
-    @endif
-
-
-@endpush

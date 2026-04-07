@@ -35,6 +35,7 @@ class AddCustomer extends Component
         'email' => false,
         'address' => false
     ];
+    public $restaurantPhoneCode;
 
 
     public function mount()
@@ -44,7 +45,9 @@ class AddCustomer extends Component
         $this->filteredPhoneCodes = $this->allPhoneCodes;
 
         // Set default phone code from restaurant
-        $this->customerPhoneCode = restaurant()->phone_code ?? $this->allPhoneCodes->first();
+        $this->restaurantPhoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
+        $this->customerPhoneCode = $this->restaurantPhoneCode;
+
     }
     public function updatedPhoneCodeIsOpen($value)
     {
@@ -87,7 +90,7 @@ class AddCustomer extends Component
                 $this->customerAddress = $customer->delivery_address;
             }
         } else {
-            $this->customerPhoneCode = restaurant()->phone_code ?? $this->allPhoneCodes->first();
+            $this->customerPhoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
         }
         $this->fromPos = $fromPos ?? false;
         $this->showAddCustomerModal = true;
@@ -238,7 +241,7 @@ class AddCustomer extends Component
 
         // Check for existing customer by phone only
         $existingCustomer = null;
-        
+
         //commented this code because when customer is creating new customer so if user have same phone it was updating that existing customer details.
         // if (!empty($this->customerPhone)) {
         //     $existingCustomer = Customer::where('restaurant_id', restaurant()->id)
@@ -294,10 +297,7 @@ class AddCustomer extends Component
             $this->dispatch('refreshOrders');
             $this->dispatch('refreshPos');
         }
-        // Case 2: From POS (before order creation)
-        else {
-            $this->dispatch('customerSelected', $customer->id);
-        }
+            $this->dispatch('customerSelected', customer: $customer);
 
         $this->resetForm();
     }

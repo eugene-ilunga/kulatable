@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ normalize_locale(session('customer_locale'), global_setting()->locale) }}" dir="{{ locale_is_rtl(session('customer_locale') ?? global_setting()->locale) ? 'rtl' : 'ltr' }}">
+<html lang="{{ session('customer_locale') ?? global_setting()->locale }}" dir="{{ session('customer_is_rtl') ? 'rtl' : 'ltr' }}">
 
 <head>
     <link rel="manifest" href="{{ asset('manifest.json') }}" crossorigin="use-credentials">
@@ -160,9 +160,9 @@
                 instructions.id = 'iosInstallInstructions';
                 instructions.innerHTML = `
                     <div style="position: fixed; bottom: 10px; left: 10px; right: 10px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 5px; text-align: center; z-index: 1000;">
-                        <p class="flex relative">@lang('messages.installAppInstruction')
-                            <img class="absolute right-0 left-auto mr-5" src="{{ asset('img/share-ios.svg') }}" alt="Share Icon" style="width: 20px; vertical-align: middle;">
-
+                        <p class="flex items-center justify-center gap-2 m-0">
+                            @lang('messages.installAppInstruction')
+                            <img class="ml-2" src="{{ asset('img/share-ios.svg') }}" alt="Share Icon" style="width: 20px; vertical-align: middle;">
                         </p>
                         @lang('messages.addToHomeScreen').
                         <button id="closeInstructions" class="block text-center mx-auto" style="margin-top: 10px; padding: 5px 10px;">@lang('app.close')</button>
@@ -179,4 +179,5 @@
         })
     </script>
 @endif
+
 

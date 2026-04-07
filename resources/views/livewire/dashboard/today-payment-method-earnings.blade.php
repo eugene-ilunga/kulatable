@@ -1,15 +1,15 @@
 <div>
     <div
-    class="items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm sm:flex dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+    class="items-center justify-between p-4 bg-white border border-gray-100 rounded-xl  sm:flex dark:border-gray-700 sm:p-6 dark:bg-gray-800">
     <div class="w-full">
-        <h3 class="text-base font-normal text-gray-500 dark:text-gray-400 mb-4">@lang('modules.order.paymentMethod') (@lang('app.today'))
+        <h3 class="text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">@lang('modules.order.paymentMethod') (@lang('app.today'))
         </h3>
-        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+        <ul class="divide-y divide-gray-50 dark:divide-gray-700">
             @forelse ($paymentMethods as $item)
                 <li class="py-1 sm:py-2">
                     <div class="flex items-center space-x-4 rtl:space-x-reverse">
                         <div class="flex-1 min-w-0">
-                            <p class="text-base text-gray-900 truncate dark:text-white flex items-center gap-1">
+                            <p class="text-[13px] text-gray-700 truncate dark:text-white flex items-center gap-1">
                                 @switch($item->payment_method)
                                     @case('cash')
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cash-stack" viewBox="0 0 16 16">
@@ -50,7 +50,7 @@
                                 @endif
                             </p>
                         </div>
-                        <div class="inline-flex items-center text-base font-medium text-gray-900 dark:text-white">
+                        <div class="text-[13px] font-medium text-gray-800 w-16 text-right dark:text-white">
                             {{ currency_format($item->total_amount, restaurant()->currency_id) }}
                         </div>
                     </div>

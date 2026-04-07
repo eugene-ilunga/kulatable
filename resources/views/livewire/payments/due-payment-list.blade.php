@@ -4,7 +4,7 @@
         <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
             <div class="w-full mb-1">
                 <div class="mb-4">
-                    <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.duePayments') <span class="text-skin-base">({{ currency_format($dueTotal, restaurant()->currency_id) }})</span></h1>
+                    <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.duePayments') <span class="text-skin-base">({{ currency_format($dueTotal, restaurant()->currency_id) }})</span></h1>
                 </div>
                 <div class="items-center justify-between block sm:flex ">
                     <div class="flex items-center gap-3 mb-4 sm:mb-0">

@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Garde de stockage',
+  'status_title' => 'Chemins du système Storage Guard',
+  'permissions_badge' => 'Mode : 0775 (Dirs) / 0664 (Fichiers)',
+  'success_message' => 'Tentative de réparation sur les éléments :count (fichiers et répertoires).',
+  'error_alert' => 'Un ou plusieurs chemins de stockage nécessitent une attention particulière. Cliquez sur "Réparation récursive" pour corriger les autorisations.',
+  'recursive_repair' => 'Réparation récursive',
+  'secure_repair' => 'Autorisations de sécurisation et de réparation',
+  'refresh_status' => 'Actualiser le statut',
+  'path' => 'Chemin',
+  'status' => 'Statut',
+  'perms' => 'Permanentes',
+  'readable' => 'Lisible',
+  'writable' => 'Inscriptible',
+  'yes' => 'Oui',
+  'no' => 'Non',
+  'ok' => 'D\'ACCORD',
+  'issue' => 'Problème',
+];

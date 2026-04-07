@@ -11,13 +11,21 @@ class DesktopApplication extends Model
 
     const WINDOWS_FILE_PATH = 'https://envato.froid.works/app/download/windows';
     const MAC_FILE_PATH = 'https://envato.froid.works/app/download/macos';
+    /** @deprecated Linux desktop app no longer provided */
     const LINUX_FILE_PATH = 'https://envato.froid.works/app/download/linux';
+    const PARTNER_APP_IOS_URL = 'https://apps.apple.com/in/app/tabletrack-rider/id6759326050';
+    const PARTNER_APP_ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.delivery.tabletrack&hl=en_IN';
 
     protected $guarded = ['id'];
-    protected $table = 'desktop_applications';
+    protected $table = 'desktop_mobile_application';
 
     public function getIsActiveAttribute()
     {
-        return $this->windows_file_path || $this->mac_file_path || $this->linux_file_path;
+        return $this->windows_file_path || $this->mac_file_path;
+    }
+
+    public function getIsMobileActiveAttribute()
+    {
+        return !empty($this->partner_app_ios) || !empty($this->partner_app_android);
     }
 }

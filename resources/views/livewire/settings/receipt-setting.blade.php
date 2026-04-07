@@ -143,6 +143,37 @@
                             </div>
 
                             <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <x-checkbox name="showRestaurantName" id="showRestaurantName" wire:model='showRestaurantName' />
+                                <label for="showRestaurantName" class="ms-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    </svg>
+                                    <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.showRestaurantName')</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <x-checkbox name="showBranchName" id="showBranchName" wire:model='showBranchName' />
+                                <label for="showBranchName" class="ms-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.showBranchName')</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <x-checkbox name="showBranchAddress" id="showBranchAddress" wire:model='showBranchAddress' />
+                                <label for="showBranchAddress" class="ms-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.showBranchAddress')</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                 <x-checkbox name="restaurantTax" id="restaurantTax" wire:model='restaurantTax' />
                                 <label for="restaurantTax" class="ms-3 flex items-center">
                                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none"
@@ -151,6 +182,30 @@
                                             d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
                                     </svg>
                                     <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.restaurantTax')</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <x-checkbox name="showCrNumber" id="showCrNumber" wire:model='showCrNumber' />
+                                <label for="showCrNumber" class="ms-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.showCrNumber')</span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <x-checkbox name="showVatNumber" id="showVatNumber" wire:model='showVatNumber' />
+                                <label for="showVatNumber" class="ms-3 flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400 me-2" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a2 2 0 012-2z" />
+                                    </svg>
+                                    <span class="font-medium text-gray-900 dark:text-white">@lang('modules.settings.showVatNumber')</span>
                                 </label>
                             </div>
                         </div>
@@ -303,20 +358,37 @@
                                                 <div class="header">
                                                     <div class="restaurant-name">
                                                         @if ($restaurantLogo)
-                                                            <span>
-                                                                <img src="{{ restaurant()->logo_url }}"
-                                                                    alt="{{ restaurant()->name }}"
-                                                                    class="restaurant-logo"
-                                                                    style="width: 20px; height: 20px; margin-top: 3px;">
-                                                            </span>
+                                                            <img src="{{ restaurant()->logo_url }}"
+                                                                alt="{{ branch()->name ?? restaurant()->name }}"
+                                                                class="restaurant-logo"
+                                                                style="width: 20px; height: 20px; margin-top: 3px;">
                                                         @endif
-                                                        <span>{{ restaurant()->name }}</span>
+                                                        @if ($showRestaurantName)
+                                                            <div>{{ restaurant()->name }}</div>
+                                                        @endif
                                                     </div>
-                                                    <div class="restaurant-info">{{ restaurant()->address }}</div>
+                                                    @if (!$showRestaurantName && $showBranchName)
+                                                        {{-- Only branch checked: show bold like restaurant name --}}
+                                                        <div class="restaurant-name" style="margin-top:0;margin-bottom:1mm;">
+                                                            {{ branch()->name ?? restaurant()->name }}
+                                                        </div>
+                                                    @elseif ($showRestaurantName && $showBranchName)
+                                                        {{-- Both checked: branch name in smaller text below --}}
+                                                        <div class="restaurant-info">{{ branch()->name ?? restaurant()->name }}</div>
+                                                    @endif
+                                                    @if ($showBranchAddress)
+                                                        <div class="restaurant-info">{{ branch()->address ?? restaurant()->address ?? '' }}</div>
+                                                    @endif
                                                     <div class="restaurant-info">@lang('modules.customer.phone'):
                                                         {{ restaurant()->phone_number }}</div>
                                                     @if ($restaurantTax)
                                                         <div class="restaurant-info">Tax ID: SAMPLE-TAX-ID</div>
+                                                    @endif
+                                                    @if ($showCrNumber)
+                                                        <div class="restaurant-info">@lang('modules.settings.branchCrNumber'): SAMPLE-CR-123</div>
+                                                    @endif
+                                                    @if ($showVatNumber)
+                                                        <div class="restaurant-info">@lang('modules.settings.branchVatNumber'): SAMPLE-VAT-456</div>
                                                     @endif
                                                 </div>
 

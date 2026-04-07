@@ -50,12 +50,40 @@
                     value="{{ $headerDescription }}" type="hidden" />
 
                 <div wire:ignore class="mt-2">
-                    <trix-editor class="trix-content text-sm" input="headerDescription" data-gramm="false"
+                    <trix-editor class="trix-content text-sm"
+                        input="headerDescription"
+                        data-gramm="false"
                         placeholder="{{ __('placeholders.headerDescriptionPlaceHolder') }}"
-                        x-on:trix-change="$wire.set('headerDescription', $event.target.value)" x-ref="trixEditor"  x-init="
+                        x-ref="trixEditor"
+                        x-init="
+                            // Load existing content into the editor
+                            $nextTick(() => {
+                                if ($refs.trixEditor && $refs.headerDescription) {
+                                    $refs.trixEditor.editor.loadHTML($refs.headerDescription.value || '');
+                                }
+                            });
+
+                            // Sync editor changes back to Livewire (no server request)
+                            $el.addEventListener('trix-change', function(event) {
+                                $wire.set('headerDescription', event.target.value, false);
+                            });
+
+                            // Reload editor when Livewire dispatches updated content (language change)
+                            window.addEventListener('description-updated', (e) => {
+                                const detail = e?.detail;
+                                // Livewire may send either a plain value or an object payload.
+                                const value = detail?.value ?? detail ?? '';
+                                if ($refs.trixEditor && $refs.trixEditor.editor) {
+                                    $refs.trixEditor.editor.loadHTML(value || '');
+                                }
+                            });
+
                             window.addEventListener('reset-trix-editor', () => {
-                                $refs.trixEditor.editor.loadHTML('');
-                            });" >
+                                if ($refs.trixEditor && $refs.trixEditor.editor) {
+                                    $refs.trixEditor.editor.loadHTML('');
+                                }
+                            });
+                        ">
                     </trix-editor>
                 </div>
                 <x-input-error for="headerDescription" class="mt-2" />

@@ -1,0 +1,17 @@
+{
+    "name": "RestApi",
+    "alias": "applicationintegration",
+    "description": "Enables desktop/mobile app integration via Sanctum-secured POS APIs tied to plan eligibility.",
+    "keywords": [
+        "pos",
+        "api",
+        "integration",
+        "apps"
+    ],
+    "version": "1.2.61",
+    "priority": 0,
+    "providers": [
+        "Modules\\RestApi\\Providers\\ApplicationIntegrationServiceProvider"
+    ],
+    "files": []
+}

@@ -93,9 +93,6 @@ class RestaurantObserver
         // Create Subscription
         $this->createSubscription($restaurant);
 
-        // Add receipt Settings
-        $restaurant->receiptSetting()->create();
-
         // Add predefined amounts
         $this->addPredefinedAmounts($restaurant);
 

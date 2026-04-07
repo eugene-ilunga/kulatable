@@ -24,7 +24,7 @@
         .receipt {
             width: {{ $width - 5 }}mm;
             padding: {{ $thermal ? '1mm' : '6.35mm' }};
-            page-break-after: always;
+            page-break-after: {{ !empty($generateImage) ? 'avoid' : 'always' }};
         }
 
         .header {
@@ -68,7 +68,7 @@
             font-size: 9pt;
         }
 
-        . {
+        .order-number{
             font-weight: bold;
         }
 
@@ -93,7 +93,7 @@
         }
 
         .items-table td {
-            padding: 1mm 0;
+            padding: 1mm 0.5mm;
             vertical-align: top;
         }
 
@@ -103,7 +103,7 @@
         }
 
         .description {
-            width: 50%;
+            width: 52%;
         }
 
         .payment-method {
@@ -121,11 +121,13 @@
         }
 
         .price {
-            width: 20%;
+            width: 18%;
+            padding-right: 1mm;
         }
 
         .amount {
-            width: 20%;
+            width: 16%;
+            padding-left: 1mm;
         }
 
         .summary {
@@ -260,21 +262,39 @@
                         }
                     @endphp
                     @if ($logoBase64)
-                        <img src="{{ $logoBase64 }}" alt="{{ restaurant()->name }}" class="restaurant-logo">
+                        <img src="{{ $logoBase64 }}" alt="{{ $orderBranch->name ?? restaurant()->name }}" class="restaurant-logo">
                     @else
-                        <img src="{{ restaurant()->logo_url }}" alt="{{ restaurant()->name }}" class="restaurant-logo">
+                        <img src="{{ restaurant()->logo_url }}" alt="{{ $orderBranch->name ?? restaurant()->name }}" class="restaurant-logo">
                     @endif
                 @endif
-                <div>{{ restaurant()->name }}</div>
+                @if ($receiptSettings->show_restaurant_name)
+                    <div>{{ restaurant()->name }}</div>
+                @endif
             </div>
+            @if (!$receiptSettings->show_restaurant_name && $receiptSettings->show_branch_name)
+                <div class="restaurant-name" style="margin-top:0;margin-bottom:1mm;">
+                    {{ $orderBranch->name ?? restaurant()->name }}
+                </div>
+            @elseif ($receiptSettings->show_restaurant_name && $receiptSettings->show_branch_name)
+                <div class="restaurant-info">{{ $orderBranch->name ?? restaurant()->name }}</div>
+            @endif
 
-            <div class="restaurant-info">{!! nl2br(branch()->address) !!}</div>
-            <div class="restaurant-info">@lang('modules.customer.phone'):<span dir="ltr" style="unicode-bidi: embed;">{{ restaurant()->phone_number }}</span></div>
+            @if ($receiptSettings->show_branch_address)
+                <div class="restaurant-info">{!! nl2br($orderBranch->address ?? restaurant()->address ?? '') !!}</div>
+            @endif
+            <div class="restaurant-info">@lang('modules.customer.phone'):<span dir="ltr" style="unicode-bidi: embed;">{{ $orderBranch->phone ?: restaurant()->phone_number }}</span></div>
             @if ($receiptSettings->show_tax)
-
-                @foreach ($taxDetails as $taxDetail)
-                    <div class="restaurant-info">{{ $taxDetail->tax_name }}: {{ $taxDetail->tax_id }}</div>
-                @endforeach
+                @if (empty($orderBranch->cr_number) && empty($orderBranch->vat_number))
+                    @foreach ($taxDetails as $taxDetail)
+                        <div class="restaurant-info">{{ $taxDetail->tax_name }}: {{ $taxDetail->tax_id }}</div>
+                    @endforeach
+                @endif
+            @endif
+            @if ($receiptSettings->show_cr_number && !empty($orderBranch->cr_number))
+                <div class="restaurant-info">@lang('modules.settings.branchCrNumber'): {{ $orderBranch->cr_number }}</div>
+            @endif
+            @if ($receiptSettings->show_vat_number && !empty($orderBranch->vat_number))
+                <div class="restaurant-info">@lang('modules.settings.branchVatNumber'): {{ $orderBranch->vat_number }}</div>
             @endif
 
         </div>
@@ -708,7 +728,9 @@
 
     <script>
         function isPWA() {
-            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            return (window.matchMedia('(display-mode: standalone)').matches) ||
+                   (window.navigator.standalone === true) ||
+                   (document.referrer.includes('android-app://'));
         }
 
         function goBack() {
@@ -719,47 +741,79 @@
             }
         }
 
-        // This function handles the printing and the redirect
-        function triggerPrint() {
-            const finish = () => {
-                if (isPWA()) goBack(); else window.close();
-            };
-
-            // Listen for the print dialog closing
-            if ('onafterprint' in window) {
-                window.onafterprint = finish;
+        // On print dialog close, close window or navigate away
+        function finishAfterPrint() {
+            if (isPWA()) {
+                goBack();
+            } else {
+                // Attempt to close. On some browsers, close() only works if window is opened by JS
+                window.close();
+                // If close fails (e.g. not opened by JS), just navigate away as fallback
+                setTimeout(function() {
+                    // Check if window is still open (only relevant outside PWA)
+                    try {
+                        if (!window.closed) {
+                            window.location.href = '{{ route("orders.index") }}';
+                        }
+                    } catch (e) {}
+                }, 500);
             }
-
-            window.print();
-
-            // Fallback: if they are on mobile, onafterprint might not fire
-            // We give them 5 seconds to print before we offer to go back
-            setTimeout(() => {
-                if(confirm("Print finished? Click OK to go back.")) {
-                    finish();
-                }
-            }, 5000);
         }
 
+        window.onafterprint = finishAfterPrint;
+
+        // For browsers that do not support onafterprint or if it doesn't fire (esp. on mobile)
+        function fallbackFinishHandler() {
+            // Only trigger if print dialog does not close the window in time
+            setTimeout(() => {
+                // Avoid multiple prompts/redirects if already handled
+                if (!window._printFinishedHandled) {
+                    window._printFinishedHandled = true;
+                    if(confirm("Did you finish printing? Click OK to go back.")) {
+                        finishAfterPrint();
+                    }
+                }
+            }, 1500); // Start fallback sooner to catch dialog cancel, but give time for onafterprint first
+        }
+
+        // Attempt automatic print on load
         window.onload = function() {
             if (isPWA()) {
-                document.getElementById('backButton').style.display = 'block';
+                // Show custom back button if you have it, ignored if missing
+                var btn = document.getElementById('backButton');
+                if (btn) btn.style.display = 'block';
             }
 
-            // Attempt 1: Automatic (might be blocked)
             setTimeout(() => {
                 try {
                     window.print();
+                    fallbackFinishHandler();
                 } catch (e) {
-                    console.log("Auto-print blocked");
+                    fallbackFinishHandler();
                 }
-            }, 1000);
+            }, 500); // Faster popup
         };
 
-        // Attempt 2: If auto-print fails, the first tap anywhere on the screen triggers it
+        // Attempt print if user interacts and it's not already printed
         window.addEventListener('click', function() {
-            window.print();
+            if (!window._printFinishedHandled) {
+                window.print();
+                fallbackFinishHandler();
+            }
         }, { once: true });
+
+        // Additional fallback: if page becomes visible again after print dialog, treat as after print (covers some mobile cases)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible' && !window._printFinishedHandled) {
+                // Some browsers hide page during print dialog, so this is after print/cancel
+                setTimeout(() => {
+                    if (!window._printFinishedHandled) {
+                        window._printFinishedHandled = true;
+                        finishAfterPrint();
+                    }
+                }, 200);
+            }
+        });
     </script>
 </body>
 

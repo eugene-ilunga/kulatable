@@ -13,8 +13,10 @@ class AddExecutive extends Component
     use LivewireAlert;
 
     public $memberName;
+    public $memberEmail;
     public $memberPhone;
     public $status = 'available';
+    public $availabilityStatus = 1;
     public $phoneCode;
     public $phoneCodeSearch = '';
     public $phoneCodeIsOpen = false;
@@ -55,26 +57,32 @@ class AddExecutive extends Component
     {
         $this->validate([
             'memberName' => 'required',
+            'memberEmail' => 'required|email|unique:delivery_executives,email',
             'phoneCode' => 'required',
             'memberPhone' => [
                 'required',
                 'regex:/^[0-9\s]{5,20}$/',
                 'unique:delivery_executives,phone'
-            ]
+            ],
+            'availabilityStatus' => 'required|in:0,1',
         ]);
 
         DeliveryExecutive::create([
             'name' => $this->memberName,
+            'email' => strtolower($this->memberEmail),
             'phone' => $this->memberPhone,
             'phone_code' => $this->phoneCode,
             'status' => $this->status,
+            'is_online' => (int) $this->availabilityStatus,
         ]);
 
         // Reset the value
         $this->memberName = '';
+        $this->memberEmail = '';
         $this->memberPhone = '';
         $this->phoneCode = '';
         $this->status = 'available';
+        $this->availabilityStatus = 1;
 
         $this->dispatch('hideAddStaff');
         $this->dispatch('closeAddExecutiveModal');

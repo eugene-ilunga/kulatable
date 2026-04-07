@@ -14,6 +14,8 @@ class BranchOperationalShifts extends Component
 {
     use LivewireAlert;
 
+    private const DEFAULT_TIMEZONE = 'UTC';
+
     public Branch $branch;
     public $selectedBranchId;
     public $shifts = [];
@@ -65,23 +67,32 @@ class BranchOperationalShifts extends Component
             $this->shifts = [];
             return;
         }
-        
+
+        $restaurantTimezone = $this->getRestaurantTimezone();
+        $timeFormat = $this->branch->restaurant?->time_format ?? 'h:i A';
+
         // This allows viewing shifts for branches other than the session branch
         $shifts = BranchOperationalShift::withoutGlobalScope(BranchScope::class)
             ->where('branch_id', $this->branch->id)
             ->orderBy('sort_order')
             ->orderBy('start_time')
             ->get();
-        
-        // Convert to array and ensure day_of_week is properly decoded
-        $this->shifts = $shifts->map(function($shift) {
+
+        // Convert to array once and prepare display fields in restaurant timezone.
+        $this->shifts = $shifts->map(function ($shift) use ($restaurantTimezone, $timeFormat) {
             $shiftArray = $shift->toArray();
-            // Ensure day_of_week is properly decoded as array
-            if (isset($shiftArray['day_of_week'])) {
-                if (is_string($shiftArray['day_of_week'])) {
-                    $shiftArray['day_of_week'] = json_decode($shiftArray['day_of_week'], true) ?? [];
-                }
-            }
+
+            $shiftArray['day_of_week'] = $this->decodeDays($shiftArray['day_of_week'] ?? []);
+
+            $startLocal = $this->convertUtcTimeToRestaurantTime($shift->start_time, $restaurantTimezone);
+            $endLocal = $this->convertUtcTimeToRestaurantTime($shift->end_time, $restaurantTimezone);
+
+            $shiftArray['start_time_local'] = $startLocal;
+            $shiftArray['end_time_local'] = $endLocal;
+            $shiftArray['start_time_display'] = Carbon::createFromFormat('H:i', $startLocal)->format($timeFormat);
+            $shiftArray['end_time_display'] = Carbon::createFromFormat('H:i', $endLocal)->format($timeFormat);
+            $shiftArray['is_overnight_local'] = $endLocal < $startLocal;
+
             return $shiftArray;
         })->toArray();
     }
@@ -100,28 +111,21 @@ class BranchOperationalShifts extends Component
         // Use withoutGlobalScope to bypass BranchScope when editing shifts from different branches
         // Always fetch fresh data from database to ensure we have the latest values
         $shift = BranchOperationalShift::withoutGlobalScope(BranchScope::class)->findOrFail($shiftId);
-        
+        $restaurantTimezone = $this->getRestaurantTimezone();
+
         $this->editingShiftId = $shift->id;
         $this->shiftName = $shift->shift_name ?? '';
-        // Convert time to H:i format for time picker (it will display in 12-hour based on restaurant settings)
-        $this->startTime = Carbon::parse($shift->start_time)->format('H:i');
-        $this->endTime = Carbon::parse($shift->end_time)->format('H:i');
-        // Handle JSON array for day_of_week (now stored as JSON)
-        $days = $shift->day_of_week; // This is already an array due to the cast
-        if (!is_array($days)) {
-            $days = json_decode($days, true) ?? [];
-        }
-        if (empty($days)) {
-            $days = [];
-        }
+        // Store UTC, edit in restaurant timezone.
+        $this->startTime = $this->convertUtcTimeToRestaurantTime($shift->start_time, $restaurantTimezone);
+        $this->endTime = $this->convertUtcTimeToRestaurantTime($shift->end_time, $restaurantTimezone);
+        $days = $this->decodeDays($shift->day_of_week ?? []);
+
         // Convert 'All' to all 7 days for display
         if (in_array('All', $days)) {
             $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         }
-        // Filter out 'All' and ensure selectedDays is properly initialized as an array
-        $this->selectedDays = array_values(array_filter(array_unique($days), function($day) {
-            return $day !== 'All' && !empty($day);
-        }));
+        // Filter out 'All' and ensure selectedDays is properly initialized as an array.
+        $this->selectedDays = $this->normalizeSelectedDays($days);
         // For display purposes, use first day or default to Monday
         $this->dayOfWeek = !empty($this->selectedDays) ? $this->selectedDays[0] : 'Monday';
         $this->isActive = $shift->is_active;
@@ -159,28 +163,19 @@ class BranchOperationalShifts extends Component
     {
         // Filter out 'All' if it exists (legacy support)
         // Ensure selectedDays is a proper array
-        if (!is_array($this->selectedDays)) {
-            $this->selectedDays = [];
-        }
-        
-        // Remove 'All' and empty values, then re-index
-        $this->selectedDays = array_values(array_filter($this->selectedDays, function($d) {
-            return !empty($d) && is_string($d) && $d !== 'All';
-        }));
-        
+        $this->selectedDays = $this->normalizeSelectedDays($this->selectedDays);
+
         // Update dayOfWeek for display purposes
         $this->dayOfWeek = !empty($this->selectedDays) ? $this->selectedDays[0] : 'Monday';
     }
 
     public function saveShift()
-    {        
+    {
+        $restaurantTimezone = $this->getRestaurantTimezone();
+
         // Filter out 'All' from selectedDays for validation
-        $validDays = is_array($this->selectedDays) 
-            ? array_filter($this->selectedDays, function($day) {
-                return !empty($day) && is_string($day) && $day !== 'All';
-            })
-            : [];
-        
+        $validDays = $this->normalizeSelectedDays($this->selectedDays);
+
         $this->validate([
             'startTime' => 'required|date_format:H:i',
             'endTime' => 'required|date_format:H:i',
@@ -206,25 +201,21 @@ class BranchOperationalShifts extends Component
         if ($this->editingShiftId) {
             // Update existing shift - use withoutGlobalScope to bypass BranchScope
             $shift = BranchOperationalShift::withoutGlobalScope(BranchScope::class)->findOrFail($this->editingShiftId);
-            
+
             // Ensure selectedDays is a proper array and not empty
-            // Convert to array and filter out any empty values
-            $selectedDaysArray = is_array($this->selectedDays) ? $this->selectedDays : [];
-            $selectedDaysArray = array_filter($selectedDaysArray, function($day) {
-                return !empty($day) && is_string($day) && $day !== 'All';
-            });
-            
+            $selectedDaysArray = $this->normalizeSelectedDays($this->selectedDays);
+
             // If empty or invalid, default to all days
             if (empty($selectedDaysArray)) {
                 $daysToSave = ['All'];
             } else {
                 $daysToSave = array_values(array_unique($selectedDaysArray)); // Re-index and remove duplicates
             }
-            
+
             $shift->update([
                 'shift_name' => $this->shiftName ?: null,
-                'start_time' => $this->startTime,
-                'end_time' => $this->endTime,
+                'start_time' => $this->convertRestaurantTimeToUtcTime($this->startTime, $restaurantTimezone),
+                'end_time' => $this->convertRestaurantTimeToUtcTime($this->endTime, $restaurantTimezone),
                 'day_of_week' => $daysToSave, // Model will auto-encode via cast
                 'is_active' => $this->isActive,
                 'sort_order' => $this->sortOrder,
@@ -242,24 +233,21 @@ class BranchOperationalShifts extends Component
         } else {
             // Create new shift - auto-generate sort_order if not set
             $sortOrder = $this->sortOrder ?? count($this->shifts);
-            
+
             // Ensure selectedDays is a proper array and not empty
-            $selectedDaysArray = is_array($this->selectedDays) ? $this->selectedDays : [];
-            $selectedDaysArray = array_filter($selectedDaysArray, function($day) {
-                return !empty($day) && is_string($day) && $day !== 'All';
-            });
-            
+            $selectedDaysArray = $this->normalizeSelectedDays($this->selectedDays);
+
             // If empty or invalid, default to all days
-            $daysToSave = !empty($selectedDaysArray) 
+            $daysToSave = !empty($selectedDaysArray)
                 ? array_values(array_unique($selectedDaysArray)) // Re-index array
                 : ['All'];
-            
+
             BranchOperationalShift::create([
                 'branch_id' => $this->branch->id,
                 'restaurant_id' => $this->branch->restaurant_id,
                 'shift_name' => $this->shiftName ?: null,
-                'start_time' => $this->startTime,
-                'end_time' => $this->endTime,
+                'start_time' => $this->convertRestaurantTimeToUtcTime($this->startTime, $restaurantTimezone),
+                'end_time' => $this->convertRestaurantTimeToUtcTime($this->endTime, $restaurantTimezone),
                 'day_of_week' => $daysToSave, // Model will auto-encode via cast
                 'is_active' => $this->isActive,
                 'sort_order' => $sortOrder,
@@ -289,6 +277,53 @@ class BranchOperationalShifts extends Component
         ]);
 
         $this->loadShifts();
+    }
+
+    private function getRestaurantTimezone(): string
+    {
+        return $this->branch->restaurant?->timezone ?? self::DEFAULT_TIMEZONE;
+    }
+
+    private function convertRestaurantTimeToUtcTime(string $time, string $restaurantTimezone): string
+    {
+        return Carbon::now($restaurantTimezone)
+            ->setTimeFromTimeString($time)
+            ->setTimezone(self::DEFAULT_TIMEZONE)
+            ->format('H:i:s');
+    }
+
+    private function convertUtcTimeToRestaurantTime(?string $time, string $restaurantTimezone): string
+    {
+        if (!$time) {
+            return '00:00';
+        }
+
+        return Carbon::now(self::DEFAULT_TIMEZONE)
+            ->setTimeFromTimeString($time)
+            ->setTimezone($restaurantTimezone)
+            ->format('H:i');
+    }
+
+    private function normalizeSelectedDays($days): array
+    {
+        $days = $this->decodeDays($days);
+
+        return array_values(array_filter(array_unique($days), function ($day) {
+            return !empty($day) && is_string($day) && $day !== 'All';
+        }));
+    }
+
+    private function decodeDays($days): array
+    {
+        if (is_string($days)) {
+            $days = json_decode($days, true) ?? [];
+        }
+
+        if (!is_array($days)) {
+            $days = [];
+        }
+
+        return $days;
     }
 
     public function render()

@@ -20,7 +20,9 @@ class AddCharges extends Component
     public function mount()
     {
         // Get order types as [slug => order_type_name]
-        $this->orderTypes = OrderType::pluck('order_type_name', 'slug')->toArray();
+        $this->orderTypes = OrderType::availableForRestaurant()
+            ->pluck('order_type_name', 'slug')
+            ->toArray();
 
         if ($this->selectedChargeId) {
             $charge = RestaurantCharge::find($this->selectedChargeId);

@@ -1,0 +1,11 @@
+{
+    "name": "Loyalty",
+    "alias": "loyalty",
+    "description": "Customer loyalty points system - earn points on orders, redeem as discounts",
+    "keywords": ["loyalty", "points", "rewards", "discount"],
+    "priority": 0,
+    "providers": [
+        "Modules\\Loyalty\\Providers\\LoyaltyServiceProvider"
+    ],
+    "files": []
+}

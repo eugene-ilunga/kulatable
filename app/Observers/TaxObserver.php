@@ -12,6 +12,10 @@ class TaxObserver
         if (restaurant()) {
             $tax->restaurant_id = restaurant()->id;
         }
+
+        if (branch()) {
+            $tax->branch_id = branch()->id;
+        }
     }
 
 }

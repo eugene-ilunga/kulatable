@@ -20,7 +20,7 @@ class KotController extends Controller
         return view('kot.index');
     }
 
-    public function printKot($id, $kotPlaceid = null, $width = 80, $thermal = false)
+    public function printKot($id, $kotPlaceid = null, $width = 80, $thermal = false, $forPdf = false)
     {
         $kot = Kot::with('items', 'order.waiter', 'table')->find($id);
         $kotPlace = KotPlace::with('printerSetting')->find($kotPlaceid);
@@ -33,6 +33,6 @@ class KotController extends Controller
         
         $printingChoice = $printerSetting?->printing_choice ?? 'browserPopupPrint';
 
-        return view('pos.printKot', compact('kot', 'kotPlaceid', 'width', 'thermal', 'kotPlace', 'printingChoice'));
+        return view('pos.printKot', compact('kot', 'kotPlaceid', 'width', 'thermal', 'kotPlace', 'printingChoice', 'forPdf'));
     }
 }

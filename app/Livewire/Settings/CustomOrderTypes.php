@@ -74,7 +74,9 @@ class CustomOrderTypes extends Component
 
     public function fetchData()
     {
-        $orderTypes = OrderType::where('branch_id', branch()->id)->get();
+        $orderTypes = OrderType::where('branch_id', branch()->id)
+            ->availableForRestaurant()
+            ->get();
 
         $this->orderTypeFields = $orderTypes->map(function ($orderType) {
             return [
@@ -235,6 +237,7 @@ class CustomOrderTypes extends Component
     {
         return OrderType::where('branch_id', branch()->id)
             ->where('is_active', true)
+            ->availableForRestaurant()
             ->pluck('order_type_name', 'id');
     }
 

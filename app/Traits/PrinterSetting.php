@@ -38,7 +38,7 @@ trait PrinterSetting
         $width = $this->getPrintWidth(); // 80mm for fullWidth approach
         $thermal = true;
         // Generate the KOT content using KotController to avoid duplication
-        $content = (new KotController())->printKot($kotId, $kotPlaceId, $width, $thermal)->render();
+        $content = (new KotController())->printKot($kotId, $kotPlaceId, $width, $thermal, $this->checkGeneratePdf())->render();
 
         if ($this->checkGeneratePdf()) {
             $this->generateKotPdf($kotId, $content);
@@ -78,13 +78,44 @@ trait PrinterSetting
     private function generateKotPdf($kotId, $content)
     {
         $width = $this->getPrintWidth();
-        $paperWidthInPoints = $width * 2.85;
-        $paperHeightInPoints = 800;
+        // Calculate paper width in points (1mm ≈ 2.83 points)
+        $paperWidthInPoints = $width * 2.83;
+        // Dynamic height based on KOT content to avoid awkward page breaks
+        $paperHeightInPoints = $this->estimateKotReceiptHeight($kotId);
 
-        $pdf = Pdf::loadHTML($content)->setPaper([0, 0, $paperWidthInPoints, $paperHeightInPoints], 'portrait');
-
+        $pdf = Pdf::loadHTML($content)
+            ->setPaper([0, 0, $paperWidthInPoints, $paperHeightInPoints], 'portrait');
         $fullPath = public_path(Files::UPLOAD_FOLDER . '/' . 'print/kot-' . $kotId . '.pdf');
         $pdf->save($fullPath);
+    }
+
+    /**
+     * Estimate KOT receipt height in points based on content (items, modifiers).
+     * Used so the PDF page height fits content and avoids unnecessary pagination.
+     */
+    private function estimateKotReceiptHeight($kotId): float
+    {
+        $baseHeight = 320;   // header, KOT info, table header, footer
+        $perItemHeight = 52; // one line item (name + qty + price)
+        $perModifierHeight = 22;
+        $minHeight = 500;
+        $maxHeight = 4500;
+
+        $kot = Kot::with(['items.modifierOptions'])->find($kotId);
+        if (!$kot) {
+            return max($minHeight, $baseHeight);
+        }
+
+        $contentHeight = $baseHeight;
+        foreach ($kot->items ?? [] as $item) {
+            $contentHeight += $perItemHeight;
+            $modifierCount = $item->modifierOptions ? $item->modifierOptions->count() : 0;
+            if ($modifierCount > 0) {
+                $contentHeight += $perModifierHeight * $modifierCount;
+            }
+        }
+
+        return (float) max($minHeight, min(ceil($contentHeight), $maxHeight));
     }
 
     /**
@@ -144,11 +175,6 @@ trait PrinterSetting
 
         // Load the order to verify what we're actually printing
         $order = Order::find($orderId);
-        if ($order) {
-            Log::info("Order details - ID: {$order->id}, Order Number: {$order->order_number}, Created: {$order->created_at}");
-        } else {
-            Log::error("Order with ID {$orderId} not found!");
-        }
 
         $orderPlace = MultipleOrder::first();
         $printerSetting = $this->getActivePrinter($orderPlace->printer_id);
@@ -160,7 +186,8 @@ trait PrinterSetting
         $thermal = true;
 
         // Generate the Order content using OrderController to avoid duplication
-        $content = (new OrderController())->printOrder($orderId, $width, $thermal)->render();
+        // Pass forPdf=true when generating PDF so receipt stays on one page (no page-break-after)
+        $content = (new OrderController())->printOrder($orderId, $width, $thermal, $this->checkGeneratePdf())->render();
 
         if ($this->checkGeneratePdf()) {
             $this->generateOrderPdf($orderId, $content);
@@ -200,15 +227,48 @@ trait PrinterSetting
     private function generateOrderPdf($orderId, $content)
     {
         $width = $this->getPrintWidth();
-        // Calculate paper width in points (1mm = 2.83465 points)
-        // Common thermal printer widths: 58mm, 80mm
+        // Calculate paper width in points (1mm ≈ 2.83 points)
         $paperWidthInPoints = $width * 2.83;
-        $paperHeightInPoints = 800; // Dynamic height, will be adjusted by content
+        // Dynamic height based on order content to avoid awkward page breaks
+        $paperHeightInPoints = $this->estimateOrderReceiptHeight($orderId);
 
         $pdf = Pdf::loadHTML($content)
             ->setPaper([0, 0, $paperWidthInPoints, $paperHeightInPoints], 'portrait');
         $fullPath = public_path(Files::UPLOAD_FOLDER . '/' . 'print/order-' . $orderId . '.pdf');
         $pdf->save($fullPath);
+    }
+
+    /**
+     * Estimate receipt height in points based on order content (items, modifiers, totals).
+     * Used so the PDF page height fits content and avoids unnecessary pagination.
+     */
+    private function estimateOrderReceiptHeight($orderId): float
+    {
+        $baseHeight = 420;   // header, order info, table header, totals, footer
+        $perItemHeight = 52; // one line item (name + qty + price)
+        $perModifierHeight = 22;
+        $perChargeOrTaxLine = 18;
+        $minHeight = 600;
+        $maxHeight = 4500;
+
+        $order = Order::with(['items.modifierOptions', 'charges.charge', 'taxes.tax'])->find($orderId);
+        if (!$order) {
+            return max($minHeight, $baseHeight);
+        }
+
+        $contentHeight = $baseHeight;
+        foreach ($order->items ?? [] as $item) {
+            $contentHeight += $perItemHeight;
+            $modifierCount = $item->modifierOptions ? $item->modifierOptions->count() : 0;
+            if ($modifierCount > 0) {
+                $contentHeight += $perModifierHeight * $modifierCount;
+            }
+        }
+        $chargeLines = $order->charges ? $order->charges->count() : 0;
+        $taxLines = $order->taxes ? $order->taxes->count() : 0;
+        $contentHeight += ($chargeLines + $taxLines) * $perChargeOrTaxLine;
+
+        return (float) max($minHeight, min(ceil($contentHeight), $maxHeight));
     }
 
     /**

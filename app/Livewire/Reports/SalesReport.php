@@ -24,9 +24,19 @@ class SalesReport extends Component
     public $startTime = '00:00'; // Default start time
     public $endTime = '23:59';  // Default end time
     public $currencyId;
+    /** @var string User id who created/handled the order (orders.added_by) */
+    public $filterByHandler = '';
+    /** @var string Assigned waiter user id (orders.waiter_id) */
     public $filterByWaiter = '';
+    /** @var string Payment method filter (payments.payment_method) */
+    public $filterByPaymentMethod = '';
+    /** All branch/restaurant users (handler filter dropdown) */
+    public $handlers = [];
+    /** Users with Waiter role only (waiter filter dropdown) */
     public $waiters = [];
+    public $selectedHandler = '';
     public $selectedWaiter = '';
+    public $selectedPaymentMethod = '';
     public $showItemsModal = false;
     public $selectedDate = '';
     public $dateItems = [];
@@ -44,8 +54,8 @@ class SalesReport extends Component
         // Load date range type from cookie
         $this->dateRangeType = request()->cookie('sales_report_date_range_type', 'currentWeek');
         $this->setDateRange();
-        // Populate users for current restaurant (branch-specific and global)
-        $this->waiters = User::withoutGlobalScope(BranchScope::class)
+        // All users (handler / added_by filter)
+        $this->handlers = User::withoutGlobalScope(BranchScope::class)
             ->where(function ($q) {
                 return $q->where('branch_id', branch()->id)
                     ->orWhereNull('branch_id');
@@ -54,6 +64,18 @@ class SalesReport extends Component
             ->orderBy('name')
             ->get();
 
+        // Waiter role only (assigned waiter / waiter_id filter)
+        $this->waiters = User::withoutGlobalScope(BranchScope::class)
+            ->role('Waiter_' . restaurant()->id)
+            ->where(function ($q) {
+                return $q->where('branch_id', branch()->id)
+                    ->orWhereNull('branch_id');
+            })
+            ->where('restaurant_id', restaurant()->id)
+            ->orderBy('name')
+            ->get();
+
+        $this->selectedHandler = '';
         $this->selectedWaiter = '';
 
         // Load operational shifts for the current branch
@@ -86,7 +108,12 @@ class SalesReport extends Component
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
         $this->startDate = $start->format($dateFormat);
         $this->endDate = $end->format($dateFormat);
+        $this->filterByHandler = '';
         $this->filterByWaiter = '';
+        $this->filterByPaymentMethod = '';
+        $this->selectedHandler = '';
+        $this->selectedWaiter = '';
+        $this->selectedPaymentMethod = '';
 
         // Clear shift filter if not viewing today (shift filter only works for today)
         if ($this->dateRangeType !== 'today') {
@@ -182,7 +209,9 @@ class SalesReport extends Component
                 $dateTimeData['endTime'], // Query end time
                 $dateTimeData['timezone'],
                 $dateTimeData['offset'],
+                $this->filterByHandler ?: null,
                 $this->filterByWaiter ?: null,
+                $this->filterByPaymentMethod ?: null,
                 $this->filterShift ?: null,
                 $this->startDate,
                 $this->endDate,
@@ -216,14 +245,26 @@ class SalesReport extends Component
             return '00:00';
         }
 
-        // Extract time in H:i format from various possible formats
-        if (preg_match('/(\d{1,2}):(\d{2})/', $time, $matches)) {
-            $hours = str_pad((int)$matches[1], 2, '0', STR_PAD_LEFT);
-            $minutes = str_pad((int)$matches[2], 2, '0', STR_PAD_LEFT);
+        $time = trim($time);
 
-            // Validate hours and minutes
-            $hours = min(23, max(0, (int)$hours));
-            $minutes = min(59, max(0, (int)$minutes));
+        // Match H:i or h:i with optional AM/PM (e.g. "14:30", "2:30 PM", "02:30 am")
+        if (preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i', $time, $matches)) {
+            $hours = (int) $matches[1];
+            $minutes = (int) $matches[2];
+            $ampm = $matches[3] ?? null;
+
+            if ($ampm !== null && $ampm !== '') {
+                $ampmUpper = strtoupper($ampm);
+                if ($ampmUpper === 'PM' && $hours !== 12) {
+                    $hours += 12;
+                }
+                if ($ampmUpper === 'AM' && $hours === 12) {
+                    $hours = 0;
+                }
+            }
+
+            $hours = min(23, max(0, $hours));
+            $minutes = min(59, max(0, $minutes));
 
             return sprintf('%02d:%02d', $hours, $minutes);
         }
@@ -232,15 +273,64 @@ class SalesReport extends Component
         return '00:00';
     }
 
+    private function applyOrderUserFilters($query, $table = null)
+    {
+        $prefix = $table ? $table . '.' : '';
+
+        if ($this->filterByHandler) {
+            $query->where($prefix . 'added_by', $this->filterByHandler);
+        }
+
+        if ($this->filterByWaiter) {
+            $query->where($prefix . 'waiter_id', $this->filterByWaiter);
+        }
+
+        return $query;
+    }
+
+    private function applyOrderPaymentMethodFilter($query, $table = null)
+    {
+        if (!$this->filterByPaymentMethod) {
+            return $query;
+        }
+
+        // If the query already joins `payments`, we can filter directly on payments.payment_method.
+        if ($table) {
+            $query->where($table . '.payment_method', $this->filterByPaymentMethod);
+
+            return $query;
+        }
+
+        // Otherwise, filter orders by checking existence of a payment with the selected method.
+        $paymentMethod = $this->filterByPaymentMethod;
+        $query->whereIn('id', function ($sub) use ($paymentMethod) {
+            $sub->select('order_id')
+                ->from('payments')
+                ->where('payment_method', $paymentMethod);
+        });
+
+        return $query;
+    }
+
     public function updatedFilterShift()
     {
         // Reset pagination or trigger re-render when shift filter changes
         $this->dispatch('$refresh');
     }
 
+    public function filterHandler()
+    {
+        $this->filterByHandler = $this->selectedHandler;
+    }
+
     public function filterWaiter()
     {
         $this->filterByWaiter = $this->selectedWaiter;
+    }
+
+    public function filterPaymentMethod()
+    {
+        $this->filterByPaymentMethod = $this->selectedPaymentMethod;
     }
 
     public function openItemsModal($date)
@@ -297,9 +387,19 @@ class SalesReport extends Component
                 }
             });
 
-        // Filter by waiter if selected
+        if ($this->filterByHandler) {
+            $baseQuery->where('orders.added_by', $this->filterByHandler);
+        }
         if ($this->filterByWaiter) {
-            $baseQuery->where('orders.added_by', $this->filterByWaiter);
+            $baseQuery->where('orders.waiter_id', $this->filterByWaiter);
+        }
+        if ($this->filterByPaymentMethod) {
+            $paymentMethod = $this->filterByPaymentMethod;
+            $baseQuery->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                $sub->select('order_id')
+                    ->from('payments')
+                    ->where('payment_method', $paymentMethod);
+            });
         }
 
         // Pull order-level taxes via the relation table and compute total tax per order
@@ -319,8 +419,19 @@ class SalesReport extends Component
                     });
                 }
             })
+            ->when($this->filterByHandler, function ($q) {
+                $q->where('orders.added_by', $this->filterByHandler);
+            })
             ->when($this->filterByWaiter, function ($q) {
-                $q->where('orders.added_by', $this->filterByWaiter);
+                $q->where('orders.waiter_id', $this->filterByWaiter);
+            })
+            ->when($this->filterByPaymentMethod, function ($q) {
+                $paymentMethod = $this->filterByPaymentMethod;
+                $q->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                    $sub->select('order_id')
+                        ->from('payments')
+                        ->where('payment_method', $paymentMethod);
+                });
             })
             ->select(
                 'orders.id as order_id',
@@ -512,11 +623,10 @@ class SalesReport extends Component
         // Apply shift filter if selected
         $outstandingQuery = $this->applyShiftFilter($outstandingQuery, $dateTimeData);
 
-        // Filter by waiter if selected
-        if ($this->filterByWaiter) {
-            $query->where('orders.added_by', $this->filterByWaiter);
-            $outstandingQuery->where('added_by', $this->filterByWaiter);
-        }
+        $this->applyOrderUserFilters($query, 'orders');
+        $this->applyOrderUserFilters($outstandingQuery);
+        $this->applyOrderPaymentMethodFilter($query, 'payments');
+        $this->applyOrderPaymentMethodFilter($outstandingQuery, null);
 
         $query = $query->select(
             DB::raw('DATE(CONVERT_TZ(orders.date_time, "+00:00", "' . $dateTimeData['offset'] . '")) as date'),
@@ -586,10 +696,8 @@ class SalesReport extends Component
         // Apply shift filter if selected
         $dueReceivedQuery = $this->applyShiftFilter($dueReceivedQuery, $dateTimeData);
 
-        // Filter by waiter if selected
-        if ($this->filterByWaiter) {
-            $dueReceivedQuery->where('orders.added_by', $this->filterByWaiter);
-        }
+        $this->applyOrderUserFilters($dueReceivedQuery, 'orders');
+        $this->applyOrderPaymentMethodFilter($dueReceivedQuery, 'payments');
 
         $dueReceivedData = $dueReceivedQuery->select(
             DB::raw('DATE(CONVERT_TZ(orders.date_time, "+00:00", "' . $dateTimeData['offset'] . '")) as date'),
@@ -623,10 +731,8 @@ class SalesReport extends Component
         // Apply shift filter if selected
         $orderData = $this->applyShiftFilter($orderData, $dateTimeData);
 
-        // Filter by waiter if selected
-        if ($this->filterByWaiter) {
-            $orderData->where('added_by', $this->filterByWaiter);
-        }
+        $this->applyOrderUserFilters($orderData);
+        $this->applyOrderPaymentMethodFilter($orderData, null);
 
         $orderData = $orderData->select(
             DB::raw('DATE(CONVERT_TZ(date_time, "+00:00", "' . $dateTimeData['offset'] . '")) as date'),
@@ -680,8 +786,19 @@ class SalesReport extends Component
                         }
                     })
                     ->where('orders.branch_id', branch()->id)
+                    ->when($this->filterByHandler, function ($q) {
+                        $q->where('orders.added_by', $this->filterByHandler);
+                    })
                     ->when($this->filterByWaiter, function ($q) {
-                        $q->where('orders.added_by', $this->filterByWaiter);
+                        $q->where('orders.waiter_id', $this->filterByWaiter);
+                    })
+                    ->when($this->filterByPaymentMethod, function ($q) {
+                        $paymentMethod = $this->filterByPaymentMethod;
+                        $q->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                            $sub->select('order_id')
+                                ->from('payments')
+                                ->where('payment_method', $paymentMethod);
+                        });
                     })
                     ->sum(DB::raw('CASE WHEN restaurant_charges.charge_type = "percent"
                 THEN (restaurant_charges.charge_value / 100) * orders.sub_total
@@ -723,8 +840,19 @@ class SalesReport extends Component
                         });
                     }
                 })
+                ->when($this->filterByHandler, function ($q) {
+                    $q->where('orders.added_by', $this->filterByHandler);
+                })
                 ->when($this->filterByWaiter, function ($q) {
-                    $q->where('orders.added_by', $this->filterByWaiter);
+                    $q->where('orders.waiter_id', $this->filterByWaiter);
+                })
+                ->when($this->filterByPaymentMethod, function ($q) {
+                    $paymentMethod = $this->filterByPaymentMethod;
+                    $q->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                        $sub->select('order_id')
+                            ->from('payments')
+                            ->where('payment_method', $paymentMethod);
+                    });
                 })
                 ->select(
                     'taxes.tax_name',
@@ -779,8 +907,19 @@ class SalesReport extends Component
                         });
                     }
                 })
+                ->when($this->filterByHandler, function ($q) {
+                    $q->where('orders.added_by', $this->filterByHandler);
+                })
                 ->when($this->filterByWaiter, function ($q) {
-                    $q->where('orders.added_by', $this->filterByWaiter);
+                    $q->where('orders.waiter_id', $this->filterByWaiter);
+                })
+                ->when($this->filterByPaymentMethod, function ($q) {
+                    $paymentMethod = $this->filterByPaymentMethod;
+                    $q->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                        $sub->select('order_id')
+                            ->from('payments')
+                            ->where('payment_method', $paymentMethod);
+                    });
                 })
                 ->select(
                     'taxes.tax_name',
@@ -827,8 +966,19 @@ class SalesReport extends Component
                                 });
                             }
                         })
+                        ->when($this->filterByHandler, function ($q) {
+                            $q->where('orders.added_by', $this->filterByHandler);
+                        })
                         ->when($this->filterByWaiter, function ($q) {
-                            $q->where('orders.added_by', $this->filterByWaiter);
+                            $q->where('orders.waiter_id', $this->filterByWaiter);
+                        })
+                        ->when($this->filterByPaymentMethod, function ($q) {
+                            $paymentMethod = $this->filterByPaymentMethod;
+                            $q->whereIn('orders.id', function ($sub) use ($paymentMethod) {
+                                $sub->select('order_id')
+                                    ->from('payments')
+                                    ->where('payment_method', $paymentMethod);
+                            });
                         })
                         ->sum(DB::raw('
                             CASE
@@ -943,7 +1093,7 @@ class SalesReport extends Component
             // Filter shifts to only show those that apply to today's day of week
             $tz = timezone();
             $currentDayOfWeek = Carbon::now($tz)->format('l'); // e.g., "Friday"
-            $filteredShifts = $this->shifts->filter(function($shift) use ($currentDayOfWeek) {
+            $filteredShifts = collect($this->shifts)->filter(function($shift) use ($currentDayOfWeek) {
                 // Ensure day_of_week is an array (handle both array and JSON string)
                 $shiftDays = $shift->day_of_week ?? [];
                 if (is_string($shiftDays)) {
@@ -989,8 +1139,8 @@ class SalesReport extends Component
             'taxMode' => $taxMode,
             'allTaxes' => $allTaxes,
             'currencyId' => $this->currencyId,
+            'handlers' => $this->handlers,
             'waiters' => $this->waiters,
-            'filterByWaiter' => $this->filterByWaiter,
             'filteredShifts' => $filteredShifts, // Pass filtered shifts (only for today) - use different name to avoid conflict
             'isToday' => $dateTimeData['isToday'], // Pass flag to view
             'businessDayInfo' => $businessDayInfo,

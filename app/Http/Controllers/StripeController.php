@@ -161,11 +161,12 @@ class StripeController extends Controller
             header('HTTP/1.1 303 See Other');
             return redirect($session->url);
         } else {
-            // Lifetime package or other
+            // Lifetime package or other - use package currency (e.g. TRY) not default USD
+            $currencyCode = strtolower($package->currency?->currency_code ?? 'usd');
             $checkoutSession = $stripe->checkout->sessions->create([
                 'line_items' => [[
                     'price_data' => [
-                        'currency' => strtolower($currency?->currency_code ?? 'usd'),
+                        'currency' => $currencyCode,
                         'product_data' => [
                             'name' => 'License Payment for ' . global_setting()->name,
                         ],

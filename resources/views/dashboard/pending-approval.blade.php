@@ -8,7 +8,7 @@
 
     <div class="grid grid-cols-1 px-4 pt-6 xl:grid-cols-2 xl:gap-4 dark:bg-gray-900">
         <div class="mb-4 col-span-full xl:mb-2">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.dashboard.approvalStatus')</h1>
+            <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.dashboard.approvalStatus')</h1>
         </div>
     </div>
 

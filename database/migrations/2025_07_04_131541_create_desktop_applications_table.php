@@ -24,14 +24,13 @@ return new class extends Migration
             });
         }
 
-
-
-
-        $desktopApplication = DesktopApplication::first();
-        if (!$desktopApplication) {
-            DesktopApplication::create([
-                'windows_file_path' => DesktopApplication::WINDOWS_FILE_PATH,
-                'linux_file_path' => DesktopApplication::LINUX_FILE_PATH,
+        // Seed default desktop application row WITHOUT using the Eloquent model.
+        // The model points to `desktop_mobile_application`, which is created later
+        // by the rename migration, so using it here breaks fresh migrations.
+        if (!DB::table('desktop_applications')->first()) {
+            DB::table('desktop_applications')->insert([
+                'windows_file_path'     => DesktopApplication::WINDOWS_FILE_PATH,
+                'linux_file_path'       => DesktopApplication::LINUX_FILE_PATH,
             ]);
         }
     }

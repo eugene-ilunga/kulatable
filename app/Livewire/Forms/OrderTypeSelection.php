@@ -28,7 +28,7 @@ class OrderTypeSelection extends Component
 
     public function loadOrderTypes()
     {
-        $this->orderTypes = OrderType::where('is_active', true)
+        $this->orderTypes = OrderType::where('is_active', true)->availableForRestaurant()
             ->orderBy('order_type_name')
             ->get();
     }
@@ -44,7 +44,7 @@ class OrderTypeSelection extends Component
     {
         $this->selectedOrderTypeChoice = $orderTypeId;
         $this->selectedOrderTypeSlug = $slug;
-        
+
         // If it's delivery, move to delivery platform selection stage
         if ($slug === 'delivery') {
             $this->selectionStage = 'delivery_platform';
@@ -82,17 +82,12 @@ class OrderTypeSelection extends Component
 
         $this->saveDefaultOrderTypePreference();
 
-        $params = [
-            'orderType' => $this->selectedOrderTypeSlug,
-            'orderTypeId' => $this->selectedOrderTypeChoice,
-        ];
-
-        if ($this->selectedDeliveryPlatform) {
-            $params['deliveryPlatform'] = $this->selectedDeliveryPlatform;
-        }
-
-        // Dispatch event to the parent component
-        $this->dispatch('setOrderTypeChoice', $params);
+        // Dispatch Livewire event that will be caught by JavaScript
+        $this->dispatch('setOrderTypeChoice',
+            orderTypeId: $this->selectedOrderTypeChoice,
+            orderTypeSlug: $this->selectedOrderTypeSlug,
+            deliveryPlatform: $this->selectedDeliveryPlatform ?? null
+        );
     }
 
     public function render()

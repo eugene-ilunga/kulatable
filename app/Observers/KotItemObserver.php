@@ -54,11 +54,11 @@ class KotItemObserver
 
     public function saved(KotItem $kotItem)
     {
-        event(new KotUpdated($kotItem->kot));
+        event(new KotUpdated($kotItem->kot, 'updated'));
     }
 
     public function deleted(KotItem $kotItem)
     {
-        event(new KotUpdated($kotItem->kot));
+        event(new KotUpdated($kotItem->kot, 'updated'));
     }
 }

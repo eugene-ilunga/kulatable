@@ -43,19 +43,19 @@
                         <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700" wire:key='invoice-list-{{ microtime() }}'>
                         @forelse ($offlinePaymentRequest as $request)
                         <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='request-{{ $request->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 {{ $request->package->package_name }} ({{ ucfirst($request->package->package_type->value) }})
                             </td>
-                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 {{ ucfirst($request->package_type) }}
                             </td>
-                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 {{ $request->offlineMethod->name }}
                             </td>
-                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 {{ $request->package->created_at->format('D, d M Y, h:i A') }}
                             </td>
-                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 @if ($request->status == 'verified')
                                 <span class="bg-green-100 uppercase text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">@lang('app.verified')</span>
                                 @elseif ($request->status == 'pending')

@@ -91,6 +91,7 @@
                             <x-textarea class="block mt-2 w-full" wire:model='restaurantAddress' rows='3' />
                             <x-input-error for="restaurantAddress" class="mt-2" />
                         </div>
+
                     </div>
                     <div class="col-span-2 mt-3">
                         <x-button>@lang('app.save')</x-button>
@@ -226,7 +227,7 @@
 
                                         @forelse ($charges as $item)
                                         <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='member-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 <div class="flex items-center">
                                                     {{ $item->charge_name }}
                                                     <span class="inline-flex items-center ml-2 px-1.5 py-0.5 rounded-full text-xs font-medium {{ $item->is_enabled ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' }}">
@@ -235,10 +236,10 @@
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ ucfirst($item->charge_type) }}
                                             </td>
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ $item->charge_type == 'percent' ? $item->charge_value . '%' : currency_format($item->charge_value, restaurant()->currency_id) }}
                                             </td>
 

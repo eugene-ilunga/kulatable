@@ -23,6 +23,7 @@ class EditRestaurant extends Component
     public $facebook;
     public $instagram;
     public $twitter;
+    public $googleBusinessLink;
     public $countries;
     public $restaurant;
     public $isActive;
@@ -35,7 +36,7 @@ class EditRestaurant extends Component
 
     public function mount($restaurantId)
     {
-        
+
         $this->restaurant = Restaurant::findOrFail($restaurantId);
         $this->initializeFormData();
     }
@@ -62,6 +63,7 @@ class EditRestaurant extends Component
         $this->facebook = $this->restaurant->facebook_link;
         $this->instagram = $this->restaurant->instagram_link;
         $this->twitter = $this->restaurant->twitter_link;
+        $this->googleBusinessLink = $this->restaurant->google_business_link;
         $this->isActive = (int)$this->restaurant->is_active;
 
         // Initialize phone codes
@@ -95,11 +97,16 @@ class EditRestaurant extends Component
     public function submitForm()
     {
         abort_if((!user_can('Update Restaurant')), 403);
-        
+
+        if (empty($this->googleBusinessLink)) {
+            $this->googleBusinessLink = null;
+        }
+
         $rules = [
             'restaurantName' => 'required',
             'email' => 'required',
             'isActive' => 'required|in:0,1',
+            'googleBusinessLink' => 'nullable|url',
         ];
 
         if (module_enabled('Subdomain')) {
@@ -135,6 +142,7 @@ class EditRestaurant extends Component
         $this->restaurant->facebook_link = $this->facebook;
         $this->restaurant->instagram_link = $this->instagram;
         $this->restaurant->twitter_link = $this->twitter;
+        $this->restaurant->google_business_link = $this->googleBusinessLink;
         $this->restaurant->is_active = (bool)$this->isActive;
         $this->restaurant->save();
 

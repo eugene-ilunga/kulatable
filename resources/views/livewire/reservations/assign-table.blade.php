@@ -66,6 +66,12 @@
         <div class="col-span-1 space-y-3 bg-gray-50 dark:bg-neutral-900/30 rounded-md p-3">
             <h4 class="text-xs font-semibold">@lang('modules.reservation.reservedTables'): {{ $reservation->reservation_date_time->translatedFormat('d F') }}</h4>
 
+            @if ($capacityError)
+            <div class="bg-red-50 border border-red-200 text-red-700 rounded-md p-3 text-xs font-medium">
+                {{ $capacityError }}
+            </div>
+            @endif
+
             @if ($reservation->table_id)
             <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
                 <h5 class="text-xs font-semibold text-blue-800 dark:text-blue-200 mb-2">@lang('modules.reservation.currentTable')</h5>

@@ -3,7 +3,7 @@
 @section('content')
 <div class="p-4 bg-white block dark:bg-gray-800 dark:border-gray-700">
     <div class="flex justify-between mb-4">
-        <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.dashboard.onboarding')</h1>
+        <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.dashboard.onboarding')</h1>
     </div>
 
     <div class="mb-4">

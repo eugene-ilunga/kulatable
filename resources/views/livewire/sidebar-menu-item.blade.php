@@ -1,7 +1,8 @@
 <li>
-    <a href="{{ $link }}" wire:navigate
-        @class(['flex items-center p-2 text-base text-gray-900 rounded-xl hover:bg-gray-200 group dark:text-gray-200 dark:hover:bg-gray-700', 'hover:text-gray-800 text-white font-bold bg-gray-700' => $active])>
-        {!! $customIcon ?? $icon !!}
-        <span class="ltr:ml-3 rtl:mr-3" sidebar-toggle-item>{{ $name }}</span>
+    <a href="{{ $link }}" @if($navigate) wire:navigate @endif
+    @class(['flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm font-medium cursor-pointer w-full text-gray-500', 'hover:text-gray-800  text-skin-base  font-bold bg-skin-base/[.20]' => $active])>
+        <span @class(['w-4 h-4 rounded bg-brand-600 flex items-center justify-center text-[9px]', 'text-skin-base' => $active])>{!! $customIcon ?? $icon !!}</span>
+        {{ $name }}
     </a>
+    
 </li>

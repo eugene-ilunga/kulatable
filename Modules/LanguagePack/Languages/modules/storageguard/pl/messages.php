@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Strażnik magazynu',
+  'status_title' => 'Ścieżki systemu ochrony pamięci masowej',
+  'permissions_badge' => 'Tryb: 0775 (katalogi) / 0664 (pliki)',
+  'success_message' => 'Próba naprawy elementów :count (plików i katalogów).',
+  'error_alert' => 'Jedna lub więcej ścieżek przechowywania wymaga uwagi. Kliknij „Naprawa rekursywna”, aby naprawić uprawnienia.',
+  'recursive_repair' => 'Naprawa rekurencyjna',
+  'secure_repair' => 'Zabezpiecz i napraw uprawnienia',
+  'refresh_status' => 'Odśwież stan',
+  'path' => 'Ścieżka',
+  'status' => 'Status',
+  'perms' => 'Trwałość',
+  'readable' => 'Czytelny',
+  'writable' => 'Możliwość zapisu',
+  'yes' => 'Tak',
+  'no' => 'NIE',
+  'ok' => 'OK',
+  'issue' => 'Wydanie',
+];

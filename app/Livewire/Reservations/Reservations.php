@@ -5,6 +5,7 @@ namespace App\Livewire\Reservations;
 use Carbon\Carbon;
 use Livewire\Component;
 use App\Models\Reservation;
+use App\Services\RestaurantAvailabilityService;
 
 class Reservations extends Component
 {
@@ -15,6 +16,8 @@ class Reservations extends Component
     public $endDate;
     public $showAddReservation = false;
     public $search = '';
+    public $isRestaurantOpenForReservations = true;
+    public $restaurantClosedMessage = '';
 
     public function mount()
     {
@@ -82,6 +85,10 @@ class Reservations extends Component
                 });
             })
             ->get();
+
+        $availability = RestaurantAvailabilityService::getAvailability(restaurant(), branch(), null, 'reservation');
+        $this->isRestaurantOpenForReservations = (bool) ($availability['is_open'] ?? true);
+        $this->restaurantClosedMessage = RestaurantAvailabilityService::getMessage($availability, restaurant());
 
         return view('livewire.reservations.reservations', [
             'reservations' => $reservations

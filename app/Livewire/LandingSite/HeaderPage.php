@@ -25,8 +25,15 @@ class HeaderPage extends Component
     public function mount()
     {
         $this->loadLanguageContents();
-        $language = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
-        $this->languageSettingid = $language?->id;
+
+        $userLocale = auth()->user()?->locale;
+
+        if ($userLocale) {
+            $language = LanguageSetting::where('language_code', $userLocale)->where('active', 1)->first();
+            if ($language) {
+                $this->languageSettingid = $language->id;
+            }
+        }
 
         $this->loadSelectedLanguageContent();
     }
@@ -60,6 +67,9 @@ class HeaderPage extends Component
             $this->headerDescription = '';
             $this->existingImageUrl = null;
         }
+
+        // Always notify the browser so Trix can reload even if content is empty.
+        $this->dispatch('description-updated', value: $this->headerDescription ?? '');
     }
 
     public function saveHeader()
@@ -120,8 +130,7 @@ class HeaderPage extends Component
 
     public function render()
     {
-        $languageEnable = LanguageSetting::availableForSelection();
-
+        $languageEnable = LanguageSetting::where('active', 1)->get();
         return view('livewire.landing-site.header-page', [
             'languageEnable' => $languageEnable
         ]);

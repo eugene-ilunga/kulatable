@@ -34,9 +34,11 @@ class SendOtp extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $recipientName = data_get($notifiable, 'name', __('app.user'));
+
         return (new MailMessage)
             ->subject(config('app.name') . ' - ' . __('auth.loginVerificationCode'))
-            ->greeting(__('app.hello') . ' ' . $notifiable->name . '!')
+            ->greeting(__('app.hello') . ' ' . $recipientName . '!')
             ->line(__('auth.youHaveRequestedToLogin'))
             ->line($this->otp)
             ->line(__('auth.thisCodeWillExpireIn') . ' **10 ' . __('auth.minutes') . '**.')

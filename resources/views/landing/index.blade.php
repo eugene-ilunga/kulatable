@@ -30,7 +30,7 @@
         </div>
 
         <div class="relative  max-w-screen-lg flex justify-center mx-auto">
-            <img src="{{ asset('landing/3199755.jpg') }}" class="shadow-lg border rounded-lg" alt="">
+            <img src="{{ asset('landing/dashboard.png') }}" class="shadow-lg border rounded-lg" alt="">
             <!-- SVG Element -->
             <div class="hidden md:block absolute top-0 end-0 -translate-y-12 translate-x-20">
                 <svg class="w-16 h-auto text-skin-base" width="121" height="135" viewBox="0 0 121 135" fill="none"

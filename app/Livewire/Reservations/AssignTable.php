@@ -13,9 +13,12 @@ class AssignTable extends Component
     public $tables;
     public $reservations;
     public $reservation;
+    public $capacityError;
 
     public function mount()
     {
+        $this->capacityError = null;
+
         $this->tables = Area::with(['tables' => function ($query) {
             return $query->where('status', 'active');
         }])->get();
@@ -59,6 +62,26 @@ class AssignTable extends Component
 
     public function setReservationTable($table)
     {
+        $this->capacityError = null;
+
+        // Reuse tables loaded in mount() to avoid an extra DB query per click.
+        $selectedTable = $this->tables
+            ->flatMap(fn ($area) => $area->tables)
+            ->firstWhere('id', $table);
+
+        if (!$selectedTable) {
+            return;
+        }
+
+        $pax = (int) ($this->reservation->party_size ?? 0);
+        $capacity = (int) ($selectedTable->seating_capacity ?? 0);
+
+        // Allow assigning when pax is equal to or less than seating capacity.
+        if ($capacity > 0 && $pax > $capacity) {
+            $this->capacityError = 'Seating capacity is less than the number of Pax';
+            return;
+        }
+
         // Check if table is available before assigning
         if (!$this->isTableAvailable($table)) {
             return; // Don't assign if table is not available

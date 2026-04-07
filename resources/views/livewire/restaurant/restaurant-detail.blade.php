@@ -1,7 +1,7 @@
 <div>
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">
+            <h1 class="text-base font-semibold text-gray-900 dark:text-white">
                 @lang('modules.restaurant.restaurantDetails')</h1>
 
         </div>
@@ -25,7 +25,7 @@
                                     <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
                                 </svg>
                             </a>
-                            <x-secondary-button class="lg:ms-3 inline-flex items-center gap-1 group relative " wire:click="impersonate({{$restaurant->id}})" wire:loading.attr="disabled">
+                            <x-secondary-button class="lg:ms-3 inline-flex items-center gap-1 group relative " wire:click="$set('showImpersonateModal', true)" wire:loading.attr="disabled">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-4 h-4" viewBox="0 0 16 16">
                                     <path fill-rule="evenodd" d="m4.736 1.968-.892 3.269-.014.058C2.113 5.568 1 6.006 1 6.5 1 7.328 4.134 8 8 8s7-.672 7-1.5c0-.494-1.113-.932-2.83-1.205l-.014-.058-.892-3.27c-.146-.533-.698-.849-1.239-.734C9.411 1.363 8.62 1.5 8 1.5s-1.411-.136-2.025-.267c-.541-.115-1.093.2-1.239.735m.015 3.867a.25.25 0 0 1 .274-.224c.9.092 1.91.143 2.975.143a30 30 0 0 0 2.975-.143.25.25 0 0 1 .05.498c-.918.093-1.944.145-3.025.145s-2.107-.052-3.025-.145a.25.25 0 0 1-.224-.274M3.5 10h2a.5.5 0 0 1 .5.5v1a1.5 1.5 0 0 1-3 0v-1a.5.5 0 0 1 .5-.5m-1.5.5q.001-.264.085-.5H2a.5.5 0 0 1 0-1h3.5a1.5 1.5 0 0 1 1.488 1.312 3.5 3.5 0 0 1 2.024 0A1.5 1.5 0 0 1 10.5 9H14a.5.5 0 0 1 0 1h-.085q.084.236.085.5v1a2.5 2.5 0 0 1-5 0v-.14l-.21-.07a2.5 2.5 0 0 0-1.58 0l-.21.07v.14a2.5 2.5 0 0 1-5 0zm8.5-.5h2a.5.5 0 0 1 .5.5v1a1.5 1.5 0 0 1-3 0v-1a.5.5 0 0 1 .5-.5"/>
                                 </svg>
@@ -275,11 +275,11 @@
 
                                         @foreach ($restaurant->branches as $item)
                                         <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='member-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ $loop->index+1 }}
                                             </td>
 
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ $item->name }}
                                             </td>
 
@@ -287,7 +287,7 @@
                                                 {{ $item->address }}
                                             </td>
 
-                                            <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                 {{ $item->orders_count }}
                                             </td>
                                         </tr>
@@ -588,5 +588,28 @@
             </x-button>
         </x-slot>
     </x-dialog-modal>
+
+    <!-- Impersonate Confirmation Modal -->
+    <x-confirmation-modal wire:model.defer="showImpersonateModal">
+        <x-slot name="title">
+            {{ __('app.impersonate') }} - {{ $restaurant->name }}
+        </x-slot>
+
+        <x-slot name="content">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                {{ __('messages.impersonateConfirmation') }}
+            </p>
+        </x-slot>
+
+        <x-slot name="footer">
+            <x-secondary-button wire:click="$toggle('showImpersonateModal')" wire:loading.attr="disabled">
+                {{ __('app.cancel') }}
+            </x-secondary-button>
+
+            <x-button class="ml-3" wire:click="impersonate({{ $restaurant->id }})" wire:loading.attr="disabled">
+                {{ __('app.impersonate') }}
+            </x-button>
+        </x-slot>
+    </x-confirmation-modal>
 
 </div>

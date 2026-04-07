@@ -23,9 +23,6 @@ class PaymentGatewayCredential extends BaseModel
         'razorpay_key' => 'encrypted',
         'stripe_secret' => 'encrypted',
         'razorpay_secret' => 'encrypted',
-        'freshpay_merchant_secret' => 'encrypted',
-        'freshpay_callback_secret_key' => 'encrypted',
-        'freshpay_callback_hmac_key' => 'encrypted',
     ];
 
 
@@ -123,13 +120,6 @@ class PaymentGatewayCredential extends BaseModel
     public function getTapPublicKeyAttribute()
     {
         return ($this->tap_mode == 'sandbox' ? $this->test_tap_public_key : $this->live_tap_public_key);
-    }
-
-    public function getFreshpayEndpointAttribute(): string
-    {
-        return ($this->freshpay_mode === 'live')
-            ? 'https://paydrc.gofreshbakery.net/api/v5/'
-            : 'https://api.gofreshpay.com/api/v1/gateway';
     }
 
 }

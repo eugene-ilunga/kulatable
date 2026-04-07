@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Guardia di stoccaggio',
+  'status_title' => 'Percorsi del sistema Storage Guard',
+  'permissions_badge' => 'Modalità: 0775 (dir) / 0664 (file)',
+  'success_message' => 'Tentative di riparazione su elementi :count (file e directory).',
+  'error_alert' => 'Uno o più percorsi di archiviazione richiedono attenzione. Fai clic su "Riparazione ricorsiva" per correggere le autorizzazioni.',
+  'recursive_repair' => 'Riparazione ricorsiva',
+  'secure_repair' => 'Autorizzazioni di sicurezza e riparazione',
+  'refresh_status' => 'Aggiorna stato',
+  'path' => 'Sentiero',
+  'status' => 'Stato',
+  'perms' => 'Permessi',
+  'readable' => 'Leggibile',
+  'writable' => 'Scrivibile',
+  'yes' => 'SÌ',
+  'no' => 'NO',
+  'ok' => 'OK',
+  'issue' => 'Problema',
+];

@@ -35,7 +35,7 @@
 
                             @forelse ($dayTimeSlots as $key => $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='menu-item-{{ $item->id . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">{{
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">{{
                                     __('modules.reservation.' . $item->slot_type) }}
 
                                     @if (!$timeSlotAvailable[$key])
@@ -46,7 +46,7 @@
                                     </span>
                                     @endif
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <div class="relative w-45">
                                         <x-time-picker
                                             wire:model.live="timeStart.{{ $key }}"
@@ -55,7 +55,7 @@
                                         />
                                     </div>
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <div class="relative w-45">
                                         <x-time-picker
                                             wire:model.live="timeEnd.{{ $key }}"
@@ -64,7 +64,7 @@
                                         />
                                     </div>
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <div class="relative w-32">
                                         <div class="absolute inset-y-0 end-0 top-0 flex items-center pe-3.5 pointer-events-none text-sm dark:text-gray-400">
                                             @lang('app.minutes')

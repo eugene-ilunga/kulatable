@@ -4,9 +4,11 @@ namespace App\Exports;
 
 use Carbon\Carbon;
 use App\Models\Tax;
+use App\Models\User;
 use App\Models\Order;
 use App\Models\RestaurantCharge;
 use App\Models\BranchOperationalShift;
+use App\Scopes\BranchScope;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Style\{Fill, Style};
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -19,14 +21,16 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
     protected array $charges, $taxes;
     protected $headingDateTime, $headingEndDateTime, $headingStartTime, $headingEndTime;
     protected $currencyId;
-    protected ?string $waiterId;
+    protected ?string $handlerId = null;
+    protected ?string $waiterId = null;
+    protected ?string $paymentMethod = null;
     protected ?string $shiftId;
     protected string $startDate;
     protected string $endDate;
     protected ?string $displayEndDateTime;
     protected ?string $displayEndTime;
 
-    public function __construct(string $startDateTime, string $endDateTime, string $startTime, string $endTime, string $timezone, string $offset, ?string $waiterId = null, ?string $shiftId = null, string $startDate = '', string $endDate = '', ?string $displayEndDateTime = null, ?string $displayEndTime = null)
+    public function __construct(string $startDateTime, string $endDateTime, string $startTime, string $endTime, string $timezone, string $offset, ?string $handlerId = null, ?string $waiterId = null, ?string $paymentMethod = null, ?string $shiftId = null, string $startDate = '', string $endDate = '', ?string $displayEndDateTime = null, ?string $displayEndTime = null)
     {
         $this->startDateTime = $startDateTime;
         $this->endDateTime = $endDateTime;
@@ -35,7 +39,9 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
         $this->timezone = $timezone;
         $this->offset = $offset;
         $this->currencyId = restaurant()->currency_id;
+        $this->handlerId = $handlerId;
         $this->waiterId = $waiterId;
+        $this->paymentMethod = $paymentMethod;
         $this->shiftId = $shiftId;
         $this->startDate = $startDate;
         $this->endDate = $endDate;
@@ -68,6 +74,30 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
         return compact('startDateTime', 'endDateTime', 'startTime', 'endTime');
     }
 
+    /** @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query */
+    private function applyJoinedOrderUserFilters($query)
+    {
+        return $query
+            ->when($this->handlerId, function ($q) {
+                $q->where('orders.added_by', $this->handlerId);
+            })
+            ->when($this->waiterId, function ($q) {
+                $q->where('orders.waiter_id', $this->waiterId);
+            });
+    }
+
+    /** @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query */
+    private function applyBareOrderUserFilters($query)
+    {
+        return $query
+            ->when($this->handlerId, function ($q) {
+                $q->where('added_by', $this->handlerId);
+            })
+            ->when($this->waiterId, function ($q) {
+                $q->where('waiter_id', $this->waiterId);
+            });
+    }
+
     public function headings(): array
     {
         $taxHeadings = array_map(function($tax) {
@@ -77,6 +107,33 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
         $headingTitle = $this->headingDateTime === $this->headingEndDateTime
             ? __('modules.report.salesDataFor') . " {$this->headingDateTime}, " . __('modules.report.timePeriod') . " {$this->headingStartTime} - {$this->headingEndTime}"
             : __('modules.report.salesDataFrom') . " {$this->headingDateTime} " . __('app.to') . " {$this->headingEndDateTime}, " . __('modules.report.timePeriodEachDay') . " {$this->headingStartTime} - {$this->headingEndTime}";
+
+        $filterParts = [];
+        $branch = branch();
+        foreach ([$this->handlerId => __('modules.report.filterByHandler'), $this->waiterId => __('modules.report.waiter')] as $userId => $label) {
+            if ($userId === null || $userId === '') {
+                continue;
+            }
+            $q = User::withoutGlobalScope(BranchScope::class)->where('id', $userId)->where('restaurant_id', restaurant()->id);
+            $branch && $q->where(fn ($sub) => $sub->where('branch_id', $branch->id)->orWhereNull('branch_id'));
+            $filterParts[] = $label . ': ' . ($q->value('name') ?? $userId);
+        }
+        if ($this->paymentMethod) {
+            $paymentLabel = match ($this->paymentMethod) {
+                'cash' => __('modules.order.cash'),
+                'upi' => __('modules.order.upi'),
+                'card' => __('modules.order.card'),
+                'razorpay' => __('modules.order.razorpay'),
+                'stripe' => __('modules.order.stripe'),
+                'flutterwave' => __('modules.order.flutterwave'),
+                'bank_transfer' => __('modules.order.bank_transfer'),
+                default => $this->paymentMethod,
+            };
+            $filterParts[] = __('modules.order.paymentMethod') . ': ' . $paymentLabel;
+        }
+        if ($filterParts !== []) {
+            $headingTitle .= ' | ' . implode(' | ', $filterParts);
+        }
 
         return [
             [__('menu.salesReport') . ' ' . $headingTitle],
@@ -154,7 +211,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
             if ($selectedShift) {
                 $restaurantTimezone = branch()->restaurant->timezone ?? 'UTC';
                 $dateFormat = restaurant()->date_format ?? 'd-m-Y';
-                
+
                 // Determine the date_time column name based on whether it's a join query
                 $dateTimeColumn = 'orders.date_time';
                 if (method_exists($query, 'getQuery')) {
@@ -163,20 +220,20 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                         $dateTimeColumn = 'date_time';
                     }
                 }
-                
+
                 // Build query to match orders within shift times for each day in the date range
                 $query->where(function($q) use ($selectedShift, $restaurantTimezone, $dateFormat, $dateTimeColumn) {
                     // Parse the start and end dates from UTC back to restaurant timezone to iterate
                     $startDate = Carbon::createFromFormat($dateFormat, $this->startDate, $this->timezone);
                     $endDate = Carbon::createFromFormat($dateFormat, $this->endDate, $this->timezone);
-                    
+
                     $currentDate = $startDate->copy();
                     $firstCondition = true;
-                    
+
                     while ($currentDate->lte($endDate)) {
                         $dayOfWeek = $currentDate->format('l');
                         $shiftDays = $selectedShift->day_of_week ?? [];
-                        
+
                         // Check if shift applies to this day
                         if (in_array('All', $shiftDays) || in_array($dayOfWeek, $shiftDays)) {
                             // Parse shift times in restaurant timezone for this date
@@ -184,21 +241,21 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                                 $currentDate->toDateString() . ' ' . $selectedShift->start_time,
                                 $restaurantTimezone
                             );
-                            
+
                             $shiftEnd = Carbon::parse(
                                 $currentDate->toDateString() . ' ' . $selectedShift->end_time,
                                 $restaurantTimezone
                             );
-                            
+
                             // Handle overnight shifts
                             if ($selectedShift->end_time < $selectedShift->start_time) {
                                 $shiftEnd->addDay();
                             }
-                            
+
                             // Convert to UTC for database query
                             $shiftStartUTC = $shiftStart->setTimezone('UTC')->toDateTimeString();
                             $shiftEndUTC = $shiftEnd->setTimezone('UTC')->toDateTimeString();
-                            
+
                             // Use where for first condition, orWhere for subsequent ones
                             if ($firstCondition) {
                                 $q->where(function($subQ) use ($shiftStartUTC, $shiftEndUTC, $dateTimeColumn) {
@@ -213,13 +270,13 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                                 });
                             }
                         }
-                        
+
                         $currentDate->addDay();
                     }
                 });
             }
         }
-        
+
         return $query;
     }
 
@@ -232,7 +289,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
             ->whereBetween('orders.date_time', [$this->startDateTime, $this->endDateTime])
             ->whereIn('orders.status', ['paid', 'payment_due'])
             ->where('orders.branch_id', branch()->id);
-        
+
         // Apply time filtering only if not filtering by shift (shift filter handles time internally)
         if (empty($this->shiftId)) {
             $query->where(function ($q) {
@@ -246,13 +303,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                 }
             });
         }
-        
+
         // Apply shift filter if selected
         $query = $this->applyShiftFilter($query);
-        
-        $queryResults = $query->when($this->waiterId, function ($q) {
-                $q->where('orders.added_by', $this->waiterId);
-            })
+
+        $queryResults = $this->applyJoinedOrderUserFilters($query)
             ->select(
                 DB::raw("DATE(CONVERT_TZ(orders.date_time, '+00:00', '{$this->offset}')) as date"),
                 DB::raw('COUNT(DISTINCT orders.id) as total_orders'),
@@ -273,7 +328,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
         $orderData = Order::whereBetween('date_time', [$this->startDateTime, $this->endDateTime])
             ->whereIn('status', ['paid', 'payment_due'])
             ->where('branch_id', branch()->id);
-        
+
         // Apply time filtering only if not filtering by shift
         if (empty($this->shiftId)) {
             $orderData->where(function ($q) {
@@ -287,13 +342,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                 }
             });
         }
-        
+
         // Apply shift filter if selected
         $orderData = $this->applyShiftFilter($orderData);
-        
-        $orderData = $orderData->when($this->waiterId, function ($q) {
-                $q->where('added_by', $this->waiterId);
-            })
+
+        $orderData = $this->applyBareOrderUserFilters($orderData)
             ->select(
                 DB::raw("DATE(CONVERT_TZ(date_time, '+00:00', '{$this->offset}')) as date"),
                 DB::raw('SUM(discount_amount) as discount_amount'),
@@ -308,7 +361,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
         $outstandingQuery = Order::whereBetween('date_time', [$this->startDateTime, $this->endDateTime])
             ->where('status', 'payment_due')
             ->where('branch_id', branch()->id);
-        
+
         // Apply time filtering only if not filtering by shift
         if (empty($this->shiftId)) {
             $outstandingQuery->where(function ($q) {
@@ -322,14 +375,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                 }
             });
         }
-        
+
         // Apply shift filter if selected
         $outstandingQuery = $this->applyShiftFilter($outstandingQuery);
-        
-        // Filter by waiter if selected
-        if ($this->waiterId) {
-            $outstandingQuery->where('added_by', $this->waiterId);
-        }
+
+        $outstandingQuery = $this->applyBareOrderUserFilters($outstandingQuery);
 
         $outstandingData = $outstandingQuery->select(
             DB::raw("DATE(CONVERT_TZ(date_time, '+00:00', '{$this->offset}')) as date"),
@@ -364,7 +414,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
             ->where('orders.branch_id', branch()->id)
             ->whereNotNull('payments.due_amount_received')
             ->where('payments.due_amount_received', '>', 0);
-        
+
         // Apply time filtering only if not filtering by shift
         if (empty($this->shiftId)) {
             $dueReceivedQuery->where(function ($q) {
@@ -378,14 +428,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                 }
             });
         }
-        
+
         // Apply shift filter if selected
         $dueReceivedQuery = $this->applyShiftFilter($dueReceivedQuery);
 
-        // Filter by waiter if selected
-        if ($this->waiterId) {
-            $dueReceivedQuery->where('orders.added_by', $this->waiterId);
-        }
+        $dueReceivedQuery = $this->applyJoinedOrderUserFilters($dueReceivedQuery);
 
         $dueReceivedData = $dueReceivedQuery->select(
             DB::raw("DATE(CONVERT_TZ(orders.date_time, '+00:00', '{$this->offset}')) as date"),
@@ -444,8 +491,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                         }
                     })
                     ->where('orders.branch_id', branch()->id)
+                    ->when($this->handlerId, function ($q) {
+                        $q->where('orders.added_by', $this->handlerId);
+                    })
                     ->when($this->waiterId, function ($q) {
-                        $q->where('orders.added_by', $this->waiterId);
+                        $q->where('orders.waiter_id', $this->waiterId);
                     })
                     ->sum(DB::raw('CASE WHEN restaurant_charges.charge_type = "percent"
                 THEN (restaurant_charges.charge_value / 100) * orders.sub_total
@@ -487,8 +537,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                         });
                     }
                 })
+                ->when($this->handlerId, function ($q) {
+                    $q->where('orders.added_by', $this->handlerId);
+                })
                 ->when($this->waiterId, function ($q) {
-                    $q->where('orders.added_by', $this->waiterId);
+                    $q->where('orders.waiter_id', $this->waiterId);
                 })
                 ->select(
                     'taxes.tax_name',
@@ -534,7 +587,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                 ->where('orders.status', 'paid')
                 ->where('orders.branch_id', branch()->id)
                 ->whereBetween('orders.date_time', [$window['startDateTime'], $window['endDateTime']]);
-            
+
             // Apply time filtering only if not filtering by shift
             if (empty($this->shiftId)) {
                 $orderTaxQuery->where(function ($q) use ($window) {
@@ -556,7 +609,7 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                         $dateCarbon = Carbon::createFromFormat('Y-m-d', $item->date, $this->timezone);
                         $dayOfWeek = $dateCarbon->format('l');
                         $shiftDays = $selectedShift->day_of_week ?? [];
-                        
+
                         if (in_array('All', $shiftDays) || in_array($dayOfWeek, $shiftDays)) {
                             $shiftStart = Carbon::parse($dateCarbon->toDateString() . ' ' . $selectedShift->start_time, $restaurantTimezone);
                             $shiftEnd = Carbon::parse($dateCarbon->toDateString() . ' ' . $selectedShift->end_time, $restaurantTimezone);
@@ -574,12 +627,15 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                     }
                 }
             }
-            
+
             // Only execute query if orderTaxData hasn't been set yet
             if ($orderTaxData === null) {
                 $orderTaxData = $orderTaxQuery
+                    ->when($this->handlerId, function ($q) {
+                        $q->where('orders.added_by', $this->handlerId);
+                    })
                     ->when($this->waiterId, function ($q) {
-                        $q->where('orders.added_by', $this->waiterId);
+                        $q->where('orders.waiter_id', $this->waiterId);
                     })
                     ->select(
                         'taxes.tax_name',
@@ -628,8 +684,11 @@ class SalesReportExport implements WithMapping, FromCollection, WithHeadings, Wi
                                 });
                             }
                         })
+                        ->when($this->handlerId, function ($q) {
+                            $q->where('orders.added_by', $this->handlerId);
+                        })
                         ->when($this->waiterId, function ($q) {
-                            $q->where('orders.added_by', $this->waiterId);
+                            $q->where('orders.waiter_id', $this->waiterId);
                         })
                         ->sum(DB::raw('
                             CASE

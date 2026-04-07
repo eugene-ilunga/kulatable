@@ -25,7 +25,7 @@ class PermissionSeeder extends Seeder
         $superAdminModule = Module::where('name', 'SuperAdmin')->where('is_superadmin', 1)->first();
         $landingSiteModule = Module::where('name', 'Landing Site')->where('is_superadmin', 1)->first();
         $superadminSettingsModule = Module::where('name', 'Superadmin Settings')->where('is_superadmin', 1)->first();
-        
+
         // Admin/Restaurant modules
         $menuModule = Module::where('name', 'Menu')->where('is_superadmin', 0)->first();
         $menuItemModule = Module::where('name', 'Menu Item')->where('is_superadmin', 0)->first();
@@ -43,7 +43,7 @@ class PermissionSeeder extends Seeder
         $deliveryExecutiveModule = Module::where('name', 'Delivery Executive')->where('is_superadmin', 0)->first();
         $waiterRequestModule = Module::where('name', 'Waiter Request')->where('is_superadmin', 0)->first();
         $expenseModule = Module::where('name', 'Expense')->where('is_superadmin', 0)->first();
-        
+
         // Define permissions to insert
         $permissions = [
             // Superadmin module permissions
@@ -82,6 +82,7 @@ class PermissionSeeder extends Seeder
             ['guard_name' => 'web', 'name' => 'Show Menu Item', 'module_id' => $menuItemModule->id],
             ['guard_name' => 'web', 'name' => 'Update Menu Item', 'module_id' => $menuItemModule->id],
             ['guard_name' => 'web', 'name' => 'Delete Menu Item', 'module_id' => $menuItemModule->id],
+            ['guard_name' => 'web', 'name' => 'Export Menu Item', 'module_id' => $menuItemModule->id],
 
             ['guard_name' => 'web', 'name' => 'Create Item Category', 'module_id' => $itemCategoryModule->id],
             ['guard_name' => 'web', 'name' => 'Show Item Category', 'module_id' => $itemCategoryModule->id],
@@ -127,10 +128,12 @@ class PermissionSeeder extends Seeder
             ['guard_name' => 'web', 'name' => 'Delete Delivery Executive', 'module_id' => $deliveryExecutiveModule->id],
 
             ['guard_name' => 'web', 'name' => 'Show Payments', 'module_id' => $paymentModule->id],
+            ['guard_name' => 'web', 'name' => 'Refund Payments', 'module_id' => $paymentModule->id],
 
             ['guard_name' => 'web', 'name' => 'Show Reports', 'module_id' => $reportModule->id],
 
             ['guard_name' => 'web', 'name' => 'Manage Settings', 'module_id' => $settingsModule->id],
+            ['guard_name' => 'web', 'name' => 'Show Restaurant Open/Close', 'module_id' => $settingsModule->id],
 
             ['guard_name' => 'web', 'name' => 'Manage Waiter Request', 'module_id' => $waiterRequestModule->id],
 

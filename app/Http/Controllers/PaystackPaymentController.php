@@ -182,7 +182,7 @@ class PaystackPaymentController extends Controller
                 return redirect()->route('kiosk.order-confirmation', $order->uuid);
             }
 
-            return redirect()->route('order_success', $orderId);
+            return redirect()->route('order_success', $order->uuid);
         }
 
         return redirect()->back();

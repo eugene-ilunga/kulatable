@@ -18,11 +18,20 @@ class FeatureHeading extends Component
     public function mount()
     {
         if (!$this->languageSettingid) {
-            $userLanguage = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
-            $this->languageSettingid = $userLanguage?->id;
+            $userLocale = auth()->user()?->locale;
+
+            if ($userLocale) {
+                $userLanguage = LanguageSetting::where('language_code', $userLocale)
+                    ->where('active', 1)
+                    ->first();
+
+                if ($userLanguage) {
+                    $this->languageSettingid = $userLanguage->id;
+                }
+            }
 
             if (!$this->languageSettingid) {
-                $defaultLanguage = LanguageSetting::availableForSelection()->first();
+                $defaultLanguage = LanguageSetting::where('active', 1)->first();
                 $this->languageSettingid = $defaultLanguage ? $defaultLanguage->id : null;
 
                 if (!$this->languageSettingid) {
@@ -72,8 +81,7 @@ class FeatureHeading extends Component
 
     public function render()
     {
-        $languageEnable = LanguageSetting::availableForSelection();
-
+        $languageEnable = LanguageSetting::where('active', 1)->get();
         return view('livewire.landing-site.feature-heading', [
             'languageEnable' => $languageEnable,
         ]);

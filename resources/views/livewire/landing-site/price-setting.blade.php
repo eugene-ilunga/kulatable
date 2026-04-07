@@ -51,11 +51,32 @@
                         input="priceDescription"
                         data-gramm="false"
                         placeholder="{{ __('placeholders.featureDescriptionPlaceHolder') }}"
-                        x-on:trix-change="$wire.set('priceDescription', $event.target.value)"
+                        x-on:trix-change="$wire.set('priceDescription', $event.target.value, false)"
                         x-ref="trixEditor"
                         x-init="
+                            // Ensure editor starts with the current hidden input value
+                            $nextTick(() => {
+                                if ($refs.trixEditor && $refs.priceDescription) {
+                                    $refs.trixEditor.editor.loadHTML($refs.priceDescription.value || '');
+                                }
+                            });
+
+                            // Reload editor content when language changes
+                            window.addEventListener('price-description-updated', (e) => {
+                                const detail = e?.detail;
+                                const value = detail?.value ?? detail ?? '';
+                                if ($refs.trixEditor && $refs.trixEditor.editor) {
+                                    $refs.trixEditor.editor.loadHTML(value || '');
+                                }
+                                if ($refs.priceDescription) {
+                                    $refs.priceDescription.value = value || '';
+                                }
+                            });
+
                             window.addEventListener('reset-trix-editor', () => {
-                                $refs.trixEditor.editor.loadHTML('');
+                                if ($refs.trixEditor && $refs.trixEditor.editor) {
+                                    $refs.trixEditor.editor.loadHTML('');
+                                }
                             });" >
                     </trix-editor>
                 </div>

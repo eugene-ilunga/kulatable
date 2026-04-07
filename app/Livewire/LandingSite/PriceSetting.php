@@ -20,11 +20,20 @@ class PriceSetting extends Component
     public function mount()
     {   
         if (!$this->languageSettingid) {
-            $userLanguage = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
-            $this->languageSettingid = $userLanguage?->id;
+            $userLocale = auth()->user()?->locale;
+
+            if ($userLocale) {
+                $userLanguage = LanguageSetting::where('language_code', $userLocale)
+                    ->where('active', 1)
+                    ->first();
+
+                if ($userLanguage) {
+                    $this->languageSettingid = $userLanguage->id;
+                }
+            }
 
             if (!$this->languageSettingid) {
-                $defaultLanguage = LanguageSetting::availableForSelection()->first();
+                $defaultLanguage = LanguageSetting::where('active', 1)->first();
                 $this->languageSettingid = $defaultLanguage?->id;
             }
         }
@@ -37,6 +46,9 @@ class PriceSetting extends Component
         $frontDetail = FrontDetail::where('language_setting_id', $this->languageSettingid)->first();
         $this->priceTitle = $frontDetail ? $frontDetail->price_heading : '';
         $this->priceDescription = $frontDetail ? $frontDetail->price_description : '';
+
+        // Trix is inside `wire:ignore` so we must reload editor content via browser event.
+        $this->dispatch('price-description-updated', value: $this->priceDescription ?? '');
     }
 
     public function updatedLanguageSettingid()
@@ -73,8 +85,7 @@ class PriceSetting extends Component
 
     public function render()
     {
-        $languageEnable = LanguageSetting::availableForSelection();
-
+        $languageEnable = LanguageSetting::where('active', 1)->get();
         return view('livewire.landing-site.price-setting', [
             'languageEnable' => $languageEnable
         ]);

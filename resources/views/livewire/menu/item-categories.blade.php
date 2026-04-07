@@ -1,8 +1,15 @@
-<div x-data="{ addCategoryOpen: false, openAddCategory() { this.addCategoryOpen = true }, closeAddCategory() { this.addCategoryOpen = false } }">
+<div x-data="{
+    addCategoryOpen: false,
+    editCategoryOpen: false,
+    openAddCategory() { this.addCategoryOpen = true },
+    closeAddCategory() { this.addCategoryOpen = false },
+    openEditCategory() { this.editCategoryOpen = true },
+    closeEditCategory() { this.editCategoryOpen = false }
+}">
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.itemCategories')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.itemCategories')</h1>
             </div>
             <div class="items-center justify-between block sm:flex ">
                 <div class="flex items-center mb-4 sm:mb-0">
@@ -53,16 +60,16 @@
 
                             @forelse ($categories as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='menu-item-{{ $item->id . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->category_name }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-xs text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->items_count }} @lang('modules.menu.item')
                                 </td>
 
                                 <td class="py-2.5 px-4 space-x-2 whitespace-nowrap text-right">
                                     @if(user_can('Update Item Category'))
-                                    <x-secondary-button-table wire:click='showEditCategory({{ $item->id }})'
+                                    <x-secondary-button-table x-on:click="openEditCategory(); $wire.showEditCategory({{ $item->id }})"
                                         wire:key='edit-cat-button-{{ $item->id }}'>
                                         <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -114,24 +121,48 @@
     </div>
 
 
-    <!-- Product Drawer -->
-    <x-dialog-modal wire:model.live="showEditItemCategory">
-        <x-slot name="title">
-            {{ __("modules.menu.itemCategory") }}
-        </x-slot>
+    <!-- Edit Item Category Modal (client-side open/close) -->
+    <div
+        x-cloak
+        x-show="editCategoryOpen"
+        x-on:keydown.escape.window="closeEditCategory()"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        style="display: none;"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="flex min-h-screen items-center justify-center px-4 py-6 text-center">
+            <div
+                x-show="editCategoryOpen"
+                x-transition.opacity
+                class="fixed inset-0 bg-gray-900/50"
+                x-on:click="closeEditCategory()"
+                aria-hidden="true"
+            ></div>
 
-        <x-slot name="content">
-            @if ($itemCategory)
-            @livewire('forms.editItemCategory', ['itemCategory' => $itemCategory], key(str()->random(50)))
-            @endif
-        </x-slot>
+            <div
+                x-show="editCategoryOpen"
+                x-transition
+                class="relative inline-block w-full max-w-xl transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800"
+            >
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    {{ __("modules.menu.itemCategory") }}
+                </h3>
 
-        <x-slot name="footer">
-            <x-secondary-button wire:click="$set('showEditItemCategory', false)" wire:loading.attr="disabled">
-                {{ __('app.close') }}
-            </x-secondary-button>
-        </x-slot>
-    </x-dialog-modal>
+                <div class="mt-4">
+                    @if ($itemCategory)
+                    @livewire('forms.editItemCategory', ['itemCategory' => $itemCategory], key(str()->random(50)))
+                    @endif
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <x-secondary-button x-on:click="closeEditCategory()" wire:loading.attr="disabled">
+                        {{ __('app.close') }}
+                    </x-secondary-button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Add Item Category: JS-only modal (no Livewire round-trip on open/close) --}}
     <div

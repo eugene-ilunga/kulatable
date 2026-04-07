@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Cashier\Billable;
 use App\Models\BaseModel;
+use Modules\Sms\Entities\RestaurantAndroidSmsSetting;
 
 class Restaurant extends BaseModel
 {
@@ -63,6 +64,8 @@ class Restaurant extends BaseModel
         'ai_enabled' => 'boolean',
         'ai_allowed_roles' => 'array',
         'ai_monthly_reset_at' => 'date',
+        'is_temporarily_closed' => 'boolean',
+        'restaurant_manual_open_close_type' => 'string',
     ];
 
     public function logoUrl(): Attribute
@@ -90,6 +93,11 @@ class Restaurant extends BaseModel
     public function paymentGateways(): HasOne
     {
         return $this->hasOne(PaymentGatewayCredential::class)->withoutGlobalScopes();
+    }
+
+    public function androidSmsGatewaySetting(): HasOne
+    {
+        return $this->hasOne(RestaurantAndroidSmsSetting::class);
     }
 
     public function offlinePaymentMethods(): HasMany
@@ -135,6 +143,11 @@ class Restaurant extends BaseModel
     public function predefinedAmounts(): HasMany
     {
         return $this->hasMany(PredefinedAmount::class);
+    }
+
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(RestaurantTax::class);
     }
 
     public function kotPlaces(): HasMany

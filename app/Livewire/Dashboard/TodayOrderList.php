@@ -10,6 +10,8 @@ class TodayOrderList extends Component
 {
 
     protected $listeners = ['refreshOrders' => '$refresh'];
+    public $waiterOrders;
+    public $orders;
 
     public function render()
     {
@@ -25,10 +27,17 @@ class TodayOrderList extends Component
             ->where('orders.date_time', '>=', $startUTC)
             ->where('orders.date_time', '<=', $endUTC);
 
-        $orders = $orders->get();
+        if (user()->hasRole('Waiter_' . user()->restaurant_id)) {
+            $orders = $orders->where('waiter_id', user()->id);
+        }
+
+        $this->waiterOrders = $orders->get();
+
+        $this->orders = $orders->get();
 
         return view('livewire.dashboard.today-order-list', [
-            'orders' => $orders
+            'waiterOrders' => $this->waiterOrders,
+            'orders' => $this->orders
         ]);
     }
 

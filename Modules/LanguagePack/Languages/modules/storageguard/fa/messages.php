@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'نگهبان ذخیره سازی',
+  'status_title' => 'مسیرهای سیستم نگهبان ذخیره سازی',
+  'permissions_badge' => 'حالت: 0775 (Dirs) / 0664 (Files)',
+  'success_message' => 'تلاش برای تعمیر موارد :count (فایل ها و دایرکتوری ها).',
+  'error_alert' => 'یک یا چند مسیر ذخیره سازی نیاز به توجه دارد. برای رفع مجوزها روی «Recursive Repair» کلیک کنید.',
+  'recursive_repair' => 'تعمیر بازگشتی',
+  'secure_repair' => 'مجوزهای ایمن و تعمیر',
+  'refresh_status' => 'وضعیت تازه کردن',
+  'path' => 'مسیر',
+  'status' => 'وضعیت',
+  'perms' => 'Perms',
+  'readable' => 'خواندنی',
+  'writable' => 'قابل نوشتن',
+  'yes' => 'بله',
+  'no' => 'خیر',
+  'ok' => 'باشه',
+  'issue' => 'موضوع',
+];

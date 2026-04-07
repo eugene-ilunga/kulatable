@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ isRtl() ? 'rtl' : 'ltr' }}" >
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ isRtl() ? 'rtl' : 'ltr' }}">
 
 <head>
    @php
@@ -40,12 +40,9 @@
 
     @stack('styles')
 
-    @php
-        $isRestaurantUser = (bool) user()?->restaurant_id;
-    @endphp
     @include('sections.theme_style', [
-        'baseColor' => $isRestaurantUser ? '251, 146, 60' : restaurantOrGlobalSetting()->theme_rgb,
-        'baseColorHex' => $isRestaurantUser ? '#FB923C' : restaurantOrGlobalSetting()->theme_hex,
+        'baseColor' => restaurantOrGlobalSetting()->theme_rgb,
+        'baseColorHex' => restaurantOrGlobalSetting()->theme_hex,
     ])
 
 
@@ -53,12 +50,13 @@
         <link href="{{ asset('css/app-custom.css') }}" rel="stylesheet">
     @endif
 
-    @if (App::environment('codecanyon') && pusherSettings()->beamer_status)
-        <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js" async></script>
-    @endif
+    {{-- Pusher Beams SDK is pulled in later alongside the initialization block below so that
+         it executes before our inline script; removing from head prevents deferred loading
+         from running after the body script and causing the warning. --}}
 
     <script>
-        if (localStorage.getItem('color-theme') === 'dark') {
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia(
+                '(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark')
         } else {
             document.documentElement.classList.remove('dark')
@@ -129,7 +127,7 @@
             @class([
                 'relative w-full h-full overflow-y-auto bg-gray-50 dark:bg-gray-900',
                 'ltr:lg:ml-0 rtl:lg:mr-0' => request()->routeIs('pos.*'),
-                'ltr:lg:ml-64 rtl:lg:mr-64' => !request()->routeIs('pos.*'),
+                'ltr:lg:ml-56 rtl:lg:mr-56' => !request()->routeIs('pos.*'),
             ])>
             <main>
                 @yield('content')
@@ -160,6 +158,8 @@
 
     @if (user()->restaurant_id)
 
+        @livewire('kot.kot-pusher-listener', key('kot-pusher-listener'))
+
         @livewire('order.OrderDetail')
 
         @livewire('customer.addCustomer')
@@ -174,34 +174,41 @@
 
 
     @if (App::environment('codecanyon') && pusherSettings()->beamer_status)
+        <!-- include SDK right before using it so browser downloads and executes it synchronously -->
+        <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"></script>
+
         <script>
             var currentUserId = "{{ Str::slug(global_setting()->name) }}-{{ auth()->id() }}"; // Get this from your auth system
 
-            const beamsClient = new PusherPushNotifications.Client({
-                instanceId: "{{ pusherSettings()->instance_id }}",
-            });
+            // at this point the library has already run, but keep guard just in case
+            if (typeof PusherPushNotifications === 'undefined') {
+                console.warn('Pusher Beams SDK not available yet, skipping initialization');
+            } else {
+                const beamsClient = new PusherPushNotifications.Client({
+                    instanceId: "{{ pusherSettings()->instance_id }}",
+                });
 
-            const beamsTokenProvider = new PusherPushNotifications.TokenProvider({
-                url: "{{ route('beam_auth') }}",
-            });
+                const beamsTokenProvider = new PusherPushNotifications.TokenProvider({
+                    url: "{{ route('beam_auth') }}",
+                });
 
-            beamsClient.start()
-                .then(() => beamsClient.addDeviceInterest('{{ Str::slug(global_setting()->name) }}'))
-                .then(() => beamsClient.setUserId(currentUserId, beamsTokenProvider))
-                .then(() => console.log('Successfully registered and subscribed!'))
-                .catch(console.error);
+                beamsClient.start()
+                    .then(() => beamsClient.addDeviceInterest('{{ Str::slug(global_setting()->name) }}'))
+                    .then(() => beamsClient.setUserId(currentUserId, beamsTokenProvider))
+                    .then(() => console.log('Successfully registered and subscribed!'))
+                    .catch(console.error);
 
-            beamsClient
-                .getUserId()
-                .then((userId) => {
-                    console.log(userId, currentUserId);
-                    // Check if the Beams user matches the user that is currently logged in
-                    if (userId !== currentUserId) {
-                        // Unregister for notifications
-                        return beamsClient.stop();
-                    }
-                })
-                .catch(console.error);
+                beamsClient
+                    .getUserId()
+                    .then((userId) => {
+                        console.log(userId, currentUserId);
+                        // Check if the Beams user matches the user that is currently logged in
+                        if (userId !== currentUserId) {
+                            // Unregister for notifications
+                            return beamsClient.stop();
+                        }
+                    });
+            }
         </script>
     @endif
 
@@ -214,7 +221,7 @@
 
         function openFullscreen() {
             var elem = getFullscreenElement();
-            
+
             if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
                 // Enter fullscreen
                 if (elem.requestFullscreen) {
@@ -274,11 +281,11 @@
             const fullscreenEnabled = localStorage.getItem('fullscreen-enabled');
             if (fullscreenEnabled === 'true') {
                 // Check if already in fullscreen
-                const isFullscreen = document.fullscreenElement || 
-                                   document.webkitFullscreenElement || 
+                const isFullscreen = document.fullscreenElement ||
+                                   document.webkitFullscreenElement ||
                                    document.msFullscreenElement ||
                                    document.mozFullScreenElement;
-                
+
                 if (!isFullscreen) {
                     var elem = getFullscreenElement();
                     // Small delay to ensure DOM is ready
@@ -304,11 +311,11 @@
 
         // Listen for fullscreen changes (e.g., user presses ESC)
         function handleFullscreenChange() {
-            const isFullscreen = document.fullscreenElement || 
-                               document.webkitFullscreenElement || 
+            const isFullscreen = document.fullscreenElement ||
+                               document.webkitFullscreenElement ||
                                document.msFullscreenElement ||
                                document.mozFullScreenElement;
-            
+
             if (!isFullscreen) {
                 localStorage.setItem('fullscreen-enabled', 'false');
             } else {
@@ -323,7 +330,7 @@
             // DOM already loaded
             restoreFullscreen();
         }
-        
+
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('msfullscreenchange', handleFullscreenChange);

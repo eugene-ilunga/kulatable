@@ -39,12 +39,9 @@
 
     @stack('styles')
 
-    @php
-        $isRestaurantUser = (bool) user()?->restaurant_id;
-    @endphp
     @include('sections.theme_style', [
-        'baseColor' => $isRestaurantUser ? '251, 146, 60' : restaurantOrGlobalSetting()->theme_rgb,
-        'baseColorHex' => $isRestaurantUser ? '#FB923C' : restaurantOrGlobalSetting()->theme_hex,
+        'baseColor' => restaurantOrGlobalSetting()->theme_rgb,
+        'baseColorHex' => restaurantOrGlobalSetting()->theme_hex,
     ])
 
 

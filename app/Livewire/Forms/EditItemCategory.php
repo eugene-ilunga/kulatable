@@ -19,7 +19,7 @@ class EditItemCategory extends Component
     public function mount()
     {
         $this->languages = collect(languages())->pluck('language_name', 'language_code')->toArray();
-        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
+        $this->globalLocale = global_setting()->locale;
         $this->currentLanguage = $this->globalLocale;
         // Load existing translations
         $this->translations = $this->itemCategory->getTranslations('category_name') ?? [];

@@ -24,9 +24,16 @@ class ItemReport extends Component
     public $searchTerm;
     public $sortBy = 'quantity_sold';
     public $sortDirection = 'desc';
-    public $waiters = [];
-    public $selectedWaiter = '';
+    /** @var string User id who created/handled the order (orders.added_by) */
+    public $filterByHandler = '';
+    /** @var string Assigned waiter user id (orders.waiter_id) */
     public $filterByWaiter = '';
+    /** All branch/restaurant users (handler filter dropdown) */
+    public $handlers = [];
+    /** Users with Waiter role only (waiter filter dropdown) */
+    public $waiters = [];
+    public $selectedHandler = '';
+    public $selectedWaiter = '';
 
     public function mount()
     {
@@ -39,8 +46,7 @@ class ItemReport extends Component
         $this->dateRangeType = request()->cookie('item_report_date_range_type', 'currentWeek');
         $this->setDateRange();
 
-        // Populate users for current restaurant (branch-specific and global)
-        $this->waiters = User::withoutGlobalScope(BranchScope::class)
+        $this->handlers = User::withoutGlobalScope(BranchScope::class)
             ->where(function ($q) {
                 return $q->where('branch_id', branch()->id)
                     ->orWhereNull('branch_id');
@@ -49,6 +55,17 @@ class ItemReport extends Component
             ->orderBy('name')
             ->get();
 
+        $this->waiters = User::withoutGlobalScope(BranchScope::class)
+            ->role('Waiter_' . restaurant()->id)
+            ->where(function ($q) {
+                return $q->where('branch_id', branch()->id)
+                    ->orWhereNull('branch_id');
+            })
+            ->where('restaurant_id', restaurant()->id)
+            ->orderBy('name')
+            ->get();
+
+        $this->selectedHandler = '';
         $this->selectedWaiter = '';
     }
 
@@ -86,6 +103,10 @@ class ItemReport extends Component
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
         $this->startDate = $start->format($dateFormat);
         $this->endDate = $end->format($dateFormat);
+        $this->filterByHandler = '';
+        $this->filterByWaiter = '';
+        $this->selectedHandler = '';
+        $this->selectedWaiter = '';
     }
 
     #[On('setStartDate')]
@@ -101,9 +122,55 @@ class ItemReport extends Component
         $this->endDate = $end;
     }
 
+    public function filterHandler()
+    {
+        $this->filterByHandler = $this->selectedHandler;
+    }
+
     public function filterWaiter()
     {
         $this->filterByWaiter = $this->selectedWaiter;
+    }
+
+    public function updatedStartTime($value)
+    {
+        $this->startTime = $this->normalizeTime($value);
+    }
+
+    public function updatedEndTime($value)
+    {
+        $this->endTime = $this->normalizeTime($value);
+    }
+
+    private function normalizeTime($time)
+    {
+        if (empty($time)) {
+            return '00:00';
+        }
+
+        // Match H:i or h:i with optional AM/PM (e.g. "14:30", "2:30 PM", "02:30 am")
+        if (preg_match('/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i', trim($time), $matches)) {
+            $hours = (int) $matches[1];
+            $minutes = (int) $matches[2];
+            $ampm = $matches[3] ?? null;
+
+            if ($ampm !== null && $ampm !== '') {
+                $ampmUpper = strtoupper($ampm);
+                if ($ampmUpper === 'PM' && $hours !== 12) {
+                    $hours += 12;
+                }
+                if ($ampmUpper === 'AM' && $hours === 12) {
+                    $hours = 0;
+                }
+            }
+
+            $hours = min(23, max(0, $hours));
+            $minutes = min(59, max(0, $minutes));
+
+            return sprintf('%02d:%02d', $hours, $minutes);
+        }
+
+        return '00:00';
     }
 
     public function exportReport()
@@ -114,7 +181,7 @@ class ItemReport extends Component
             $data = $this->prepareDateTimeData();
 
             return Excel::download(
-                new ItemReportExport($data['startDateTime'], $data['endDateTime'], $data['startTime'], $data['endTime'], $data['timezone'], $this->searchTerm, $this->filterByWaiter),
+                new ItemReportExport($data['startDateTime'], $data['endDateTime'], $data['startTime'], $data['endTime'], $data['timezone'], $this->searchTerm, $this->filterByHandler, $this->filterByWaiter),
                 'item-report-' . now()->toDateTimeString() . '.xlsx'
             );
         }
@@ -124,15 +191,17 @@ class ItemReport extends Component
     {
         $timezone = timezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
+        $normalizedStartTime = $this->normalizeTime($this->startTime);
+        $normalizedEndTime = $this->normalizeTime($this->endTime);
 
-        $startDateTime = Carbon::createFromFormat($dateFormat . ' H:i', $this->startDate . ' ' . $this->startTime, $timezone)
+        $startDateTime = Carbon::createFromFormat($dateFormat . ' H:i', $this->startDate . ' ' . $normalizedStartTime, $timezone)
             ->setTimezone('UTC')->toDateTimeString();
 
-        $endDateTime = Carbon::createFromFormat($dateFormat . ' H:i', $this->endDate . ' ' . $this->endTime, $timezone)
+        $endDateTime = Carbon::createFromFormat($dateFormat . ' H:i', $this->endDate . ' ' . $normalizedEndTime, $timezone)
             ->setTimezone('UTC')->toDateTimeString();
 
-        $startTime = Carbon::parse($this->startTime, $timezone)->setTimezone('UTC')->format('H:i');
-        $endTime = Carbon::parse($this->endTime, $timezone)->setTimezone('UTC')->format('H:i');
+        $startTime = Carbon::createFromFormat('H:i', $normalizedStartTime, $timezone)->setTimezone('UTC')->format('H:i');
+        $endTime = Carbon::createFromFormat('H:i', $normalizedEndTime, $timezone)->setTimezone('UTC')->format('H:i');
 
         return compact('timezone', 'startDateTime', 'endDateTime', 'startTime', 'endTime');
     }
@@ -158,8 +227,11 @@ class ItemReport extends Component
                             });
                         }
                     })
+                    ->when($this->filterByHandler, function ($q) {
+                        $q->where('orders.added_by', $this->filterByHandler);
+                    })
                     ->when($this->filterByWaiter, function ($q) {
-                        $q->where('orders.added_by', $this->filterByWaiter);
+                        $q->where('orders.waiter_id', $this->filterByWaiter);
                     });
             }, 'category', 'variations'])->withCount('variations');
 

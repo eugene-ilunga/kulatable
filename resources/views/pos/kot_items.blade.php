@@ -1,5 +1,25 @@
 <div
-    class="lg:w-6/12 flex flex-col bg-white  dark:border-gray-700  pr-4 px-2 py-4 dark:bg-gray-800 lg:sticky  overflow-hidden rounded-md">
+    class="w-full flex flex-col bg-white dark:border-gray-700 pr-4 px-2 py-4 dark:bg-gray-800 lg:sticky lg:top-0 lg:self-start overflow-hidden rounded-md h-full">
+    <style>
+        .pos-hover-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .pos-hover-scrollbar::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        .pos-hover-scrollbar:hover {
+            scrollbar-width: thin;
+        }
+
+        .pos-hover-scrollbar:hover::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+    </style>
 
     {{-- Order Type Indicator --}}
     @if($orderTypeId)
@@ -23,32 +43,33 @@
             @endif
         </div>
 
-        <button type="button" wire:click="changeOrderType" class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-full transition-all">
+        <button type="button" onclick="changeOrderType()" class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-full transition-all">
             @lang('app.change')
         </button>
     </div>
     @endif
 
-    <div class="overflow-y-auto overflow-x-hidden space-y-2 pr-1 pb-36">
-        <div class="mt-2">
-            @if($customerId)
-                <div class="flex items-center gap-2">
-                    <div class="font-semibold text-gray-700 dark:text-gray-300">{{ $customer->name }}</div>
-                    @if(user_can('Update Order'))
-                        <button  wire:click="$dispatch('showAddCustomerModal', { customerId: {{ $customerId }} })" title="{{__('modules.order.updateCustomerDetails')}}" class="p-1 text-gray-500 transition-colors bg-gray-100 rounded-md hover:text-gray-700 hover:bg-gray-200 rtl:ml-2 ltr:mr-2 dark:text-gray-300 dark:bg-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                                <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                            </svg>
-                        </button>
-                    @endif
-                </div>
+    <div class="overflow-y-auto overflow-x-hidden space-y-2 pr-1 pb-36 pos-hover-scrollbar">
+        <div class="mt-2 customer-display-container">
+            {{-- Customer info section (shown when customer exists) --}}
+            <div id="customer-info-section" class="flex items-center gap-2" style="display: {{ $customerId ? 'flex' : 'none' }};">
+                <div id="customer-name" class="font-semibold text-gray-700 dark:text-gray-300">{{ $customer->name ?? '' }}</div>
+                @if(user_can('Update Order'))
+                    <button id="edit-customer-btn" onclick="showAddCustomerModal({{ $customerId ?? 'null' }})" title="{{__('modules.order.updateCustomerDetails')}}" class="p-1 text-gray-500 transition-colors bg-gray-100 rounded-md hover:text-gray-700 hover:bg-gray-200 rtl:ml-2 ltr:mr-2 dark:text-gray-300 dark:bg-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                        </svg>
+                    </button>
+                @endif
+            </div>
 
-            @else
+            {{-- Add customer section (shown when no customer) --}}
+            <div id="add-customer-section" style="display: {{ $customerId ? 'none' : 'block' }};">
                 <a href="javascript:;"
-                    wire:click="$dispatch('showAddCustomerModal')"
+                    onclick="showAddCustomerModal()"
                     class="text-sm underline underline-offset-2 dark:text-gray-300">&plus; @lang('modules.order.addCustomerDetails')</a>
-            @endif
+            </div>
         </div>
 
         <div class="flex justify-between my-2 items-center">
@@ -64,23 +85,30 @@
 
 
             @if ($orderType == 'dine_in')
-                <div class="inline-flex items-center gap-2 dark:text-gray-300">
+                <div class="inline-flex items-center gap-2 dark:text-gray-300 table-display-container">
                     {{-- @if (!auth()->user()->roles->pluck('display_name')->contains('Waiter')) --}}
-                        @if ($tableNo)
+                        <div id="table-info-section" style="display: {{ $tableNo ? 'flex' : 'none' }};" class="inline-flex items-center gap-2">
                             <svg fill="currentColor" class="w-5 h-5 transition duration-75 group-hover:text-gray-900 dark:text-gray-200 dark:group-hover:text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44.999 44.999" xml:space="preserve"><g stroke-width="0"/><g stroke-linecap="round" stroke-linejoin="round"/><path d="m42.558 23.378 2.406-10.92a1.512 1.512 0 0 0-2.954-.652l-2.145 9.733h-9.647a1.512 1.512 0 0 0 0 3.026h.573l-3.258 7.713a1.51 1.51 0 0 0 1.393 2.102c.59 0 1.15-.348 1.394-.925l2.974-7.038 4.717.001 2.971 7.037a1.512 1.512 0 1 0 2.787-1.177l-3.257-7.713h.573a1.51 1.51 0 0 0 1.473-1.187m-28.35 1.186h.573a1.512 1.512 0 0 0 0-3.026H5.134L2.99 11.806a1.511 1.511 0 1 0-2.954.652l2.406 10.92a1.51 1.51 0 0 0 1.477 1.187h.573L1.234 32.28a1.51 1.51 0 0 0 .805 1.98 1.515 1.515 0 0 0 1.982-.805l2.971-7.037 4.717-.001 2.972 7.038a1.514 1.514 0 0 0 1.982.805 1.51 1.51 0 0 0 .805-1.98z"/><path d="M24.862 31.353h-.852V18.308h8.13a1.513 1.513 0 1 0 0-3.025H12.856a1.514 1.514 0 0 0 0 3.025h8.13v13.045h-.852a1.514 1.514 0 0 0 0 3.027h4.728a1.513 1.513 0 1 0 0-3.027"/></svg>
-                            {{ $tableNo }}
-                            <x-secondary-button wire:click="openTableChangeConfirmation">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
-                                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
-                                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
-                                </svg>
+                            <span id="table-code">{{ $tableNo }}</span>
+
+                            @if (user_can('Update Order'))
+                                <x-secondary-button onclick="showTableChangeConfirmationModal()" class="text-xs">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-gear" viewBox="0 0 16 16">
+                                        <path
+                                            d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
+                                        <path
+                                            d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
+                                    </svg>
+                                </x-secondary-button>
+                            @endif
+                        </div>
+                        <div id="set-table-section" style="display: {{ $tableNo ? 'none' : 'block' }};">
+                            <x-secondary-button class="text-xs"
+                                onclick="showTableChangeConfirmationModal()" >@lang('modules.order.setTable')
                             </x-secondary-button>
-                        @else
-                            <x-secondary-button class="text-xs" wire:click="openTableChangeConfirmation">
-                                @lang('modules.order.setTable')
-                            </x-secondary-button>
-                        @endif
-                        <x-secondary-button wire:click="openMergeTableModal" class="ml-2" title="Merge Table">
+                        </div>
+                        <x-secondary-button onclick="showMergeTableModal()" class="ml-2" title="Merge Table">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5zm14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5z"/>
                             </svg>
@@ -98,17 +126,14 @@
             @if ($orderType == 'dine_in')
                 <div class="inline-flex items-center gap-1 text-xs dark:text-gray-300">
                     @lang('modules.order.noOfPax') <x-input type="number" step='1' min='1' class="w-16 text-xs"
-                        wire:model.defer='noOfPax' />
+                        id="noOfPaxInput" value="{{ $noOfPax }}" onchange="updateNoOfPax(this.value)" />
                 </div>
 
                 <div class="gap-2 inline-flex items-center">
-                    <x-secondary-button class="relative text-xs" wire:click="$toggle('showKotNote')" :title="__('modules.order.addNote')"
+                    <x-secondary-button class="relative text-xs" onclick="showKotNoteModal()" :title="__('modules.order.addNote')"
                         data-tooltip-target="tooltip-note">
-                        @if ($this->orderNote)
-                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor"
-                                class="absolute bi bi-circle-fill top-1 right-1 text-skin-base" viewBox="0 0 16 16">
-                                <circle cx="8" cy="8" r="8" />
-                            </svg>
+                        @if ($orderNote)
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="absolute bi bi-circle-fill top-1 right-1 text-skin-base" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg>
                         @endif
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                             class="bi bi-pencil-square" viewBox="0 0 16 16">
@@ -126,18 +151,17 @@
                     </div>
 
                     <div class="inline-flex items-center gap-2">
-                        <svg class="text-current dark:text-gray-200" width="16" height="16" fill="currentColor" viewBox="0 -2.89 122.88 122.88" xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><g stroke-width="0"/><g stroke-linecap="round" stroke-linejoin="round"/><path d="M36.82 107.86 35.65 78.4l13.25-.53c5.66.78 11.39 3.61 17.15 6.92l10.29-.41c4.67.1 7.3 4.72 2.89 8-3.5 2.79-8.27 2.83-13.17 2.58-3.37-.03-3.34 4.5.17 4.37 1.22.05 2.54-.29 3.69-.34 6.09-.25 11.06-1.61 13.94-6.55l1.4-3.66 15.01-8.2c7.56-2.83 12.65 4.3 7.23 10.1-10.77 8.51-21.2 16.27-32.62 22.09-8.24 5.47-16.7 5.64-25.34 1.01zm-7.08-44.89h91.9c.68 0 1.24.57 1.24 1.24v5.41c0 .67-.56 1.24-1.24 1.24h-91.9c-.68 0-1.24-.56-1.24-1.24v-5.41c0-.68.56-1.24 1.24-1.24m49.52-51.74c25.16 2.01 46.35 23.16 43.22 48.06H28.91C25.82 34.23 47.09 13.05 72.43 11.2V7.14h-4c-.7 0-1.28-.58-1.28-1.28V1.28c0-.7.57-1.28 1.28-1.28h14.72c.7 0 1.28.58 1.28 1.28v4.58c0 .7-.58 1.28-1.28 1.28h-3.89zM0 77.39l31.55-1.66 1.4 35.25-31.55 1.65z" style="fill-rule:evenodd;clip-rule:evenodd"/></svg>
-                        @if ($this->isWaiterLocked)
+                        @if ($isWaiterLocked)
                             <span
                                 class="text-xs w-36 px-2 py-1 border border-gray-300 rounded-md bg-gray-100 dark:text-gray-200 dark:bg-gray-600 dark:border-gray-700 truncate"
-                                title="{{ $this->waiterName }}">
-                                {{ $this->waiterName }}
+                                title="{{ $waiterName }}">
+                                {{ $waiterName }}
                             </span>
                         @else
-                            <x-select class="text-xs w-36" wire:model.live='selectWaiter' :disabled="$this->isWaiterLocked">
+                            <x-select class="text-xs w-36" id="selectWaiterInput" onchange="updateSelectWaiter(this.value)" :disabled="$isWaiterLocked">
                                 <option value="">@lang('modules.order.selectWaiter')</option>
                                 @foreach ($users as $item)
-                                    <option value="{{ $item->id }}" {{ ($this->selectWaiter && $this->selectWaiter == $item->id) ? 'selected' : '' }}>{{ $item->name }}</option>
+                                    <option value="{{ $item->id }}" {{ ($selectWaiter && $selectWaiter == $item->id) ? 'selected' : '' }}>{{ $item->name }}</option>
                                 @endforeach
                             </x-select>
                         @endif
@@ -158,14 +182,26 @@
                             </g>
                         </svg>
 
-                        <x-select class="text-sm w-full" wire:model.defer='selectDeliveryExecutive'>
+                        <x-select class="text-sm w-full" id="selectDeliveryExecutiveInput" onchange="updateSelectDeliveryExecutive(this.value)">
                             <option value="">@lang('modules.order.selectDeliveryExecutive')</option>
                             @foreach ($deliveryExecutives as $item)
-                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                @php
+                                    $isBusy = (bool)($deliveryExecutiveBusyMap[$item->id] ?? false);
+                                    $isSelected = (int)($selectedDeliveryExecutive ?? 0) === (int)$item->id;
+                                @endphp
+                                @if (!$isBusy || $isSelected)
+                                    <option value="{{ $item->id }}" {{ $isSelected ? 'selected' : '' }}>
+                                        {{ $item->name }}
+                                    </option>
+                                @endif
                             @endforeach
                         </x-select>
                     </div>
                 </div>
+            @endif
+
+            @if(module_enabled('Hotel')  && in_array('Hotel', restaurant_modules()))
+                @include('hotel::pos.room-service')
             @endif
 
             @if ($orderType == 'pickup')
@@ -178,10 +214,11 @@
                 <div class="flex items-end gap-2 pb-2" id="pickup-datetime-container">
                     <div class="relative flex-1">
                         <x-datepicker
-                            wire:model.live="pickupDate"
+                            id="pickupDateInput"
                             value="{{ $currentDate }}"
                             minDate="{{ $minDate }}"
                             maxDate="{{ $maxDate }}"
+                            onchange="window.updatePickupDate && window.updatePickupDate(this.value)"
                             class="pl-4 pr-5 py-2 text-lg text-gray-700 dark:text-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 w-full" />
                         <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
                             <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
@@ -192,8 +229,9 @@
 
                     <div class="relative flex-1" style="overflow: visible;">
                         <x-time-picker
-                            wire:model.live="pickupTime"
+                            id="pickupTimeInput"
                             value="{{ $currentTime }}"
+                            onchange="window.updatePickupTime && window.updatePickupTime(this.value)"
                         />
                     </div>
                 </div>
@@ -202,7 +240,32 @@
             @endif
         </div>
 
-        <div class="flex flex-col rounded gap-1">
+        @php
+            // Performance: avoid repeated relation loads + collection scans in each cart row.
+            // Build O(1) lookups once per render for existing-order KOT/order items.
+            $kotItemLookup = [];
+            $orderItemLookup = [];
+
+            if (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail) {
+                if (!$orderDetail->relationLoaded('kot')) {
+                    $orderDetail->load('kot.items');
+                }
+                if (!$orderDetail->relationLoaded('items')) {
+                    $orderDetail->load('items');
+                }
+
+                foreach (($orderDetail->kot ?? collect()) as $kotRow) {
+                    foreach (($kotRow->items ?? collect()) as $kotItemRow) {
+                        $kotItemLookup[((int)$kotRow->id) . '_' . ((int)$kotItemRow->id)] = $kotItemRow;
+                    }
+                }
+
+                foreach (($orderDetail->items ?? collect()) as $orderItemRow) {
+                    $orderItemLookup[(int)$orderItemRow->id] = $orderItemRow;
+                }
+            }
+        @endphp
+        <div class="flex flex-col rounded gap-1 border-t border-gray-50 dark:border-gray-700 p-2">
             @forelse ($orderItemList as $key => $item)
             @php
                 // Initialize variables - START WITH FALSE
@@ -223,55 +286,45 @@
                             $kotId = (int)($keyParts[1] ?? 0);
 
                             if ($kotItemId > 0 && $kotId > 0) {
-                                try {
-                                    // Load kot items if not already loaded
-                                    if (!$orderDetail->relationLoaded('kot')) {
-                                        $orderDetail->load('kot.items');
+                                $lookupKey = $kotId . '_' . $kotItemId;
+                                $kotItem = $kotItemLookup[$lookupKey] ?? null;
+
+                                if ($kotItem) {
+                                    $itemFoundInDatabase = true; // Found in database
+
+                                    // STRICT CHECK: Only true if database value is exactly 1, true, or '1'
+                                    // Explicitly check for 0, false, null, '0', '' and set to false
+                                    $dbFreeValue = $kotItem->getAttribute('is_free_item_from_stamp') ?? $kotItem->is_free_item_from_stamp ?? null;
+
+                                    // Explicitly check: if value is 0, false, null, '0', or empty string, it's NOT free
+                                    if ($dbFreeValue === 0 || $dbFreeValue === false || $dbFreeValue === null || $dbFreeValue === '0' || $dbFreeValue === '') {
+                                        $isFreeItem = false;
+                                    } else {
+                                        // Only mark as free if value is exactly 1, true, or '1'
+                                        $isFreeItem = ($dbFreeValue === 1 || $dbFreeValue === true || $dbFreeValue === '1');
                                     }
 
-                                    // Find the kot and kot_item
-                                    $kot = $orderDetail->kot->firstWhere('id', $kotId);
-                                    if ($kot) {
-                                        if (!$kot->relationLoaded('items')) {
-                                            $kot->load('items');
-                                        }
+                                    // Check for discount from stamp in kot_items
+                                    $discountAmount = (float)($kotItem->getAttribute('discount_amount') ?? $kotItem->discount_amount ?? 0);
+                                    $isDiscounted = (bool)($kotItem->getAttribute('is_discounted') ?? $kotItem->is_discounted ?? false);
+                                    $hasStampDiscount = $discountAmount > 0 || $isDiscounted || !is_null($kotItem->stamp_rule_id);
 
-                                        $kotItem = $kot->items->firstWhere('id', $kotItemId);
-
-                                        if ($kotItem) {
-                                            $itemFoundInDatabase = true; // Found in database
-
-                                            // STRICT CHECK: Only true if database value is exactly 1, true, or '1'
-                                            // Explicitly check for 0, false, null, '0', '' and set to false
-                                            $dbFreeValue = $kotItem->getAttribute('is_free_item_from_stamp') ?? $kotItem->is_free_item_from_stamp ?? null;
-
-                                            // Explicitly check: if value is 0, false, null, '0', or empty string, it's NOT free
-                                            if ($dbFreeValue === 0 || $dbFreeValue === false || $dbFreeValue === null || $dbFreeValue === '0' || $dbFreeValue === '') {
-                                                $isFreeItem = false;
-                                            } else {
-                                                // Only mark as free if value is exactly 1, true, or '1'
-                                                $isFreeItem = ($dbFreeValue === 1 || $dbFreeValue === true || $dbFreeValue === '1');
-                                            }
-
-                                            // Check for discount from stamp in kot_items
-                                            $discountAmount = (float)($kotItem->getAttribute('discount_amount') ?? $kotItem->discount_amount ?? 0);
-                                            $isDiscounted = (bool)($kotItem->getAttribute('is_discounted') ?? $kotItem->is_discounted ?? false);
-                                            $hasStampDiscount = $discountAmount > 0 || $isDiscounted || !is_null($kotItem->stamp_rule_id);
-
-                                            if ($hasStampDiscount && $discountAmount > 0) {
-                                                $stampDiscountAmount = $discountAmount;
-                                                $originalAmount = (float)($kotItem->amount ?? 0) + $discountAmount;
-                                            } elseif ($isFreeItem) {
-                                                // For free items, calculate original amount from price
-                                                $basePrice = (float)($kotItem->getAttribute('price') ?? $kotItem->price ?? 0);
-                                                $modifierPrice = isset($orderItemModifiersPrice[$key]) ? (float)$orderItemModifiersPrice[$key] : 0;
-                                                $qty = isset($orderItemQty[$key]) ? (int)$orderItemQty[$key] : 1;
-                                                $originalAmount = ($basePrice + $modifierPrice) * $qty;
-                                            }
-                                        }
+                                    // SAFEGUARD: treat item as free only when its amount is actually zero (or nearly zero)
+                                    $currentAmount = (float)($kotItem->amount ?? 0);
+                                    if ($isFreeItem && $currentAmount > 0.0001) {
+                                        $isFreeItem = false;
                                     }
-                                } catch (\Exception $e) {
-                                    // Silently fail if error
+
+                                    if ($hasStampDiscount && $discountAmount > 0) {
+                                        $stampDiscountAmount = $discountAmount;
+                                        $originalAmount = (float)($kotItem->amount ?? 0) + $discountAmount;
+                                    } elseif ($isFreeItem) {
+                                        // For free items, calculate original amount from price
+                                        $basePrice = (float)($kotItem->getAttribute('price') ?? $kotItem->price ?? 0);
+                                        $modifierPrice = isset($orderItemModifiersPrice[$key]) ? (float)$orderItemModifiersPrice[$key] : 0;
+                                        $qty = isset($orderItemQty[$key]) ? (int)$orderItemQty[$key] : 1;
+                                        $originalAmount = ($basePrice + $modifierPrice) * $qty;
+                                    }
                                 }
                             }
                         }
@@ -285,58 +338,54 @@
                             $orderItemId = (int)($keyParts[2] ?? 0);
 
                             if ($orderItemId > 0) {
-                                try {
-                                    // Load order items if not already loaded
-                                    if (!$orderDetail->relationLoaded('items')) {
-                                        $orderDetail->load('items');
+                                $orderItem = $orderItemLookup[$orderItemId] ?? null;
+                                if ($orderItem) {
+                                    $itemFoundInDatabase = true; // Found in database
+
+                                    // STRICT CHECK: Only true if database value is exactly 1, true, or '1'
+                                    // Explicitly check for 0, false, null, '0', '' and set to false
+                                    $dbFreeValue = $orderItem->is_free_item_from_stamp ?? null;
+
+                                    // Explicitly check: if value is 0, false, null, '0', or empty string, it's NOT free
+                                    if ($dbFreeValue === 0 || $dbFreeValue === false || $dbFreeValue === null || $dbFreeValue === '0' || $dbFreeValue === '') {
+                                        $isFreeItem = false;
+                                    } else {
+                                        // Only mark as free if value is exactly 1, true, or '1'
+                                        $isFreeItem = ($dbFreeValue === 1 || $dbFreeValue === true || $dbFreeValue === '1');
                                     }
 
-                                    // Find the order_item from the loaded relationship
-                                    $orderItem = $orderDetail->items->firstWhere('id', $orderItemId);
-                                    if ($orderItem) {
-                                        $itemFoundInDatabase = true; // Found in database
-
-                                        // STRICT CHECK: Only true if database value is exactly 1, true, or '1'
-                                        // Explicitly check for 0, false, null, '0', '' and set to false
-                                        $dbFreeValue = $orderItem->is_free_item_from_stamp ?? null;
-
-                                        // Explicitly check: if value is 0, false, null, '0', or empty string, it's NOT free
-                                        if ($dbFreeValue === 0 || $dbFreeValue === false || $dbFreeValue === null || $dbFreeValue === '0' || $dbFreeValue === '') {
-                                            $isFreeItem = false;
-                                        } else {
-                                            // Only mark as free if value is exactly 1, true, or '1'
-                                            $isFreeItem = ($dbFreeValue === 1 || $dbFreeValue === true || $dbFreeValue === '1');
-                                        }
-
-                                        // Check for discount from stamp
-                                        // Note: order_items table only has 'stamp_rule_id' and 'is_free_item_from_stamp' columns
-                                        if (!$hasStampDiscount) {
-                                            $hasStampDiscount = !is_null($orderItem->stamp_rule_id) && !$isFreeItem;
-                                        }
-
-                                        // For items with stamp discounts, we can't calculate exact discount per item from order_items
-                                        // The discount is already deducted from amount field
-                                        if ($hasStampDiscount && $stampDiscountAmount == 0) {
-                                            // Try to estimate original amount from price field (if available)
-                                            $basePrice = $orderItem->price ?? 0;
-                                            $modifierPrice = isset($orderItemModifiersPrice[$key]) ? $orderItemModifiersPrice[$key] : 0;
-                                            $qty = $orderItemQty[$key] ?? $orderItem->quantity ?? 1;
-                                            $estimatedOriginalAmount = ($basePrice + $modifierPrice) * $qty;
-                                            // If current amount is less than estimated, there's a discount
-                                            $currentAmount = (float)($orderItem->amount ?? 0);
-                                            if ($estimatedOriginalAmount > $currentAmount) {
-                                                $stampDiscountAmount = $estimatedOriginalAmount - $currentAmount;
-                                                $originalAmount = $estimatedOriginalAmount;
-                                            }
-                                        } elseif ($isFreeItem && $originalAmount == 0) {
-                                            // For free items, calculate original amount from price
-                                            $basePrice = $orderItem->price ?? 0;
-                                            $modifierPrice = isset($orderItemModifiersPrice[$key]) ? $orderItemModifiersPrice[$key] : 0;
-                                            $originalAmount = ($basePrice + $modifierPrice) * ($orderItemQty[$key] ?? 1);
-                                        }
+                                    // Check for discount from stamp
+                                    // Note: order_items table only has 'stamp_rule_id' and 'is_free_item_from_stamp' columns
+                                    if (!$hasStampDiscount) {
+                                        $hasStampDiscount = !is_null($orderItem->stamp_rule_id) && !$isFreeItem;
                                     }
-                                } catch (\Exception $e) {
-                                    // Silently fail if error
+
+                                    // SAFEGUARD: treat item as free only when its amount is actually zero (or nearly zero)
+                                    $currentAmount = (float)($orderItem->amount ?? 0);
+                                    if ($isFreeItem && $currentAmount > 0.0001) {
+                                        $isFreeItem = false;
+                                    }
+
+                                    // For items with stamp discounts, we can't calculate exact discount per item from order_items
+                                    // The discount is already deducted from amount field
+                                    if ($hasStampDiscount && $stampDiscountAmount == 0) {
+                                        // Try to estimate original amount from price field (if available)
+                                        $basePrice = $orderItem->price ?? 0;
+                                        $modifierPrice = isset($orderItemModifiersPrice[$key]) ? $orderItemModifiersPrice[$key] : 0;
+                                        $qty = $orderItemQty[$key] ?? $orderItem->quantity ?? 1;
+                                        $estimatedOriginalAmount = ($basePrice + $modifierPrice) * $qty;
+                                        // If current amount is less than estimated, there's a discount
+                                        $currentAmount = (float)($orderItem->amount ?? 0);
+                                        if ($estimatedOriginalAmount > $currentAmount) {
+                                            $stampDiscountAmount = $estimatedOriginalAmount - $currentAmount;
+                                            $originalAmount = $estimatedOriginalAmount;
+                                        }
+                                    } elseif ($isFreeItem && $originalAmount == 0) {
+                                        // For free items, calculate original amount from price
+                                        $basePrice = $orderItem->price ?? 0;
+                                        $modifierPrice = isset($orderItemModifiersPrice[$key]) ? $orderItemModifiersPrice[$key] : 0;
+                                        $originalAmount = ($basePrice + $modifierPrice) * ($orderItemQty[$key] ?? 1);
+                                    }
                                 }
                             }
                         }
@@ -356,6 +405,12 @@
                         $isFreeItem = false;
                         $isFreeItem = strpos($key, 'free_stamp_') === 0
                             || (isset($itemNotes[$key]) && str_contains($itemNotes[$key] ?? '', __('loyalty::app.freeItemFromStamp')));
+
+                        // SAFEGUARD: for draft items, consider them free only if their current amount is zero (or nearly zero)
+                        $draftAmount = (float)($orderItemAmount[$key] ?? 0);
+                        if ($isFreeItem && $draftAmount > 0.0001) {
+                            $isFreeItem = false;
+                        }
                     } else {
                         // For non-draft orders, if item not found in DB, it's definitely NOT free
                         $isFreeItem = false;
@@ -404,9 +459,9 @@
                                         <div
                                             class="inline-flex items-center justify-between text-xs mb-1 py-0.5 px-1 border-l-2 border-blue-500 bg-gray-200 dark:bg-gray-900 rounded-md">
                                             <span
-                                                class="text-gray-900 dark:text-white">{{ $this->modifierOptions[$modifierOptionId]->name }}</span>
+                                                class="text-gray-900 dark:text-white">{{ isset($modifierOptions[$modifierOptionId]) ? $modifierOptions[$modifierOptionId]->name : '' }}</span>
                                             <span
-                                                class="text-gray-600 dark:text-gray-300">{{ currency_format($this->modifierOptions[$modifierOptionId]->price, $restaurant->currency_id) }}</span>
+                                                class="text-gray-600 dark:text-gray-300">{{ isset($modifierOptions[$modifierOptionId]) ? currency_format($modifierOptions[$modifierOptionId]->price, $restaurant->currency_id) : '' }}</span>
                                         </div>
                                     @endforeach
                                 </div>
@@ -414,7 +469,16 @@
                         </div>
 
                         @php
-                            $displayPrice = $this->getItemDisplayPrice($key);
+                            // Livewire method leftover guard: compute display price directly for Blade/AJAX POS.
+                            // Base price = variation price (if any) else item price; then add modifiers' total price.
+                            $basePrice = 0;
+                            if (isset($orderItemVariation[$key]) && $orderItemVariation[$key]) {
+                                $basePrice = (float) ($orderItemVariation[$key]->price ?? 0);
+                            } else {
+                                $basePrice = (float) ($item->price ?? 0);
+                            }
+                            $modifierPrice = (float) ($orderItemModifiersPrice[$key] ?? 0);
+                            $displayPrice = $basePrice + $modifierPrice;
                             // Prefer component amount (reflects live qty changes); fallback to DB if not available
                             $totalAmount = $orderItemAmount[$key] ?? (isset($orderItem) && $orderItem ? (float)($orderItem->amount ?? 0) : 0);
                         @endphp
@@ -461,54 +525,28 @@
                     @if (!$isFreeItem)
                     <div class="relative inline-flex items-center max-w-[7rem]"
                         wire:key='orderItemQty-{{ $key }}-counter'>
-                        <button type="button" wire:click="subQty('{{ $key }}')"
-                            wire:loading.attr="disabled" wire:loading.class="opacity-50"
-                            class="bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 hover:bg-gray-200 border border-gray-300 rounded-s-md p-3 h-8 relative">
+                        <button type="button" onclick="decreaseQty('{{ $key }}')"
+                        wire:loading.attr="disabled" wire:loading.class="opacity-50"
+                        class="bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 hover:bg-gray-200 border border-gray-300 rounded-s-md p-3 h-8 relative">
                             <svg class="w-2 h-2 text-gray-900 dark:text-white" aria-hidden="true"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 2">
                                 <path stroke="currentColor" stroke-linecap="round"
                                     stroke-linejoin="round" stroke-width="2" d="M1 1h16" />
                             </svg>
-                            {{-- Loading spinner for subQty --}}
-                            <div wire:loading.flex wire:target="subQty('{{ $key }}')"
-                                class="absolute inset-0 items-center justify-center">
-                                <svg class="animate-spin h-3 w-3 text-skin-base"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                            </div>
                         </button>
 
-                        <input type="text" wire:model.lazy="orderItemQty.{{ $key }}" wire:change="updateQty('{{ $key }}')"
+                        <input type="text" id="qty-{{ $key }}" value="{{ $orderItemQty[$key] ?? 1 }}"
+                            onchange="updateQtyInput('{{ $key }}', this.value)"
                             class="min-w-10 bg-white border-x-0 border-gray-300 h-8 text-center text-gray-900 text-sm block w-full py-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                             min="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
 
-                        <button type="button" wire:click="addQty('{{ $key }}')"
-                            wire:loading.attr="disabled" wire:loading.class="opacity-50"
+                        <button type="button" onclick="increaseQty('{{ $key }}')"
                             class="bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 hover:bg-gray-200 border border-gray-300 rounded-e-md p-3 h-8 relative">
                             <svg class="w-2 h-2 text-gray-900 dark:text-white" aria-hidden="true"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round"
                                     stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16" />
                             </svg>
-                            {{-- Loading spinner for addQty --}}
-                            <div wire:loading.flex wire:target="addQty('{{ $key }}')"
-                                class="absolute inset-0 items-center justify-center">
-                                <svg class="animate-spin h-3 w-3 text-skin-base"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                            </div>
                         </button>
                     </div>
                     @else
@@ -517,33 +555,52 @@
                     </div>
                     @endif
 
-                    <div>
-                        <x-pos.item-note :id="$key" :note="$itemNotes[$key] ?? ''" />
+                    {{-- Item Note Button/Display --}}
+                    <div class="flex-shrink-0">
+                        @if(isset($itemNotes[$key]) && !empty($itemNotes[$key]))
+                            {{-- Show note preview when note exists --}}
+                            <button type="button"
+                                onclick="showItemNote('{{ $key }}')"
+                                class="group relative inline-flex items-center gap-1.5 px-2 py-1.5 text-xs text-skin-base hover:text-skin-base/80 bg-skin-base/10 dark:bg-skin-base/20 hover:bg-skin-base/20 dark:hover:bg-skin-base/30 rounded-md transition-all duration-200"
+                                title="{{ $itemNotes[$key] }}">
+                                {{-- Note Icon --}}
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                                </svg>
+                                {{-- Truncated Note Text --}}
+                                <span class="truncate max-w-[60px] md:max-w-[100px] lg:max-w-[80px] font-medium">
+                                    {{ $itemNotes[$key] }}
+                                </span>
+                                {{-- Edit Indicator (appears on hover) --}}
+                                <svg class="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                                </svg>
+                            </button>
+                        @else
+                            {{-- Show "Add Note" button when no note exists --}}
+                            <button type="button"
+                                onclick="showItemNote('{{ $key }}')"
+                                class="inline-flex items-center gap-1 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-skin-base dark:hover:text-blue-400 hover:bg-skin-base/10 dark:hover:bg-blue-900/20 rounded-md transition-all duration-200"
+                                title="@lang('modules.order.addNote')">
+                                {{-- Plus Icon --}}
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span class="font-medium">@lang('modules.order.addNote')</span>
+                            </button>
+                        @endif
                     </div>
 
                     <div>
                         <button
                             class="rounded text-gray-800 dark:text-gray-400 border dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-900/20 p-2 relative"
-                            wire:click="deleteCartItems('{{ $key }}')" wire:loading.attr="disabled"
-                            wire:loading.class="opacity-50">
+                            onclick="deleteCartItemHandler('{{ $key }}')">
                             <svg class="w-4 h-4 text-gray-700 dark:text-gray-200" fill="currentColor" viewBox="0 0 20 20"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path fill-rule="evenodd"
                                     d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1"
                                     clip-rule="evenodd" />
                             </svg>
-                            {{-- Loading spinner for delete --}}
-                            <div wire:loading.flex wire:target="deleteCartItems('{{ $key }}')"
-                                class="absolute inset-0 items-center justify-center">
-                                <svg class="animate-spin h-4 w-4 text-skin-base"
-                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                            </div>
                         </button>
                     </div>
                 </div>
@@ -552,11 +609,7 @@
             @empty
                 <div class="text-center text-gray-500 dark:text-gray-400 mt-4">
                     <div class="flex flex-col items-center justify-center">
-                        <svg class="w-12 h-12 text-gray-500 dark:text-gray-300" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
+                        <svg class="w-12 h-12 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13 5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-8 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/></svg>
                         <div class="text-gray-500 dark:text-gray-400 text-base">
                             @lang('messages.noItemAdded')
                         </div>
@@ -568,31 +621,21 @@
         </div>
     </div>
 
-    <div class="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+    <div class="border-t border-gray-100 px-2 pt-3 pb-4 space-y-3 shrink-0">
         <div class="h-auto p-4 select-none text-center bg-gray-50 rounded space-y-2 dark:bg-gray-700">
-            @if (count($orderItemList) > 0)
-                <div class="flex gap-2 text-left">
-                    @if (user_can('Add Discount on POS'))
-                        <x-secondary-button wire:click="showAddDiscount">
-                            <svg class="h-5 w-5 text-current me-1" width="24" height="24" viewBox="0 0 16 16"
-                                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
-                                stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-                                <path d="m7.25 14.25-5.5-5.5 7-7h5.5v5.5z" />
-                                <circle cx="11" cy="5" r=".5" fill="#000" />
-                            </svg>
-                            @lang('modules.order.addDiscount')
-                        </x-secondary-button>
-                    @endif
 
-                    @if($this->isLoyaltyEnabled() && $customerId && ($loyaltyPointsAvailable ?? 0) > 0)
-                        <x-secondary-button wire:click="openLoyaltyRedemptionModal" class="bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-800">
-                            <svg class="w-5 h-5 text-current me-1" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M8 21L9.09 15.26L16 14.5L9.09 13.74L8 8L6.91 13.74L0 14.5L6.91 15.26L8 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            @lang('loyalty::app.redeemLoyaltyPoints')
-                        </x-secondary-button>
-                    @endif
+            @if (user_can('Add Discount on POS'))
+                <div class="text-left" id="discount-button-container" style="display: {{ count($orderItemList) > 0 ? 'block' : 'none' }};">
+                    <x-secondary-button onclick="showAddDiscountModal()" class="text-xs py-1.5 px-3">
+                        <svg class="h-4 w-4 text-current me-1" width="16" height="16" viewBox="0 0 16 16"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                            <path d="m7.25 14.25-5.5-5.5 7-7h5.5v5.5z" />
+                            <circle cx="11" cy="5" r=".5" fill="#000" />
+                        </svg>
+                        @lang('modules.order.addDiscount')
+                    </x-secondary-button>
+
                 </div>
             @endif
 
@@ -600,7 +643,7 @@
                 <div>
                     @lang('modules.order.totalItem')
                 </div>
-                <div>
+                <div id="total-items-display">
                     {{ count($orderItemList) }}
                 </div>
             </div>
@@ -631,17 +674,29 @@
                                 // Silently fail
                             }
                         } else {
-                            // For new orders, check if any items in cart are marked as free from stamp
+                            // For new orders, detect free stamp items by key, payload flag, or note token.
                             foreach ($orderItemList as $key => $item) {
-                                if (isset($itemNotes[$key]) && str_contains($itemNotes[$key] ?? '', __('loyalty::app.freeItemFromStamp'))) {
+                                $note = $itemNotes[$key] ?? '';
+                                $rawFreeFlag = is_array($item)
+                                    ? ($item['is_free_item_from_stamp'] ?? false)
+                                    : ($item->is_free_item_from_stamp ?? false);
+                                $isFlaggedFree = in_array($rawFreeFlag, [true, 1, '1', 'true'], true);
+
+                                if (
+                                    str_starts_with((string)$key, 'free_stamp_')
+                                    || $isFlaggedFree
+                                    || str_contains((string)$note, __('loyalty::app.freeItemFromStamp'))
+                                    || str_starts_with(strtolower(trim((string)$note)), 'free')
+                                ) {
                                     $hasFreeStampItems = true;
                                     break;
                                 }
                             }
                         }
                     @endphp
-                    @if(!$isOrderPlaced && ($displayStampDiscountAmount > 0 || $hasFreeStampItems))
-                        <span class="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <span id="stamp-discount-badge"
+                        class="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 {{ ($displayStampDiscountAmount > 0 || $hasFreeStampItems) ? '' : 'hidden' }}">
+                        <span id="stamp-discount-badge-text">
                             @lang('app.stampDiscount')
                             @if($displayStampDiscountAmount > 0)
                                 (-{{ currency_format($displayStampDiscountAmount, $restaurant->currency_id) }})
@@ -649,31 +704,58 @@
                                 (@lang('app.freeItem'))
                             @endif
                         </span>
-                    @endif
+                    </span>
                 </div>
-                <div>
+                <div id="subtotal-display">
                     {{ currency_format($subTotal, $restaurant->currency_id) }}
                 </div>
             </div>
 
             @if(function_exists('module_enabled') && module_enabled('Loyalty'))
-                @include('loyalty::components.loyalty-discount-display', [
-                    'loyaltyPointsRedeemed' => $loyaltyPointsRedeemed ?? 0,
-                    'loyaltyDiscountAmount' => $loyaltyDiscountAmount ?? 0,
-                    'currencyId' => $restaurant->currency_id,
-                    'showEditIcon' => true,
-                    'customer' => $customer ?? null
-                ])
+                @php
+                    // On the dedicated New KOT page, when there are no new KOT items yet,
+                    // the loyalty section should start from 0 (do not show main order points).
+                    $isNewKotPage = isset($orderDetail) && $orderDetail && $orderDetail->status === 'kot' && request()->routeIs('pos.kot');
+                    $hasNewKotItems = isset($orderItemList) && count($orderItemList) > 0;
+                    $loyaltyPointsForDisplay = ($isNewKotPage && !$hasNewKotItems) ? 0 : ($loyaltyPointsRedeemed ?? 0);
+                    $loyaltyDiscountForDisplay = ($isNewKotPage && !$hasNewKotItems) ? 0.0 : ($loyaltyDiscountAmount ?? 0.0);
+                @endphp
+                <div id="loyalty-discount-row-blade">
+                    @include('loyalty::components.loyalty-discount-display', [
+                        'loyaltyPointsRedeemed' => $loyaltyPointsForDisplay,
+                        'loyaltyDiscountAmount' => $loyaltyDiscountForDisplay,
+                        'currencyId' => $restaurant->currency_id,
+                        'showEditIcon' => true,
+                        'customer' => $customer ?? null
+                    ])
+                </div>
+                {{-- JS-updatable row (shown when loyalty applied in session; updated by updateTotalsDisplay) --}}
+                <div id="loyalty-discount-row-js" class="flex justify-between text-xs text-blue-600 dark:text-blue-400 items-center" style="display: none;">
+                    <div class="inline-flex items-center gap-x-1">
+                        <span id="loyalty-js-label">@lang('loyalty::app.loyaltyDiscount') (<span id="loyalty-js-points">0</span> @lang('loyalty::app.points'))</span>
+                        @if(user_can('Update Order'))
+                            <span class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer ml-1"
+                                onclick="if (typeof window.openLoyaltyRedemptionModal === 'function') { window.openLoyaltyRedemptionModal(); }"
+                                title="{{ __('Edit loyalty points') }}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </span>
+                        @endif
+                    </div>
+                    <div id="loyalty-js-amount" class="text-blue-600 dark:text-blue-400 font-medium">-0</div>
+                </div>
             @endif
 
-            @if ($discountAmount && $loyaltyPointsRedeemed == 0)
-                <div wire:key="discountAmount"
-                    class="flex justify-between text-green-500 text-xs dark:text-green-400">
-                    <div class="inline-flex items-center gap-x-1">@lang('modules.order.discount') @if ($discountType == 'percent')
-                            ({{ $discountValue }}%)
-                        @endif
+            <div wire:key="discountAmount" id="discount-row"
+            class="flex justify-between text-green-500 text-xs dark:text-green-400"
+            style="display: {{ $discountAmount > 0 && $loyaltyPointsRedeemed == 0 ? 'flex' : 'none' }};">
+                <div class="inline-flex items-center gap-x-1">@lang('modules.order.discount') <span id="discount-type-display">@if ($discountType == 'percent')
+                        ({{ $discountValue }}%)
+                    @endif</span>
+                    @if(user_can('Add Discount on POS') && user_can('Update Order'))
                         <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
-                            wire:click="removeCurrentDiscount">
+                            onclick="removeCurrentDiscount()" title="@lang('app.remove')">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path fill-rule="evenodd"
@@ -681,18 +763,18 @@
                                 clip-rule="evenodd" />
                             </svg>
                         </span>
-                    </div>
-                    <div>
-                        -{{ currency_format($discountAmount, $restaurant->currency_id) }}
-                    </div>
+                    @endif
                 </div>
-            @endif
+                <div id="discount-display">
+                    -{{ currency_format($discountAmount, $restaurant->currency_id) }}
+                </div>
+            </div>
 
             @if ($orderType === 'delivery')
-                <div class="flex justify-between items-center text-gray-500 text-xs dark:text-neutral-400">
+                <div class="flex justify-between items-center text-gray-500 text-xs dark:text-neutral-400" id="delivery-fee-row">
                     <div>
                         @lang('modules.delivery.deliveryFee')
-                        <span class="text-xs text-gray-400">
+                        <span class="text-xs text-gray-400" id="delivery-fee-note">
                             @if($deliveryFee == 0)
                                 (@lang('modules.delivery.freeDelivery'))
                             @endif
@@ -701,122 +783,59 @@
                     <div class="flex items-center gap-2">
                         <div class="relative">
                             <x-input type="number" step='1' min='0' class="w-16 text-sm"
-                            wire:model.live='deliveryFee' />
+                            id="deliveryFeeInput" value="{{ $deliveryFee }}" onchange="updateDeliveryFee(this.value)" />
                         </div>
                     </div>
                 </div>
             @endif
 
-            @if ((!$orderID || ($orderID && $orderDetail && $orderDetail->status == 'draft')) && count($orderItemList) > 0 && $extraCharges)
-                @foreach ($extraCharges as $charge)
-                    <div wire:key="extraCharge-{{ $loop->index }}"
-                        class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
-                        <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
-                            @if ($charge->charge_type == 'percent')
-                                ({{ $charge->charge_value }}%)
-                            @endif
-                            <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
-                                wire:click="removeExtraCharge('{{ $charge->id }}', '{{ $orderType }}')">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd"
-                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </span>
+            <div id="extra-charges-container" style="{{ (count($orderItemList) > 0 && $extraCharges && count($extraCharges) > 0) ? '' : 'display: none;' }}">
+                @if (count($orderItemList) > 0 && $extraCharges)
+                    @foreach ($extraCharges as $charge)
+                        <div
+                            class="flex justify-between text-gray-500 text-xs dark:text-neutral-400"
+                            data-charge-id="{{ $charge->id }}"
+                            data-charge-name="{{ $charge->charge_name }}"
+                            data-charge-type="{{ $charge->charge_type }}"
+                            data-charge-value="{{ $charge->charge_value }}">
+                            <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
+                                @if ($charge->charge_type == 'percent')
+                                    ({{ $charge->charge_value }}%)
+                                @endif
+                                @if (user_can('Update Order'))
+                                    <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
+                                        onclick="removeExtraCharge({{ $charge->id }}, '{{ $orderType }}')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1" clip-rule="evenodd"/></svg>
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="charge-amount-display">
+                                {{ currency_format($charge->getAmount($discountedTotal), $restaurant->currency_id) }}
+                            </div>
                         </div>
-                        <div>
-                            {{ currency_format($charge->getAmount($discountedTotal), $restaurant->currency_id) }}
+                    @endforeach
+                @elseif($orderID && count($orderItemList) > 0 && $extraCharges)
+                    @foreach ($extraCharges as $newKotCharge)
+                        <div wire:key="extraCharge-newKot-{{ $loop->index }}"
+                            class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
+                            <div class="inline-flex items-center gap-x-1">{{ $newKotCharge->charge_name }}
+                                @if ($newKotCharge->charge_type == 'percent')
+                                    ({{ $newKotCharge->charge_value }}%)
+                                @endif
+                            </div>
+                            <div>
+                                {{ currency_format($newKotCharge->getAmount($discountedTotal), $restaurant->currency_id) }}
+                            </div>
                         </div>
-                    </div>
-                @endforeach
-            @elseif($orderID && count($orderItemList) > 0 && $extraCharges)
-                @foreach ($extraCharges as $newKotCharge)
-                    <div wire:key="extraCharge-newKot-{{ $loop->index }}"
-                        class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
-                        <div class="inline-flex items-center gap-x-1">{{ $newKotCharge->charge_name }}
-                            @if ($newKotCharge->charge_type == 'percent')
-                                ({{ $newKotCharge->charge_value }}%)
-                            @endif
-                        </div>
-                        <div>
-                            {{ currency_format($newKotCharge->getAmount($discountedTotal), $restaurant->currency_id) }}
-                        </div>
-                    </div>
-                @endforeach
-            @endif
+                    @endforeach
+                @endif
+            </div>
 
+            <!-- Taxes Section - Always render container -->
             @if ($taxMode == 'order')
-                @php
-                    // For existing orders, use order's taxes; otherwise use all restaurant taxes
-                    // Prevent duplicate taxes by tracking tax IDs and tax names
-                    $taxesToDisplay = [];
-                    $seenTaxIds = [];
-                    $seenTaxNames = [];
-
-                    if ($orderID && $orderDetail && $orderDetail->taxes && $orderDetail->taxes->count() > 0) {
-                        // Use order's specific taxes (avoid duplicates by both ID and name)
-                        // Use unique() to remove duplicates at collection level first
-                        $uniqueOrderTaxes = $orderDetail->taxes->unique(function ($orderTax) {
-                            $tax = $orderTax->tax ?? null;
-                            return $tax ? ($tax->id ?? $tax->tax_name ?? '') : '';
-                        });
-
-                        foreach ($uniqueOrderTaxes as $orderTax) {
-                            $tax = $orderTax->tax ?? null;
-                            if ($tax) {
-                                $taxId = $tax->id ?? null;
-                                $taxName = strtolower(trim($tax->tax_name ?? ''));
-
-                                // Check both ID and name to prevent duplicates
-                                $isDuplicate = false;
-                                if ($taxId && in_array($taxId, $seenTaxIds)) {
-                                    $isDuplicate = true;
-                                } elseif ($taxName && in_array($taxName, $seenTaxNames)) {
-                                    $isDuplicate = true;
-                                }
-
-                                if (!$isDuplicate) {
-                                    if ($taxId) $seenTaxIds[] = $taxId;
-                                    if ($taxName) $seenTaxNames[] = $taxName;
-
-                                    $taxesToDisplay[] = (object)[
-                                        'tax_name' => $tax->tax_name ?? '',
-                                        'tax_percent' => $tax->tax_percent ?? 0
-                                    ];
-                                }
-                            }
-                        }
-                    } else {
-                        // Use all restaurant taxes for new orders (avoid duplicates)
-                        foreach ($taxes ?? [] as $tax) {
-                            if ($tax) {
-                                $taxId = $tax->id ?? null;
-                                $taxName = strtolower(trim($tax->tax_name ?? ''));
-
-                                // Check both ID and name to prevent duplicates
-                                $isDuplicate = false;
-                                if ($taxId && in_array($taxId, $seenTaxIds)) {
-                                    $isDuplicate = true;
-                                } elseif ($taxName && in_array($taxName, $seenTaxNames)) {
-                                    $isDuplicate = true;
-                                }
-
-                                if (!$isDuplicate) {
-                                    if ($taxId) $seenTaxIds[] = $taxId;
-                                    if ($taxName) $seenTaxNames[] = $taxName;
-
-                                    $taxesToDisplay[] = (object)[
-                                        'tax_name' => $tax->tax_name ?? '',
-                                        'tax_percent' => $tax->tax_percent ?? 0
-                                    ];
-                                }
-                            }
-                        }
-                    }
-                @endphp
-                @foreach ($taxesToDisplay as $item)
-                    <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
+                <div id="order-taxes-container">
+                @foreach ($taxes as $item)
+                    <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400" data-tax-name="{{ $item->tax_name }}" data-tax-percent="{{ $item->tax_percent }}">
                         <div>
                             {{ $item->tax_name }} ({{ $item->tax_percent }}%)
                         </div>
@@ -825,7 +844,9 @@
                         </div>
                     </div>
                 @endforeach
+                </div>
             @else
+                <div id="item-taxes-container">
                 @php
                     // Show item-wise tax breakdown above total tax
                     $taxTotals = [];
@@ -857,7 +878,7 @@
                             </div>
                         </div>
                     @endforeach
-                    <div class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
+                    <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
                         <div>
                             @lang('modules.order.totalTax')
                             @if ($isInclusive)
@@ -866,32 +887,35 @@
                                 <span class="text-xs text-gray-400">(@lang('modules.settings.taxExclusive'))</span>
                             @endif
                         </div>
-                        <div>
+                        <div id="total-tax-display">
                             {{ currency_format($totalTaxAmount, $restaurant->currency_id) }}
                         </div>
                     </div>
                 @endif
+                </div>
             @endif
 
-            <div class="flex justify-between font-medium dark:text-neutral-300">
+            <div class="flex justify-between text-sm font-bold text-gray-900 pt-1.5 border-t border-gray-200 mt-1 dark:text-neutral-300">
                 <div>
                     @lang('modules.order.total')
                 </div>
-                <div>
+                <div id="total-display" class="text-skin-base text-base">
                     {{ currency_format($total, $restaurant->currency_id) }}
                 </div>
             </div>
         </div>
 
         <div class="h-auto pt-3 select-none text-center w-full">
-            @if (!$orderID || ($orderID && $orderDetail && $orderDetail->status !== 'draft'))
+            @php
+                $isNewKotPage = $orderDetail && $orderDetail->status === 'kot' && !request()->boolean('show-order-detail');
+            @endphp
+
+            @if ((!$orderID || ($orderID && $orderDetail && $orderDetail->status !== 'draft')) && !$isNewKotPage)
                 <div class="flex gap-3 mb-3">
-                    <button class="rounded bg-yellow-600 hover:bg-yellow-700 text-white w-full p-2 relative" wire:click="saveOrder('draft')"
-                        wire:loading.attr="disabled" wire:loading.class="opacity-50">
-                        <span wire:loading.remove wire:target="saveOrder('draft')">
-                            @lang('modules.order.saveAsDraft')
-                        </span>
-                        <span wire:loading wire:target="saveOrder('draft')" class="inline-flex items-center">
+                    <button class="pos-order-action-btn rounded bg-yellow-600 hover:bg-yellow-700 text-white w-full p-2 relative text-sm" onclick="saveOrder('draft')"
+                        id="saveDraftBtn">
+                        <span id="saveDraftBtnText">@lang('modules.order.saveAsDraft')</span>
+                        <span id="saveDraftBtnLoading" class="hidden">
                             <svg class="animate-spin inline -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -907,12 +931,10 @@
             @endif
             @if (in_array('KOT', restaurant_modules()))
                 <div class="flex gap-3">
-                    <button class="rounded bg-gray-700 text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('kot')"
-                        wire:loading.attr="disabled" wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove wire:target="saveOrder('kot')">@lang('modules.order.kot')</span>
-                        <span wire:loading wire:target="saveOrder('kot')">
+                    <button class="pos-order-action-btn rounded bg-gray-700 text-white w-full p-2 relative text-xs"
+                        onclick="saveKotActionOnce('kot')" id="saveKotBtn">
+                        <span id="saveKotBtnText">@lang('modules.order.kot')</span>
+                        <span id="saveKotBtnLoading" class="hidden">
                             <svg class="animate-spin -ml-1 mr-1 h-4 w-4 inline-flex text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -924,12 +946,10 @@
                             @lang('modules.order.kot')
                         </span>
                     </button>
-                    <button class="rounded bg-gray-700 text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('kot', 'print')" wire:loading.attr="disabled"
-                        wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove wire:target="saveOrder('kot', 'print')">@lang('modules.order.kotAndPrint')</span>
-                        <span wire:loading wire:target="saveOrder('kot', 'print')" class="inline-flex items-center">
+                    <button class="pos-order-action-btn rounded bg-gray-700 text-white w-full p-2 relative text-xs"
+                        onclick="saveKotActionOnce('kot', 'print')" id="saveKotPrintBtn">
+                        <span id="saveKotPrintBtnText">@lang('modules.order.kotAndPrint')</span>
+                        <span id="saveKotPrintBtnLoading" class="hidden">
                             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -941,13 +961,10 @@
                             @lang('modules.order.kotAndPrint')
                         </span>
                     </button>
-                    <button class="rounded bg-gray-700 text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('kot','bill','payment', 'print')" wire:loading.attr="disabled"
-                        wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove
-                            wire:target="saveOrder('kot','bill','payment', 'print')">@lang('modules.order.kotBillAndPayment')</span>
-                        <span wire:loading wire:target="saveOrder('kot','bill','payment', 'print')" >
+                    <button class="pos-order-action-btn rounded bg-gray-700 text-white w-full p-2 relative text-xs"
+                        onclick="saveKotActionOnce('kot','bill','payment', 'print')" id="saveKotBillPaymentBtn">
+                        <span id="saveKotBillPaymentBtnText">@lang('modules.order.kotBillAndPayment')</span>
+                        <span id="saveKotBillPaymentBtnLoading" class="hidden">
                             <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -963,12 +980,10 @@
             @endif
             @if (!$orderID || ($orderID && $orderDetail && $orderDetail->status == 'draft'))
                 <div class="flex gap-3 mt-3">
-                    <button class="rounded bg-skin-base text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill')"
-                        wire:loading.attr="disabled" wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove wire:target="saveOrder('bill')">@lang('modules.order.bill')</span>
-                        <span wire:loading wire:target="saveOrder('bill')">
+                    <button class="pos-order-action-btn rounded bg-skin-base text-white w-full p-2 relative text-xs"
+                        onclick="saveOrder('bill')" id="saveBillBtn">
+                        <span id="saveBillBtnText">@lang('modules.order.bill')</span>
+                        <span id="saveBillBtnLoading" class="hidden">
                             <svg class="animate-spin inline-flex items-center -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -980,12 +995,10 @@
                             @lang('modules.order.bill')
                         </span>
                     </button>
-                    <button class="rounded bg-green-500 text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill', 'payment')" wire:loading.attr="disabled"
-                        wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove wire:target="saveOrder('bill', 'payment')">@lang('modules.order.billAndPayment')</span>
-                        <span wire:loading wire:target="saveOrder('bill', 'payment')">
+                    <button class="pos-order-action-btn rounded bg-green-500 text-white w-full p-2 relative text-xs"
+                        onclick="saveOrder('bill', 'payment')" id="saveBillPaymentBtn">
+                        <span id="saveBillPaymentBtnText">@lang('modules.order.billAndPayment')</span>
+                        <span id="saveBillPaymentBtnLoading" class="hidden">
                             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-flex items-center" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -997,12 +1010,10 @@
                             @lang('modules.order.billAndPayment')
                         </span>
                     </button>
-                    <button class="rounded bg-blue-500 text-white w-full p-2 relative {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill', 'print')" wire:loading.attr="disabled"
-                        wire:loading.class="opacity-50"
-                        @if($isPastTime) disabled @endif>
-                        <span wire:loading.remove wire:target="saveOrder('bill', 'print')">@lang('modules.order.createBillAndPrintReceipt')</span>
-                        <span wire:loading wire:target="saveOrder('bill', 'print')" class="inline-flex items-center">
+                    <button class="pos-order-action-btn rounded bg-blue-500 text-white w-full p-2 relative text-xs"
+                        onclick="saveOrder('bill', 'print')" id="saveBillPrintBtn">
+                        <span id="saveBillPrintBtnText">@lang('modules.order.createBillAndPrintReceipt')</span>
+                        <span id="saveBillPrintBtnLoading" class="hidden">
                             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10"
@@ -1020,17 +1031,24 @@
     </div>
 
     <!-- Reservation Confirmation Modal -->
-    <x-dialog-modal wire:model.live="showReservationModal" maxWidth="md">
-        <x-slot name="title">
-            <div class="flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                @lang('modules.order.reservationConfirmation')
+    <div id="reservationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <h3 class="text-lg font-semibold">@lang('modules.order.reservationConfirmation')</h3>
+                    </div>
+                    <button type="button" onclick="closeReservationModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </x-slot>
-
-        <x-slot name="content">
+            <div class="px-6 py-4">
             <div class="space-y-4">
                 <div class="text-center">
                     <svg class="mx-auto h-12 w-12 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
@@ -1040,8 +1058,8 @@
                         @lang('modules.order.tableHasReservation')
                     </h3>
                     <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        <p>@lang('modules.order.reservationFor'): <strong>{{ $this->reservationCustomer?->name ?? 'N/A' }}</strong></p>
-                        <p>@lang('modules.order.reservationTime'): <strong>{{ $this->reservation?->reservation_date_time?->translatedFormat(dateFormat() . ' ' . timeFormat()) ?? 'N/A' }}</strong></p>
+                        <p>@lang('modules.order.reservationFor'): <strong>{{ $reservationCustomer?->name ?? 'N/A' }}</strong></p>
+                        <p>@lang('modules.order.reservationTime'): <strong>{{ $reservation?->reservation_date_time?->translatedFormat(dateFormat() . ' ' . timeFormat()) ?? 'N/A' }}</strong></p>
                     </div>
                 </div>
 
@@ -1051,37 +1069,36 @@
                     </p>
                 </div>
             </div>
-        </x-slot>
-
-        <x-slot name="footer">
-            <div class="flex justify-between w-full">
-                <x-button-cancel wire:click="closeReservationModal" wire:loading.attr="disabled">
-                    @lang('app.cancel')
-                </x-button-cancel>
+            </div>
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <button type="button" onclick="closeReservationModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">@lang('app.cancel')</button>
                 <div class="flex gap-2">
-                    <x-secondary-button wire:click="confirmDifferentCustomer" wire:loading.attr="disabled">
-                        @lang('modules.order.differentCustomer')
-                    </x-secondary-button>
-                    <x-button wire:click="confirmSameCustomer" wire:loading.attr="disabled">
-                        @lang('modules.order.sameCustomer')
-                    </x-button>
+                    <button type="button" onclick="confirmDifferentCustomer()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">@lang('modules.order.differentCustomer')</button>
+                    <button type="button" onclick="confirmSameCustomer()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">@lang('modules.order.sameCustomer')</button>
                 </div>
             </div>
-        </x-slot>
-    </x-dialog-modal>
+        </div>
+    </div>
 
     <!-- Table Change Confirmation Modal -->
-    <x-dialog-modal wire:model.live="showTableChangeConfirmationModal" maxWidth="md">
-        <x-slot name="title">
-            <div class="flex items-center gap-2">
-                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                @lang('modules.order.changeTable')
+    <div id="tableChangeConfirmationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <h3 class="text-lg font-semibold">@lang('modules.order.changeTable')</h3>
+                    </div>
+                    <button type="button" onclick="closeTableChangeConfirmationModal()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </x-slot>
-
-        <x-slot name="content">
+            <div class="px-6 py-4">
             <div class="space-y-4">
                 <div class="text-center">
                     <svg class="mx-auto h-12 w-12 text-amber-100" fill="currentColor" viewBox="0 0 20 20">
@@ -1105,129 +1122,56 @@
                     </p>
                 </div>
             </div>
-        </x-slot>
-
-        <x-slot name="footer">
-            <div class="flex justify-end gap-2 w-full">
-                <x-button-cancel wire:click="cancelTableChange" wire:loading.attr="disabled">
-                    @lang('app.cancel')
-                </x-button-cancel>
-                <x-button wire:click="confirmTableChange" wire:loading.attr="disabled" class="bg-amber-600 hover:bg-amber-700">
-                    @lang('modules.order.changeTable')
-                </x-button>
             </div>
-        </x-slot>
-    </x-dialog-modal>
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button type="button" onclick="cancelTableChange()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">@lang('app.cancel')</button>
+                <button type="button" onclick="confirmTableChange()" class="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700">@lang('modules.order.changeTable')</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Merge Table Modal -->
-    <x-dialog-modal wire:model.live="showMergeTableModal" maxWidth="lg">
-        <x-slot name="title">
-            <div class="flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-                @lang('modules.order.mergeTables')
-            </div>
-        </x-slot>
-
-        <x-slot name="content">
-            <div class="space-y-4">
-                @if(count($tablesWithUnpaidOrders) > 0)
-                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        @lang('modules.order.mergeTableDescription')
-                    </div>
-                    <div class="max-h-96 overflow-y-auto">
-                        <div class="grid grid-cols-1 gap-3">
-                            @foreach($tablesWithUnpaidOrders as $table)
-                                <label class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer {{ in_array($table->id, $selectedTablesForMerge) ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : '' }}">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-3 flex-1">
-                                            <input type="checkbox"
-                                                wire:model.live="selectedTablesForMerge"
-                                                value="{{ $table->id }}"
-                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                            <svg fill="currentColor" class="w-6 h-6 text-gray-700 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44.999 44.999" xml:space="preserve">
-                                                <g stroke-width="0"/>
-                                                <g stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="m42.558 23.378 2.406-10.92a1.512 1.512 0 0 0-2.954-.652l-2.145 9.733h-9.647a1.512 1.512 0 0 0 0 3.026h.573l-3.258 7.713a1.51 1.51 0 0 0 1.393 2.102c.59 0 1.15-.348 1.394-.925l2.974-7.038 4.717.001 2.971 7.037a1.512 1.512 0 1 0 2.787-1.177l-3.257-7.713h.573a1.51 1.51 0 0 0 1.473-1.187m-28.35 1.186h.573a1.512 1.512 0 0 0 0-3.026H5.134L2.99 11.806a1.511 1.511 0 1 0-2.954.652l2.406 10.92a1.51 1.51 0 0 0 1.477 1.187h.573L1.234 32.28a1.51 1.51 0 0 0 .805 1.98 1.515 1.515 0 0 0 1.982-.805l2.971-7.037 4.717-.001 2.972 7.038a1.514 1.514 0 0 0 1.982.805 1.51 1.51 0 0 0 .805-1.98z"/>
-                                                <path d="M24.862 31.353h-.852V18.308h8.13a1.513 1.513 0 1 0 0-3.025H12.856a1.514 1.514 0 0 0 0 3.025h8.13v13.045h-.852a1.514 1.514 0 0 0 0 3.027h4.728a1.513 1.513 0 1 0 0-3.027"/>
-                                            </svg>
-                                            <div class="flex-1">
-                                                <div class="font-semibold text-gray-900 dark:text-white">
-                                                    {{ $table->table_code }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 ml-4">
-                                            @if($table->activeOrder)
-                                                {{ ucfirst($table->activeOrder->status) }}
-                                            @endif
-                                        </div>
-                                    </div>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-                    @if(count($selectedTablesForMerge) > 0)
-                        <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                            <p class="text-sm text-blue-700 dark:text-blue-300">
-                                <strong>{{ count($selectedTablesForMerge) }}</strong> @lang('modules.order.tablesSelectedForMerge')
-                            </p>
-                        </div>
-                    @endif
-                @else
-                    <div class="text-center py-8">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    <div id="mergeTableModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                            @lang('modules.order.noTablesWithUnpaidOrders')
-                        </h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            @lang('modules.order.noTablesWithUnpaidOrdersDescription')
-                        </p>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">@lang('modules.order.mergeTables')</h3>
                     </div>
-                @endif
+                    <button type="button" onclick="closeMergeTableModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </x-slot>
-
-        <x-slot name="footer">
-            <div class="flex justify-end gap-2 w-full">
-                <x-button-cancel wire:click="closeMergeTableModal" wire:loading.attr="disabled">
-                    @lang('app.close')
-                </x-button-cancel>
-                @if(count($tablesWithUnpaidOrders) > 0)
-                    @if(count($selectedTablesForMerge) > 0)
-                        <button type="button"
-                            wire:click="mergeSelectedTables"
-                            wire:loading.attr="disabled"
-                            wire:key="merge-button-enabled"
-                            class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring focus:ring-blue-300 disabled:opacity-25 transition ease-in-out duration-150">
-                            <span wire:loading.remove wire:target="mergeSelectedTables">
-                                @lang('modules.order.mergeTables')
-                            </span>
-                            <span wire:loading wire:target="mergeSelectedTables" class="inline-flex items-center">
-                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
-                                    fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                        stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
-                                </svg>
-                                @lang('modules.order.merging')
-                            </span>
-                        </button>
-                    @else
-                        <button type="button"
-                            class="inline-flex items-center px-4 py-2 bg-gray-400 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest cursor-not-allowed opacity-50"
-                            disabled>
-                            @lang('modules.order.mergeTables')
-                        </button>
-                    @endif
-                @endif
+            <div class="flex-1 overflow-y-auto px-6 py-4" id="mergeTableModalContent">
+                <div class="text-center py-8">
+                    <svg class="animate-spin mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">@lang('app.loading')</p>
+                </div>
             </div>
-        </x-slot>
-    </x-dialog-modal>
 
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button type="button" onclick="closeMergeTableModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">@lang('app.close')</button>
+                <button type="button" id="mergeTablesButton" onclick="mergeSelectedTables()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+                    <span id="mergeButtonText">@lang('modules.order.mergeTables')</span>
+                    <span id="mergeButtonLoading" class="hidden inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        @lang('modules.order.merging')
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

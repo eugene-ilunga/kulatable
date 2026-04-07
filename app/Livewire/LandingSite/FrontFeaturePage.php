@@ -90,8 +90,9 @@ class FrontFeaturePage extends Component
     }
     public function render()
     {
-       $languageEnable = LanguageSetting::availableForSelection();
-        $languageSetting = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
+       $languageEnable = LanguageSetting::where('active', 1)->get();
+        $currentLocale = auth()->user()?->locale;
+        $languageSetting = LanguageSetting::where('language_code', $currentLocale)->where('active', 1)->first();
         $frontDetails = FrontFeature::where('type', 'image');
 
         if ($languageSetting) {

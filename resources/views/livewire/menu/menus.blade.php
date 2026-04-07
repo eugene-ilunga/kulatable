@@ -1,8 +1,8 @@
-<div>
-    <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
+<div x-data="{ assignTableModalOpen: false }">
+    <div class="p-4 block sm:flex items-center justify-between ">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.menu.allMenus')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.menu.allMenus')</h1>
             </div>
             <div class="items-center justify-between block sm:flex">
                 <div class="flex items-center mb-4 sm:mb-0">
@@ -14,7 +14,7 @@
                     </form>
                 </div>
                 <div class="inline-flex gap-x-4 mb-4 sm:mb-0">
-                    <x-secondary-link wire:click="$set('showAssignTableModal', true)" href="javascript:;">
+                    <x-secondary-link href="javascript:;" x-on:click.prevent="assignTableModalOpen = true">
                         @lang('modules.menu.assignTableToMenu')
                     </x-secondary-link>
                 <x-secondary-link href="{{ route('menu-items.entities.sort') }}">
@@ -34,36 +34,31 @@
 
     <div class="flex flex-col my-4 px-4">
         <!-- Card Section -->
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="flex items-center gap-3 mb-6 overflow-x-auto pb-1">
             @forelse ($menus as $item)
             <!-- Card -->
-            <a
-            @class(['group flex flex-col border shadow-sm rounded-lg hover:shadow-md transition dark:bg-gray-700 dark:border-gray-600', 'bg-skin-base dark:bg-skin-base' => ($menuId == $item->id), 'bg-white' => ($menuId != $item->id)])
-            wire:key='menu-{{ $item->id . microtime() }}' wire:click='showMenuItems({{ $item->id }})'
-                href="javascript:;">
-                <div class="p-3">
-                    <div class="flex items-center">
-                        <div class="bg-gray-100 p-2 rounded-md">
-
-                            <svg class="flex-shrink-0 size-5 text-gray-800 dark:text-neutral-200" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 409.221 409.221" xmlns:xlink="http://www.w3.org/1999/xlink" enable-background="new 0 0 409.221 409.221">
-                                <path d="m387.059,389.218h-14.329v-18.114h14.327c5.523,0 10-4.477 10-10 0-55.795-42.81-101.781-97.305-106.843v-17.29c0-5.523-4.477-10-10-10s-10,4.477-10,10v17.29c-54.496,5.062-97.305,51.048-97.305,106.843 0,5.523 4.477,10 10,10h14.327v18.114h-14.327c-5.523,0-10,4.477-10,10s4.477,10 10,10h24.13c0.131,0.003 0.262,0.003 0.393,0h145.564c0.065,0.001 0.131,0.002 0.196,0.002s0.131,0 0.196-0.002h24.133c5.523,0 10-4.477 10-10s-4.478-10-10-10zm-34.33,0h-125.957v-18.114h125.957v18.114zm-149.714-38.113c4.978-43.447 41.978-77.305 86.736-77.305s81.758,33.858 86.736,77.305h-173.472zm-71.385-253.799c-29.383,1.42109e-14-52.4,16.809-52.4,38.267 0,21.457 23.017,38.265 52.4,38.265 29.383,0 52.399-16.808 52.399-38.265 0-21.459-23.016-38.267-52.399-38.267zm0,56.531c-19.094,0-32.4-9.625-32.4-18.265 0-8.64 13.306-18.267 32.4-18.267 19.093,0 32.399,9.627 32.399,18.267 0,8.639-13.306,18.265-32.399,18.265zm23.553,235.383h-123.021v-320.568h198.936v166.52c0,5.523 4.477,10 10,10s10-4.477 10-10v-176.52c0-5.523-4.477-10-10-10h-4.701v-38.652c0-2.858-1.223-5.58-3.36-7.478-2.137-1.897-4.984-2.789-7.822-2.452l-204.236,24.327c-5.03,0.599-8.817,4.864-8.817,9.93v364.893c0,5.523 4.477,10 10,10h133.021c5.523,0 10-4.477 10-10s-4.477-10-10-10zm-123.021-346.014l184.235-21.944v27.391h-184.235v-5.447zm82.627,317.362c-5.523,0-10-4.477-10-10s4.477-10 10-10h33.681c5.523,0 10,4.477 10,10s-4.477,10-10,10h-33.681z"/>
-                            </svg>
-
-                        </div>
-
-                        <div class="grow ms-5">
-                            <h3 wire:loading.class.delay='opacity-50'
-                                @class(['font-semibold dark:group-hover:text-neutral-400 dark:text-neutral-200', 'text-gray-800 group-hover:text-skin-base' => ($menuId != $item->id), 'text-white group-hover:text-white' => ($menuId == $item->id)])>
-                                {{ $item->menu_name }}
-                            </h3>
-                            <p
-                            @class(['text-sm dark:text-neutral-500', 'text-gray-500' => ($menuId != $item->id), 'text-gray-100' => ($menuId == $item->id)])>
-                                {{ $item->items_count }} @lang('modules.menu.item')
-                            </p>
-                        </div>
-                    </div>
+            <div @class([
+                'rounded-xl px-4 py-3 flex items-center gap-3 min-w-[220px] cursor-pointer shrink-0',
+                'bg-skin-base dark:bg-skin-base text-white' => ($menuId == $item->id),
+                'bg-white text-gray-800 dark:text-gray-200 group-hover:text-skin-base dark:bg-gray-700' => ($menuId != $item->id),
+            ]) wire:key='menu-{{ $item->id . microtime() }}' wire:click='showMenuItems({{ $item->id }})'>
+                <div @class([
+                    'w-9 h-9 rounded-lg  flex items-center justify-center shrink-0',
+                    'bg-gray-50 dark:bg-gray-800 ' => ($menuId != $item->id),
+                    'bg-white/20 ' => ($menuId == $item->id),
+                ])>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
-            </a>
+                <div>
+                  <p @class(['text-sm leading-tight', 
+                  'font-semibold' => ($menuId == $item->id),
+                  'font-medium' => ($menuId != $item->id),
+                  ])>{{ $item->menu_name }}</p>
+                  <p @class(["text-[11px] text-gray-400 mt-0.5 font-medium", 'text-white/70' => ($menuId == $item->id), 'text-gray-400' => ($menuId != $item->id)])>{{ $item->items_count }} @lang('modules.menu.item')</p>
+                </div>
+            </div>
+
+         
             <!-- End Card -->
             @empty
                 <span class="dark:text-gray-400">@lang('messages.noMenuAdded')</span>
@@ -76,7 +71,7 @@
         @if ($menuItems)
         <div class="w-full">
             <div class="my-4 flex items-center gap-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">{{ $activeMenu->menu_name }}</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">{{ $activeMenu->menu_name }}</h1>
 
                 @if(user_can('Update Menu'))
                 <x-secondary-button-table wire:click='showEditMenu({{ $activeMenu->id }})'
@@ -156,90 +151,112 @@
     @endif
 
 
-    <!-- Assign Table to Menu Modal -->
-<x-dialog-modal wire:model.live="showAssignTableModal" maxWidth="lg">
-    <x-slot name="title">
-        @lang('modules.menu.assignTableToMenu')
-    </x-slot>
+    <!-- Assign Table to Menu Modal (client-side open/close) -->
+    <div
+        x-cloak
+        x-show="assignTableModalOpen"
+        x-on:keydown.escape.window="assignTableModalOpen = false"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        style="display: none;"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="flex min-h-screen items-center justify-center px-4 py-6 text-center">
+            <div
+                x-show="assignTableModalOpen"
+                x-transition.opacity
+                class="fixed inset-0 bg-gray-900/50"
+                x-on:click="assignTableModalOpen = false"
+                aria-hidden="true"
+            ></div>
 
-    <x-slot name="content">
-        <div class="mt-6 space-y-4">
-            <div>
-                <x-label for="selectedTableId" :value="__('modules.table.table')" />
-                <x-select id="selectedTableId" class="mt-1 block w-full" wire:model.live="selectedTableId">
-                    <option value="">{{ __('app.select') }}</option>
-                    @foreach ($allTables as $table)
-                    <option value="{{ $table->id }}">{{ $table->table_code }}</option>
-                    @endforeach
-                </x-select>
-                <x-input-error for="selectedTableId" class="mt-2" />
-            </div>
+            <div
+                x-show="assignTableModalOpen"
+                x-transition
+                class="relative inline-block w-full max-w-2xl transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800"
+            >
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                    @lang('modules.menu.assignTableToMenu')
+                </h3>
 
-            <div>
-                <x-label for="selectedMenuIds" :value="__('modules.menu.menuName')" />
-                <div
-                    class="overflow-x-auto w-full transition-all duration-300 ease-in-out mt-2 border border-gray-300 dark:border-gray-600 rounded-md max-h-96 overflow-y-auto">
-                    <table class="min-w-full divide-y divide-gray-200 table-fixed dark:divide-gray-600">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr>
-                                <th
-                                    class="py-2.5 px-4 text-xs font-medium text-left text-gray-500 uppercase dark:text-gray-400">
-                                    {{ __('modules.menu.menuName') }}
-                                </th>
-                                <th
-                                    class="py-2.5 px-4 text-xs font-medium text-right text-gray-500 uppercase dark:text-gray-400">
-                                    {{ __('app.select') }}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                            @forelse($allMenus as $menu)
-                                <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key="menu-row-{{ $menu->id }}">
-                                    <td class="py-2.5 px-4 text-sm text-gray-900 dark:text-white">
-                                        {{ $menu->menu_name }}
-                                    </td>
-                                    <td class="py-2.5 px-4 text-right">
-                                        <x-checkbox id="menu{{ $menu->id }}" name="selectedMenuIds[]"
-                                            wire:model.live="selectedMenuIds"
-                                            wire:key="checkbox-{{ $menu->id }}-{{ $menuCheckboxKey }}"
-                                            :value="(int) $menu->id" />
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="2" class="py-2.5 px-4 text-sm text-gray-500 text-center">
-                                        {{ __('messages.noMenuAdded') }}
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <x-input-error for="selectedMenuIds" class="mt-2" />
-            </div>
-
-            <div>
-                <x-label for="is_active">
-                    <div class="flex items-center cursor-pointer">
-                        <x-checkbox name="is_active" id="is_active" wire:model.defer="is_active" />
-                        <div class="ms-2">
-                            {{ __('app.active') }}
-                        </div>
+                <div class="mt-6 space-y-4">
+                    <div>
+                        <x-label for="selectedTableId" :value="__('modules.table.table')" />
+                        <x-select id="selectedTableId" class="mt-1 block w-full" wire:model.live="selectedTableId">
+                            <option value="">{{ __('app.select') }}</option>
+                            @foreach ($allTables as $table)
+                            <option value="{{ $table->id }}">{{ $table->table_code }}</option>
+                            @endforeach
+                        </x-select>
+                        <x-input-error for="selectedTableId" class="mt-2" />
                     </div>
-                </x-label>
+
+                    <div>
+                        <x-label for="selectedMenuIds" :value="__('modules.menu.menuName')" />
+                        <div
+                            class="overflow-x-auto w-full transition-all duration-300 ease-in-out mt-2 border border-gray-300 dark:border-gray-600 rounded-md max-h-96 overflow-y-auto">
+                            <table class="min-w-full divide-y divide-gray-200 table-fixed dark:divide-gray-600">
+                                <thead class="bg-gray-100 dark:bg-gray-700">
+                                    <tr>
+                                        <th
+                                            class="py-2.5 px-4 text-xs font-medium text-left text-gray-500 uppercase dark:text-gray-400">
+                                            {{ __('modules.menu.menuName') }}
+                                        </th>
+                                        <th
+                                            class="py-2.5 px-4 text-xs font-medium text-right text-gray-500 uppercase dark:text-gray-400">
+                                            {{ __('app.select') }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                                    @forelse($allMenus as $menu)
+                                        <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key="menu-row-{{ $menu->id }}">
+                                            <td class="py-2.5 px-4 text-sm text-gray-900 dark:text-white">
+                                                {{ $menu->menu_name }}
+                                            </td>
+                                            <td class="py-2.5 px-4 text-right">
+                                                <x-checkbox id="menu{{ $menu->id }}" name="selectedMenuIds[]"
+                                                    wire:model.live="selectedMenuIds"
+                                                    wire:key="checkbox-{{ $menu->id }}-{{ $menuCheckboxKey }}"
+                                                    :value="(int) $menu->id" />
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="2" class="py-2.5 px-4 text-sm text-gray-500 text-center">
+                                                {{ __('messages.noMenuAdded') }}
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        <x-input-error for="selectedMenuIds" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-label for="is_active">
+                            <div class="flex items-center cursor-pointer">
+                                <x-checkbox name="is_active" id="is_active" wire:model.defer="is_active" />
+                                <div class="ms-2">
+                                    {{ __('app.active') }}
+                                </div>
+                            </div>
+                        </x-label>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <x-secondary-button x-on:click="assignTableModalOpen = false" wire:loading.attr="disabled">
+                        {{ __('app.close') }}
+                    </x-secondary-button>
+                    <x-button wire:click="saveTableMenuAssignment" wire:loading.attr="disabled" class="ml-3">
+                        {{ __('app.save') }}
+                    </x-button>
+                </div>
             </div>
         </div>
-    </x-slot>
-
-    <x-slot name="footer">
-        <x-secondary-button wire:click="$set('showAssignTableModal', false)" wire:loading.attr="disabled">
-            {{ __('app.close') }}
-        </x-secondary-button>
-        <x-button wire:click="saveTableMenuAssignment" wire:loading.attr="disabled" class="ml-3">
-            {{ __('app.save') }}
-        </x-button>
-    </x-slot>
-</x-dialog-modal>
+    </div>
 </div>
 
 

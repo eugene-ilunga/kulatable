@@ -27,6 +27,7 @@ class CustomerSiteSettings extends Component
     public $instagram;
     public $twitter;
     public $yelp;
+    public $googleBusinessLink;
     public bool $tableRequired;
     public bool $allowDineIn;
     public $metaKeyword;
@@ -100,6 +101,7 @@ class CustomerSiteSettings extends Component
         $this->instagram = $this->settings->instagram_link;
         $this->twitter = $this->settings->twitter_link;
         $this->yelp = $this->settings->yelp_link;
+        $this->googleBusinessLink = $this->settings->google_business_link;
         $this->metaKeyword = $this->settings->meta_keyword;
         $this->metaDescription = $this->settings->meta_description;
         $this->wifiName = $this->settings->wifi_name;
@@ -196,11 +198,14 @@ class CustomerSiteSettings extends Component
 
     public function submitForm()
     {
+       
+
         $rules = [
             'defaultReservationStatus' => 'required|in:Confirmed,Checked_In,Cancelled,No_Show,Pending',
             'tableLockTimeoutMinutes' => 'required|integer|min:1',
             'headerType' => 'required|in:text,image',
             'headerText' => 'required_if:headerType,text',
+            'googleBusinessLink' => 'nullable|url',
             'wifiName' => [
                 'nullable',
                 'max:255',
@@ -252,6 +257,7 @@ class CustomerSiteSettings extends Component
         $this->settings->instagram_link = $this->instagram;
         $this->settings->twitter_link = $this->twitter;
         $this->settings->yelp_link = $this->yelp;
+        $this->settings->google_business_link = $this->googleBusinessLink;
         $this->settings->meta_keyword = $this->metaKeyword;
         $this->settings->meta_description = $this->metaDescription;
         $this->settings->wifi_name = $this->wifiName;

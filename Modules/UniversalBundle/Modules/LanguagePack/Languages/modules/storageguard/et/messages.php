@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Hoiu valvur',
+  'status_title' => 'Storage Guard süsteemi teed',
+  'permissions_badge' => 'Režiim: 0775 (direktorid) / 0664 (failid)',
+  'success_message' => 'Prooviti parandada :count üksusi (failid ja kataloogid).',
+  'error_alert' => 'Üks või mitu salvestusteed vajavad tähelepanu. Lubade parandamiseks klõpsake "Rekursiivne parandamine".',
+  'recursive_repair' => 'Rekursiivne remont',
+  'secure_repair' => 'Turva- ja remondiload',
+  'refresh_status' => 'Värskenda olekut',
+  'path' => 'Tee',
+  'status' => 'Olek',
+  'perms' => 'Permid',
+  'readable' => 'Loetav',
+  'writable' => 'Kirjutatav',
+  'yes' => 'Jah',
+  'no' => 'Ei',
+  'ok' => 'OK',
+  'issue' => 'probleem',
+];

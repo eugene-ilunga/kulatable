@@ -15,7 +15,7 @@
         .receipt {
             width: {{ $width - 10 }}mm;
             padding: {{ $thermal ? '1mm' : '6.35mm' }};
-            page-break-after: always;
+            page-break-after: {{ (!empty($generateImage) || !empty($forPdf)) ? 'avoid' : 'always' }};
         }
         .header {
             text-align: center;
@@ -110,7 +110,7 @@
             font-size: 14px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        
+
         .back-button:hover {
             background-color: #2563eb;
         }
@@ -255,7 +255,7 @@
         @if(isset($printingChoice) && $printingChoice === 'browserPopupPrint')
         // Detect if running in PWA standalone mode
         function isPWA() {
-            return (window.matchMedia('(display-mode: standalone)').matches) || 
+            return (window.matchMedia('(display-mode: standalone)').matches) ||
                    (window.navigator.standalone === true) ||
                    (document.referrer.includes('android-app://'));
         }

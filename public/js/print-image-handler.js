@@ -780,56 +780,11 @@ async function saveReportImageFromPrint(sessionId, content, reportType) {
                 "Report image saved:",
                 result.url || result.path || result
             );
-            
-            // After successfully saving image to POS machine, also open browser print window
-            // This allows user to save as PDF/image like orders
-            // Use a small delay to ensure image save is complete
-            setTimeout(() => {
-                const printUrl = `/cash-register/print/${sessionId}/${reportType}`;
-                
-                // Detect if running in PWA standalone mode
-                const isPWA = (window.matchMedia('(display-mode: standalone)').matches) ||
-                             (window.navigator.standalone === true) ||
-                             (document.referrer.includes('android-app://'));
-                
-                if (isPWA) {
-                    // In PWA mode, open in same tab to prevent app closing
-                    window.location.href = printUrl;
-                } else {
-                    // In browser mode, open in new tab (like orders)
-                    const anchor = document.createElement('a');
-                    anchor.href = printUrl;
-                    anchor.target = '_blank';
-                    anchor.click();
-                }
-                
-                // Clean up flags after opening window
-                delete window.reportPrintQueue[uniqueKey];
-                window.reportPrintInProgress = false;
-            }, 500); // Small delay to ensure everything is complete
         } catch (e) {
             console.log("Report image saved (non-JSON response)");
-            
-            // Still open browser print window even if JSON parsing fails
-            setTimeout(() => {
-                const printUrl = `/cash-register/print/${sessionId}/${reportType}`;
-                const isPWA = (window.matchMedia('(display-mode: standalone)').matches) ||
-                             (window.navigator.standalone === true) ||
-                             (document.referrer.includes('android-app://'));
-                
-                if (isPWA) {
-                    window.location.href = printUrl;
-                } else {
-                    const anchor = document.createElement('a');
-                    anchor.href = printUrl;
-                    anchor.target = '_blank';
-                    anchor.click();
-                }
-                
-                // Clean up flags after opening window
-                delete window.reportPrintQueue[uniqueKey];
-                window.reportPrintInProgress = false;
-            }, 500);
+        } finally {
+            delete window.reportPrintQueue[uniqueKey];
+            window.reportPrintInProgress = false;
         }
     } catch (error) {
         console.error("Error saving Report image:", error);

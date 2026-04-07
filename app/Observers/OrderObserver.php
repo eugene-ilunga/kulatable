@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Order;
 use App\Events\OrderCancelled;
 use App\Events\TodayOrdersUpdated;
+use App\Services\OrderCashCollectionService;
 use App\Models\Kot;
 use App\Events\OrderUpdated;
 use App\Events\OrderSuccessEvent;
@@ -13,6 +14,9 @@ use App\Events\NewOrderCreated;
 
 class OrderObserver
 {
+    public function __construct(private readonly OrderCashCollectionService $orderCashCollectionService)
+    {
+    }
 
     public function creating(Order $order)
     {
@@ -23,6 +27,8 @@ class OrderObserver
 
     public function created(Order $order)
     {
+        $this->orderCashCollectionService->syncForOrder($order);
+
         // Increment branch's count_orders (only for non-draft, non-canceled orders)
         if ($order->branch) {
             $order->branch->increment('count_orders');
@@ -55,6 +61,10 @@ class OrderObserver
 
     public function updated(Order $order)
     {
+        if ($order->wasChanged(['order_type', 'delivery_executive_id', 'amount_paid', 'total', 'branch_id'])) {
+            $this->orderCashCollectionService->syncForOrder($order);
+        }
+
         if ($order->isDirty('status') && $order->status == 'canceled') {
             OrderCancelled::dispatch($order);
         }

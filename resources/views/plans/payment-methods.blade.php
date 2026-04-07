@@ -82,21 +82,6 @@
                 </button>
             @endif
 
-            @if($stripeSettings->freshpay_status === 1)
-                <div class="w-full space-y-2">
-                    <button wire:click="initiateFreshpayPayment" class="flex items-center w-full px-4 py-3 border rounded btn-light hover:shadow hover:bg-indigo-50 dark:hover:bg-gray-500 f-15 btn">
-                        <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-6 h-6 mr-2" />
-                        @lang('modules.billing.freshpay')
-                    </button>
-                    <input
-                        type="text"
-                        wire:model.live="freshpayCustomerNumber"
-                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        placeholder="@lang('modules.customer.enterPhoneNumber')"
-                    />
-                </div>
-            @endif
-
 
             @if($offlinePaymentGateways > 0)
                 <button wire:click="togglePaymentOptions('0')" class="flex items-center w-full px-4 py-3 border rounded btn-light hover:shadow hover:bg-indigo-50 dark:hover:bg-gray-500 f-15 btn gap-x-1">

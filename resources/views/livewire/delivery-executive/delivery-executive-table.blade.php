@@ -27,6 +27,10 @@
                                     @lang('app.status')
                                 </th>
                                 <th scope="col"
+                                    class="py-2.5 px-4 text-xs font-medium text-left text-gray-500 uppercase dark:text-gray-400">
+                                    @lang('app.availability')
+                                </th>
+                                <th scope="col"
                                     class="py-2.5 px-4 text-xs font-medium text-gray-500 uppercase dark:text-gray-400 text-right">
                                     @lang('app.action')
                                 </th>
@@ -36,32 +40,41 @@
 
                             @forelse ($members as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='customer-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
-                                    {{ $item->name }}
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
+                                    @if(user_can('Show Order'))
+                                    <a href="{{ route('delivery-executives.show', $item) }}" class="text-skin-base hover:underline">
+                                        {{ $item->name }}
+                                    </a>
+                                    @endif
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->phone_code ? '+' . $item->phone_code  : '' }}{{ $item->phone ?? '--' }}
                                 </td>
-                                 <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                 <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->unique_code ?? '--' }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <span
-                                    @if(user_can('Show Order'))
-                                     wire:click='showCustomerOrders({{ $item->id }})'
-                                    @endif
-
-                                     @class(['text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400 border border-gray-400 cursor-pointer'])>
+                                     @class(['text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400 border border-gray-400'])>
                                         {{ $item->orders_count }} @lang('menu.orders')
                                     </span>
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <span @class(['text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap ',
                                     'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-400 border border-blue-400' => ($item->status == 'on_delivery'),
                                     'bg-green-100 text-green-800 dark:bg-gray-700 dark:text-green-400 border border-green-400' => ($item->status == 'available'),
                                     'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-400 border border-red-400' => ($item->status == 'inactive'),
                                     ])>
                                         @lang('modules.staff.' . $item->status)
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
+                                    <span @class([
+                                        'text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap border',
+                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-400' => (bool) $item->is_online,
+                                        'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-400' => !(bool) $item->is_online,
+                                    ])>
+                                        {{ (bool) $item->is_online ? __('app.online') : __('app.offline') }}
                                     </span>
                                 </td>
 
@@ -97,7 +110,7 @@
                             </tr>
                             @empty
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <td class="py-2.5 px-4 space-x-6 text-center dark:text-gray-200" colspan="5">
+                                <td class="py-2.5 px-4 space-x-6 text-center dark:text-gray-200" colspan="6">
                                     @lang('messages.noMemberFound')
                                 </td>
                             </tr>
@@ -131,24 +144,6 @@
 
         <x-slot name="footer">
             <x-secondary-button wire:click="$set('showEditCustomerModal', false)" wire:loading.attr="disabled">
-                {{ __('app.close') }}
-            </x-secondary-button>
-        </x-slot>
-    </x-right-modal>
-
-    <x-right-modal wire:model.live="showCustomerOrderModal" maxWidth="3xl">
-        <x-slot name="title">
-            {{ __("menu.orders") }}
-        </x-slot>
-
-        <x-slot name="content">
-            @if ($customer)
-            @livewire('deliveryExecutive.showOrders', ['customer' => $customer], key(str()->random(50)))
-            @endif
-        </x-slot>
-
-        <x-slot name="footer">
-            <x-secondary-button wire:click="$set('showCustomerOrderModal', false)" wire:loading.attr="disabled">
                 {{ __('app.close') }}
             </x-secondary-button>
         </x-slot>

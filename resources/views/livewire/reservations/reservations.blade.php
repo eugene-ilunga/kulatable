@@ -6,8 +6,14 @@
 
     <div class="p-4 bg-white block  dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-4">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.reservations')</h1>
+            <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.reservations')</h1>
         </div>
+
+        @if(!$isRestaurantOpenForReservations)
+            <div class="w-full p-3 mb-4 text-sm font-medium text-center text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                {{ $restaurantClosedMessage }}
+            </div>
+        @endif
 
         <div class="items-center justify-between block sm:flex bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4">
             <div class="lg:flex items-center mb-4 sm:mb-0">
@@ -38,8 +44,10 @@
             </div>
 
             @if(user_can('Create Reservation') && in_array('Table Reservation', restaurant_modules()) && restaurant()->enable_admin_reservation)
-            <x-button type="button" @click="openAddReservation()">
-                @lang('modules.reservation.newReservation')</x-button>
+                @if($isRestaurantOpenForReservations)
+                    <x-button type="button" @click="openAddReservation()">
+                        @lang('modules.reservation.newReservation')</x-button>
+                @endif
             @endif
         </div>
 
@@ -76,8 +84,8 @@
         style="display: none;"
         x-show="addReservationOpen"
         x-on:keydown.escape.window="closeAddReservation()"
-        @close-add-reservation-modal.window="closeAddReservation()"
-    >
+        @close-add-reservation-modal.window="closeAddReservation()">
+        
         <div
             x-show="addReservationOpen"
             class="fixed inset-0 transform transition-all"

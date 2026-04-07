@@ -12,7 +12,7 @@ export default {
         "./node_modules/flowbite/**/*.js",
         "./Modules/**/*.blade.php",
     ],
-  darkMode: "class",
+
     theme: {
         extend: {
             fill: {

@@ -34,18 +34,18 @@
 
                             @forelse ($payments as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='customer-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->id }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white inline-flex gap-2 items-center">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white inline-flex gap-2 items-center">
                                     <img src="{{  $item->restaurant->logoUrl }}" class="h-8" alt="App Logo" />
                                     {{ $item->restaurant->name }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->package->currency->currency_symbol . $item->amount }}
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->transaction_id }}
                                 </td>
 

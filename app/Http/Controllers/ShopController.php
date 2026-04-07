@@ -6,7 +6,9 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\Table;
+use App\Models\LanguageSetting;
 use App\Traits\HasLanguageSettings;
+use Illuminate\Support\Facades\App;
 
 class ShopController extends Controller
 {
@@ -16,7 +18,6 @@ class ShopController extends Controller
      */
     public function __construct()
     {
-        parent::__construct();
         $this->applyLanguageSettings();
     }
 
@@ -91,6 +92,7 @@ class ShopController extends Controller
             : $order->branch;
 
         $restaurant = $order->branch->restaurant;
+
 
         return view('shop.order_success', [
             'restaurant' => $restaurant,

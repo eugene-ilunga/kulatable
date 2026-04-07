@@ -2,29 +2,26 @@
 
     <h2 class="text-2xl font-extrabold dark:text-white">@lang('modules.order.myOrders')</h2>
 
-    <ul role="list" class=" space-y-2 dark:divide-gray-700 mt-4">
+    <ul role="list" class="mt-4 space-y-2 dark:divide-gray-700">
         @forelse ($orders as $order)
         <li class="p-3 border rounded-md">
             <a href="{{ route('order_success', $order->uuid) }}"  class="font-medium text-skin-base truncate dark:text-white">
-                <div class="flex w-full  space-y-4">
-
-                    <div class="flex w-full items-center justify-between" >
-                        <div class="flex items-center">
-                            <div>
-                                    {{ $order->show_formatted_order_number }}
-
-                                <div class="flex items-center flex-1 text-xs text-gray-500">
-                                    {{ $order->items->count() }} @lang('modules.menu.item') | {{ $order->date_time->timezone($restaurant->timezone)->format(dateFormat() . ' ' . timeFormat()) }}
-                                </div>
+                <div class="w-full">
+                    <div class="flex w-full items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate">
+                                {{ $order->show_formatted_order_number }}
+                            </div>
+                            <div class="mt-1 text-xs text-gray-500">
+                                <div class="truncate">{{ $order->items->count() }} @lang('modules.menu.item')</div>
+                                <div class="truncate">{{ $order->date_time->timezone($restaurant->timezone)->format(dateFormat() . ' ' . timeFormat()) }}</div>
                             </div>
                         </div>
-                        <div class="inline-flex flex-col text-right text-base font-semibold text-gray-900 dark:text-white">
+                        <div class="inline-flex flex-shrink-0 flex-col text-right text-base font-semibold text-gray-900 dark:text-white">
                             <div>{{ currency_format($order->total, $restaurant->currency_id) }}</div>
                             <div class="text-xs text-gray-500 font-light">@lang('modules.order.includeTax')</div>
                         </div>
                     </div>
-
-
                 </div>
             </a>
         </li>

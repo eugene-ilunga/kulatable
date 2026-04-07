@@ -2,6 +2,7 @@
 
 use App\Models\EmailSetting;
 use App\Models\GlobalSetting;
+use App\Models\LanguageSetting;
 use App\Helper\Files;
 use App\Models\Package;
 use App\Models\PaymentGatewayCredential;
@@ -23,7 +24,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\Branch;
 use App\Models\BranchOperationalShift;
-use App\Support\LocaleManager;
+use App\Models\DeliveryExecutive;
 use Carbon\Carbon;
 
 
@@ -51,6 +52,25 @@ function customer()
 {
     if (session()->has('customer')) {
         return session('customer');
+    }
+
+    return null;
+}
+
+function delivery_executive()
+{
+    if (session()->has('delivery_executive')) {
+        return session('delivery_executive');
+    }
+
+    if (session()->has('delivery_executive_id')) {
+        $executive = DeliveryExecutive::with('branch.restaurant.currency')
+            ->find(session('delivery_executive_id'));
+
+        if ($executive) {
+            session(['delivery_executive' => $executive]);
+            return $executive;
+        }
     }
 
     return null;
@@ -420,15 +440,16 @@ if (!function_exists('isRtl')) {
     {
 
         if (session()->has('isRtl')) {
-            return (bool) session('isRtl');
+            return session('isRtl');
         }
 
-        $locale = user()?->locale ?? global_setting()?->locale ?? config('app.locale', 'en');
-        $resolvedLocale = LocaleManager::resolve($locale, global_setting()?->locale ?? config('app.fallback_locale', 'en'));
-        $isRtl = LocaleManager::isRtl($resolvedLocale);
-        session(['isRtl' => $isRtl]);
+        if (user()) {
+            $language = LanguageSetting::where('language_code', auth()->user()->locale)->first();
+            $isRtl = ($language->is_rtl == 1);
+            session(['isRtl' => $isRtl]);
+        }
 
-        return $isRtl;
+        return false;
     }
 }
 
@@ -436,31 +457,15 @@ if (!function_exists('languages')) {
 
     function languages()
     {
-        return LocaleManager::available();
-    }
-}
 
-if (!function_exists('normalize_locale')) {
+        if (cache()->has('languages')) {
+            return cache('languages');
+        }
 
-    function normalize_locale(?string $locale, ?string $fallback = null): string
-    {
-        return LocaleManager::resolve($locale, $fallback ?? config('app.fallback_locale', 'en'));
-    }
-}
+        $languages = LanguageSetting::where('active', 1)->get();
+        cache(['languages' => $languages]);
 
-if (!function_exists('locale_is_rtl')) {
-
-    function locale_is_rtl(?string $locale): bool
-    {
-        return LocaleManager::isRtl($locale);
-    }
-}
-
-if (!function_exists('locale_label')) {
-
-    function locale_label(?string $locale): string
-    {
-        return LocaleManager::label($locale);
+        return cache('languages');
     }
 }
 
@@ -605,6 +610,18 @@ if (!function_exists('getDomainSpecificUrl')) {
 function module_enabled($moduleName)
 {
     return Module::has($moduleName) && Module::isEnabled($moduleName);
+}
+
+if (!function_exists('isHotelModuleEnabled')) {
+    /**
+     * Check if Hotel module is enabled and available in restaurant modules
+     * 
+     * @return bool
+     */
+    function isHotelModuleEnabled(): bool
+    {
+        return function_exists('module_enabled')  && module_enabled('Hotel') && function_exists('restaurant_modules') && in_array('Hotel', restaurant_modules());
+    }
 }
 
 if (!function_exists('package')) {
@@ -1005,6 +1022,12 @@ if (!function_exists('getBusinessDayBoundaries')) {
         
         $restaurant = $branch->restaurant;
         $restaurantTimezone = $restaurant->timezone ?? 'UTC';
+        $toRestaurantTime = function ($utcTime) use ($restaurantTimezone) {
+            return Carbon::now('UTC')
+                ->setTimeFromTimeString($utcTime)
+                ->setTimezone($restaurantTimezone)
+                ->format('H:i:s');
+        };
         
         // Get current time in restaurant timezone
         $currentTime = $date 
@@ -1047,19 +1070,22 @@ if (!function_exists('getBusinessDayBoundaries')) {
         $previousDayEndTime = null;
         
         foreach ($previousDayShifts as $shift) {
+            $shiftStartTime = $toRestaurantTime($shift->start_time);
+            $shiftEndTime = $toRestaurantTime($shift->end_time);
+
             // Parse shift times for previous day
             $shiftStart = Carbon::parse(
-                $previousDay->toDateString() . ' ' . $shift->start_time, 
+                $previousDay->toDateString() . ' ' . $shiftStartTime,
                 $restaurantTimezone
             );
             
             $shiftEnd = Carbon::parse(
-                $previousDay->toDateString() . ' ' . $shift->end_time, 
+                $previousDay->toDateString() . ' ' . $shiftEndTime,
                 $restaurantTimezone
             );
             
             // Handle overnight shifts (end_time < start_time means it ends next day)
-            if ($shift->end_time < $shift->start_time) {
+            if ($shiftEndTime < $shiftStartTime) {
                 $shiftEnd->addDay();
             }
             
@@ -1073,37 +1099,37 @@ if (!function_exists('getBusinessDayBoundaries')) {
         }
         
         // Business day boundaries:
-        // Start: 12:00 AM (start of calendar day) OR if previous day's last shift ended in current day, use that end time
-        // End: 11:59 PM (end of calendar day) OR if a shift crosses to next day, use that shift's end time
-        
-        // Start with calendar day boundaries
-        $businessDayStart = $currentTime->copy()->startOfDay(); // 12:00 AM
-        $businessDayEnd = $currentTime->copy()->endOfDay(); // 11:59 PM
-        
-        // If previous day's shift ended in current day, start from that end time
-        if ($previousDayEndTime) {
-            $businessDayStart = $previousDayEndTime;
-        }
-        
-        // Find latest end from shifts that started on this calendar date
-        // Check if any shift crosses to next day
+        // Start: first active shift start of the day (or previous day's overnight-end if later)
+        // End: latest active shift end of the day (can cross to next day)
+        $businessDayStart = null;
+        $businessDayEnd = null;
+
+        // Find earliest start and latest end from shifts that started on this calendar date.
         $latestShiftEnd = null;
-        
+        $earliestShiftStart = null;
+
         foreach ($shifts as $shift) {
+            $shiftStartTime = $toRestaurantTime($shift->start_time);
+            $shiftEndTime = $toRestaurantTime($shift->end_time);
+
             // Parse shift times in restaurant timezone
             $shiftStart = Carbon::parse(
-                $calendarDate . ' ' . $shift->start_time, 
+                $calendarDate . ' ' . $shiftStartTime,
                 $restaurantTimezone
             );
             
             $shiftEnd = Carbon::parse(
-                $calendarDate . ' ' . $shift->end_time, 
+                $calendarDate . ' ' . $shiftEndTime,
                 $restaurantTimezone
             );
             
             // Handle overnight shifts (end_time < start_time means it ends next day)
-            if ($shift->end_time < $shift->start_time) {
+            if ($shiftEndTime < $shiftStartTime) {
                 $shiftEnd->addDay();
+            }
+
+            if (!$earliestShiftStart || $shiftStart < $earliestShiftStart) {
+                $earliestShiftStart = $shiftStart;
             }
             
             // Track the latest shift end (especially if it crosses to next day)
@@ -1111,12 +1137,28 @@ if (!function_exists('getBusinessDayBoundaries')) {
                 $latestShiftEnd = $shiftEnd;
             }
         }
-        
-        // If there's a shift that crosses to next day, use that end time
-        // Otherwise use 11:59 PM (end of calendar day)
-        if ($latestShiftEnd && $latestShiftEnd->toDateString() !== $calendarDate) {
-            // Shift crosses to next day, use that end time
+
+        // Base start/end from configured shifts
+        if ($earliestShiftStart) {
+            $businessDayStart = $earliestShiftStart;
+        }
+
+        if ($latestShiftEnd) {
             $businessDayEnd = $latestShiftEnd;
+        }
+
+        // If previous day's shift ended in current day and it's later than first shift start,
+        // keep continuity by starting at previous shift end.
+        if ($previousDayEndTime && $businessDayStart && $previousDayEndTime > $businessDayStart) {
+            $businessDayStart = $previousDayEndTime;
+        }
+
+        // Safety fallback for unexpected empty boundaries.
+        if (!$businessDayStart) {
+            $businessDayStart = $currentTime->copy()->startOfDay();
+        }
+        if (!$businessDayEnd) {
+            $businessDayEnd = $currentTime->copy()->endOfDay();
         }
         
         // For "today", the end should be current time (now) if we're viewing today
@@ -1134,15 +1176,15 @@ if (!function_exists('getBusinessDayBoundaries')) {
         // Use business day start
         $earliestStart = $businessDayStart;
 
-        $earliestStart = $earliestStart->shiftTimezone(timezone());
-        $latestEnd = $latestEnd->shiftTimezone(timezone());
-        $businessDayEnd = $businessDayEnd->shiftTimezone(timezone());
+        $earliestStart = $earliestStart->copy()->setTimezone($restaurantTimezone);
+        $latestEnd = $latestEnd->copy()->setTimezone($restaurantTimezone);
+        $businessDayEnd = $businessDayEnd->copy()->setTimezone($restaurantTimezone);
         
         return [
             'start' => $earliestStart,
             'end' => $latestEnd, // For queries - "now" if today, otherwise full business day end
             'business_day_end' => $businessDayEnd, // Full business day end for display (11:59 PM or shift end)
-            'timezone' => timezone(),
+            'timezone' => $restaurantTimezone,
             'calendar_date' => $calendarDate
         ];
     }
@@ -1165,6 +1207,12 @@ if (!function_exists('getShiftForOrder')) {
         }
         
         $restaurantTimezone = $branch->restaurant->timezone ?? 'UTC';
+        $toRestaurantTime = function ($utcTime) use ($restaurantTimezone) {
+            return Carbon::now('UTC')
+                ->setTimeFromTimeString($utcTime)
+                ->setTimezone($restaurantTimezone)
+                ->format('H:i:s');
+        };
         
         // Convert order datetime from UTC to restaurant timezone
         $orderTime = Carbon::parse($orderDateTime)->setTimezone($restaurantTimezone);
@@ -1180,6 +1228,9 @@ if (!function_exists('getShiftForOrder')) {
             ->get();
         
         foreach ($shifts as $shift) {
+            $shiftStartTime = $toRestaurantTime($shift->start_time);
+            $shiftEndTime = $toRestaurantTime($shift->end_time);
+
             // Check if shift applies to this day of week
             $shiftDays = $shift->day_of_week ?? [];
             if (!in_array('All', $shiftDays) && !in_array($dayOfWeek, $shiftDays)) {
@@ -1188,17 +1239,17 @@ if (!function_exists('getShiftForOrder')) {
             
             // Parse shift times in restaurant timezone
             $shiftStart = Carbon::parse(
-                $calendarDate . ' ' . $shift->start_time,
+                $calendarDate . ' ' . $shiftStartTime,
                 $restaurantTimezone
             );
             
             $shiftEnd = Carbon::parse(
-                $calendarDate . ' ' . $shift->end_time,
+                $calendarDate . ' ' . $shiftEndTime,
                 $restaurantTimezone
             );
             
             // Handle overnight shifts
-            if ($shift->end_time < $shift->start_time) {
+            if ($shiftEndTime < $shiftStartTime) {
                 $shiftEnd->addDay();
                 
                 // If order is early morning (before shift end), check previous day

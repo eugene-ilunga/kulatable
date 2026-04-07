@@ -1,0 +1,14 @@
+{
+    "name": "Hotel",
+    "alias": "hotel",
+    "description": "Hotel Booking + Room Service add-on for TableTrack",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Hotel\\Providers\\HotelServiceProvider",
+        "Modules\\Hotel\\Providers\\RouteServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -10,6 +10,12 @@
             </div>
 
             <div>
+                <x-label for="memberEmail" value="{{ __('app.email') }}" />
+                <x-input id="memberEmail" class="block mt-1 w-full" type="email" wire:model='memberEmail' />
+                <x-input-error for="memberEmail" class="mt-2" />
+            </div>
+
+            <div>
                 <x-label for="memberPhone" value="{{ __('modules.restaurant.phone') }}" />
                 <div class="flex gap-2 mt-1">
                     <!-- Phone Code Dropdown -->
@@ -74,6 +80,15 @@
                 </x-select>
 
                 <x-input-error for="status" class="mt-2" />
+            </div>
+
+            <div>
+                <x-label for="availabilityStatus" value="{{ __('app.availability') }}" />
+                <x-select id="availabilityStatus" class="mt-1 block w-full" wire:model='availabilityStatus'>
+                    <option value="1">@lang('app.online')</option>
+                    <option value="0">@lang('app.offline')</option>
+                </x-select>
+                <x-input-error for="availabilityStatus" class="mt-2" />
             </div>
 
         </div>

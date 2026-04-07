@@ -30,23 +30,25 @@
                                     class="py-2.5 px-4 text-xs font-medium ltr:text-right rtl:text-right text-gray-500 uppercase dark:text-gray-400">
                                     @lang('app.dateTime')
                                 </th>
-                                <th scope="col"
-                                    class="py-2.5 px-4 text-xs font-medium ltr:text-right rtl:text-right text-gray-500 uppercase dark:text-gray-400">
-                                    @lang('app.action')
-                                </th>
+                                @if(user_can('Refund Payments'))
+                                    <th scope="col"
+                                        class="py-2.5 px-4 text-xs font-medium ltr:text-right rtl:text-right text-gray-500 uppercase dark:text-gray-400">
+                                        @lang('app.action')
+                                    </th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700" wire:key='customer-list-{{ microtime() }}'>
 
                             @forelse ($payments as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='customer-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $loop->remaining+1 }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ currency_format($item->amount, restaurant()->currency_id) }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white flex items-center gap-1">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white flex items-center gap-1">
 
                                     @switch($item->payment_method)
                                         @case('cash')
@@ -97,10 +99,10 @@
 
 
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->transaction_id }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <a href="javascript:;" class="underline underline-offset-2 decoration-dotted"
 
                                     @if(user_can('Show Order'))
@@ -115,33 +117,35 @@
                                 <td class="py-2.5 px-4 space-x-2 whitespace-nowrap text-right dark:text-white">
                                     @include('common.date-time-display', ['date' => $item->created_at])
                                 </td>
-                                <td class="py-2.5 px-4 space-x-2 whitespace-nowrap text-right">
-                                    @php
-                                        $processedRefunds = $item->refunds->where('status', 'processed');
-                                        $totalRefundedAmount = $processedRefunds->sum('amount');
-                                    @endphp
-                                    @if($processedRefunds->count() > 0)
-                                        <div class="flex flex-col items-end gap-1">
-                                            <span class="inline-flex items-center px-3 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-300">
-                                                @lang('modules.refund.refunded')
-                                            </span>
-                                            <span class="text-xs font-semibold text-red-600 dark:text-red-400">
-                                                {{ currency_format($totalRefundedAmount, restaurant()->currency_id) }}
-                                            </span>
-                                        </div>
-                                    @else
-                                        <x-secondary-button wire:click="openRefundModal({{ $item->id }})" wire:key='refund-{{ $item->id . microtime() }}'>
-                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
-                                            </svg>
-                                            @lang('modules.refund.refund')
-                                        </x-secondary-button>
-                                    @endif
-                                </td>
+                                @if(user_can('Refund Payments'))
+                                    <td class="py-2.5 px-4 space-x-2 whitespace-nowrap text-right">
+                                        @php
+                                            $processedRefunds = $item->refunds->where('status', 'processed');
+                                            $totalRefundedAmount = $processedRefunds->sum('amount');
+                                        @endphp
+                                        @if($processedRefunds->count() > 0)
+                                            <div class="flex flex-col items-end gap-1">
+                                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-300">
+                                                    @lang('modules.refund.refunded')
+                                                </span>
+                                                <span class="text-xs font-semibold text-red-600 dark:text-red-400">
+                                                    {{ currency_format($totalRefundedAmount, restaurant()->currency_id) }}
+                                                </span>
+                                            </div>
+                                        @else
+                                            <x-secondary-button wire:click="openRefundModal({{ $item->id }})" wire:key='refund-{{ $item->id . microtime() }}'>
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                                </svg>
+                                                @lang('modules.refund.refund')
+                                            </x-secondary-button>
+                                        @endif
+                                    </td>
+                                @endif
                             </tr>
                             @empty
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <td class="py-2.5 px-4 space-x-6 dark:text-white" colspan="6">
+                                <td class="py-2.5 px-4 space-x-6 dark:text-white" colspan="{{ user_can('Refund Payments') ? 6 : 5 }}">
                                     @lang('messages.noPaymentFound')
                                 </td>
                             </tr>

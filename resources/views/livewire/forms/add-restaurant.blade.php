@@ -5,7 +5,7 @@
             @csrf
 
             <div>
-                <x-label for="restaurantName" value="{{ __('modules.restaurant.name') }}" />
+                <x-label for="restaurantName" value="{{ __('modules.restaurant.name') }}" required />
                 <x-input id="restaurantName" class="block mt-1 w-full" type="text" wire:model='restaurantName' />
                 <x-input-error for="restaurantName" class="mt-2" />
             </div>
@@ -13,20 +13,20 @@
             @includeIf('subdomain::super-admin.restaurant.subdomain-field')
 
             <div class="mt-4">
-                <x-label for="fullName" value="{{ __('app.fullName') }}" />
+                <x-label for="fullName" value="{{ __('app.fullName') }}" required />
                 <x-input id="fullName" class="block mt-1 w-full" type="text" wire:model='fullName' />
                 <x-input-error for="fullName" class="mt-2" />
             </div>
 
             <div class="mt-4">
-                <x-label for="email" value="{{ __('app.email') }}" />
+                <x-label for="email" value="{{ __('app.email') }}" required />
                 <x-input id="email" class="block mt-1 w-full" type="email" wire:model='email' />
                 <x-input-error for="email" class="mt-2" />
             </div>
 
             <div>
                 <x-label class="mt-4" for="restaurantPhoneNumber"
-                    value="{{ __('modules.settings.restaurantPhoneNumber') }}" />
+                    value="{{ __('modules.settings.restaurantPhoneNumber') }}" required />
                 <div class="flex gap-2 mt-2">
                     <!-- Phone Code Dropdown -->
                     <div x-data="{ isOpen: @entangle('phoneCodeIsOpen').live }" @click.away="isOpen = false" class="relative w-32">
@@ -83,7 +83,7 @@
            </div>
 
             <div class="mt-4">
-                <x-label for="password" value="{{ __('Password') }}" />
+                <x-label for="password" value="{{ __('Password') }}" required />
                 <x-input id="password" class="block mt-1 w-full" type="password" autocomplete="new-password"
                     wire:model='password' />
                 <x-input-error for="password" class="mt-2" />
@@ -108,6 +108,12 @@
             </div>
 
             <div class="mt-4">
+                <x-label for="googleBusiness" value="{{ __('modules.settings.google_business_link') }}" />
+                <x-input id="googleBusiness" class="block mt-1 w-full" type="url" autofocus wire:model='googleBusinessLink' placeholder="{{ __('placeholders.googleBusinessPlaceHolder') }}" />
+                <x-input-error for="googleBusinessLink" class="mt-2" />
+            </div>
+
+            <div class="mt-4">
                 <x-label for="status" value="{{ __('app.status') }}" />
                 <x-select id="status" class="mt-1 block w-full" wire:model.defer="status">
                     <option value="1">{{ __('app.active') }}</option>
@@ -127,19 +133,19 @@
     @endif
 
     @if ($showBranchForm)
-        <form wire:submit="submitForm2">
+        <form wire:submit.prevent="submitForm2">
             @csrf
 
             <h2 class="text-xl font-medium mb-6 mt-3 dark:text-white">@lang('modules.restaurant.restaurantBranchDetails')</h2>
 
             <div>
-                <x-label for="branchName" value="{{ __('Branch Name') }}" />
+                <x-label for="branchName" value="{{ __('Branch Name') }}" required />
                 <x-input id="branchName" class="block mt-1 w-full" type="text" wire:model='branchName' />
                 <x-input-error for="branchName" class="mt-2" />
             </div>
 
             <div class="mt-4">
-                <x-label for="country" value="{{ __('modules.settings.restaurantCountry') }}" />
+                <x-label for="country" value="{{ __('modules.settings.restaurantCountry') }}" required />
                 <x-select id="restaurantCountry" class="mt-1 block w-full" wire:model.live="country">
                     @foreach ($this->countries as $country)
                         <option value="{{ $country->id }}">{{ $country->countries_name }}</option>
@@ -149,18 +155,17 @@
             </div>
 
             <div class="mt-4">
-                <x-label for="address" value="{{ __('Address') }}" />
+                <x-label for="address" value="{{ __('Address') }}" required />
                 <x-textarea id="address" class="block mt-1 w-full" rows="3" wire:model='address' />
                 <x-input-error for="address" class="mt-2" />
             </div>
 
             <div class="flex items-center justify-between mt-4">
                 <x-button
+                    type="submit"
                     wire:target="submitForm2"
                     wire:loading.attr="disabled"
-                    :disabled="$isSubmitting"
-                    onclick="this.disabled=true; this.form.submit();"
-                    wire:click="submitForm2">
+                    :disabled="$isSubmitting">
                     <span wire:loading.remove wire:target="submitForm2">@lang('app.save')</span>
                     <span wire:loading wire:target="submitForm2">
                         <svg class="inline animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12zm2 5.291A7.96 7.96 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938z"/></svg>

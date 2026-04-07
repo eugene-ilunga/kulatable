@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Depolama Koruması',
+  'status_title' => 'Depolama Koruma Sistemi Yolları',
+  'permissions_badge' => 'Mod: 0775 (Dizinler) / 0664 (Dosyalar)',
+  'success_message' => ' :count öğesinde (dosyalar ve dizinler) onarım yapılmaya çalışıldı.',
+  'error_alert' => 'Bir veya daha fazla depolama yoluna dikkat edilmesi gerekiyor. İzinleri düzeltmek için "Yinelemeli Onarım"ı tıklayın.',
+  'recursive_repair' => 'Yinelemeli Onarım',
+  'secure_repair' => 'Güvenli ve Onarım İzinleri',
+  'refresh_status' => 'Durumu Yenile',
+  'path' => 'Yol',
+  'status' => 'Durum',
+  'perms' => 'Perma',
+  'readable' => 'Okunabilir',
+  'writable' => 'Yazılabilir',
+  'yes' => 'Evet',
+  'no' => 'HAYIR',
+  'ok' => 'TAMAM',
+  'issue' => 'Sorun',
+];

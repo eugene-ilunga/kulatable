@@ -58,6 +58,7 @@
                         @lang('modules.settings.customOrderTypes')
                     </span>
                 </li>
+
                 <li class="me-2">
                     <span wire:click="$set('activeTab', 'deliveryApps')"
                         @class([
@@ -68,6 +69,22 @@
                         <!-- SVG: Delivery Apps Icon -->
                         <svg class="w-5 h-5 text-current" height="32" viewBox="0 0 32 32" width="32" xmlns="http://www.w3.org/2000/svg"><g style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-width:2"><path d="M31.098 5.76H9.327v17.893h11.286m5.173 0h2.19V17.27M2.528 23.653H.902v-6.065l4.212-4.949h4.213v11.014H7.7"/><circle cx="23.2" cy="23.653" r="2.586"/><circle cx="5.114" cy="23.653" r="2.586"/><path d="M27.976 9.906h-4.777m6.827 4.149h-4.24"/></g></svg>
                         @lang('modules.settings.deliveryApps')
+                    </span>
+                </li>
+
+                <li class="me-2">
+                    <span wire:click="$set('activeTab', 'orderNotificationSettings')"
+                        @class([
+                            'inline-flex items-center gap-x-1 cursor-pointer select-none p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300',
+                            'border-transparent'=> $activeTab != 'orderNotificationSettings',
+                            'active border-skin-base dark:text-skin-base dark:border-skin-base text-skin-base' => $activeTab == 'orderNotificationSettings',
+                        ])>
+                        <!-- SVG: Order Notification Settings Icon -->
+                        <svg class="w-5 h-5 text-current" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 2a4 4 0 00-4 4v2.586l-.707 1.414A1 1 0 006.21 12h7.58a1 1 0 00.917-1.414L14 8.586V6a4 4 0 00-4-4z" />
+                            <path d="M8 14a2 2 0 104 0H8z" />
+                        </svg>
+                        @lang('modules.settings.orderNotificationSettings')
                     </span>
                 </li>
             </ul>
@@ -240,21 +257,45 @@
 
                         <div class="space-y-4">
                             @forelse($this->orderTypes as $orderType)
-                                <div class="flex gap-x-3 items-center p-4 bg-gray-100 rounded-lg shadow-sm dark:bg-gray-700">
-                                    <x-checkbox
-                                        name="tokenSettings.{{ $orderType->id }}"
-                                        id="tokenSettings_{{ $orderType->id }}"
-                                        wire:model.live="tokenSettings.{{ $orderType->id }}"
-                                        class="mr-4 accent-indigo-600" />
-                                    <div class="flex-1">
-                                        <x-label
-                                            for="tokenSettings_{{ $orderType->id }}"
-                                            :value="$orderType->order_type_name"
-                                            class="!mb-1 font-medium" />
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                                            @lang('modules.order.tokenNumberSettingsDescriptionOrderType', ['orderType' => $orderType->order_type_name])
-                                        </p>
+                                <div class="rounded-lg bg-gray-100 shadow-sm dark:bg-gray-700 overflow-hidden">
+                                    <!-- Enable Token Number -->
+                                    <div class="flex gap-x-3 items-center p-4">
+                                        <x-checkbox
+                                            name="tokenSettings.{{ $orderType->id }}"
+                                            id="tokenSettings_{{ $orderType->id }}"
+                                            wire:model.live="tokenSettings.{{ $orderType->id }}"
+                                            class="mr-4 accent-indigo-600" />
+                                        <div class="flex-1">
+                                            <x-label
+                                                for="tokenSettings_{{ $orderType->id }}"
+                                                :value="$orderType->order_type_name"
+                                                class="!mb-1 font-medium" />
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                @lang('modules.order.tokenNumberSettingsDescriptionOrderType', ['orderType' => $orderType->order_type_name])
+                                            </p>
+                                        </div>
                                     </div>
+
+                                    <!-- Show Order Number on Board (only visible when token is enabled) -->
+                                    @if(!empty($tokenSettings[$orderType->id]))
+                                        <div class="flex gap-x-3 items-center px-4 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                                            <div class="w-6"></div>{{-- indent to align with above --}}
+                                            <x-checkbox
+                                                name="orderNumberSettings.{{ $orderType->id }}"
+                                                id="orderNumberSettings_{{ $orderType->id }}"
+                                                wire:model.live="orderNumberSettings.{{ $orderType->id }}"
+                                                class="mr-4 accent-indigo-600" />
+                                            <div class="flex-1">
+                                                <x-label
+                                                    for="orderNumberSettings_{{ $orderType->id }}"
+                                                    :value="__('modules.order.showOrderNumberOnBoard')"
+                                                    class="!mb-1 font-medium" />
+                                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                                    @lang('modules.order.showOrderNumberOnBoardDescription')
+                                                </p>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @empty
                                 <div class="p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -285,8 +326,14 @@
                     @livewire('settings.customOrderTypes', ['settings' => $settings])
                     @break
 
+
+
                 @case('deliveryApps')
                     @livewire('settings.deliveryApps', ['settings' => $settings])
+                    @break
+
+                @case('orderNotificationSettings')
+                    @livewire('settings.order-notification-setting', ['settings' => $settings])
                     @break
             @endswitch
         </div>

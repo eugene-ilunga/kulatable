@@ -44,48 +44,9 @@
 
         <!-- Filter Section -->
         <div class="flex flex-wrap justify-between items-center gap-4 p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
-            <div class="lg:flex items-center mb-4 sm:mb-0">
-                <form class="sm:pr-3" action="#" method="GET">
-                    <div class="lg:flex gap-2 items-center">
-                        <x-select id="dateRangeType" class="block w-full sm:w-fit mb-2 lg:mb-0" wire:model.defer="dateRangeType" wire:change="setDateRange">
-                            <option value="today">@lang('app.today')</option>
-                            <option value="currentWeek">@lang('app.currentWeek')</option>
-                            <option value="lastWeek">@lang('app.lastWeek')</option>
-                            <option value="last7Days">@lang('app.last7Days')</option>
-                            <option value="currentMonth">@lang('app.currentMonth')</option>
-                            <option value="lastMonth">@lang('app.lastMonth')</option>
-                            <option value="currentYear">@lang('app.currentYear')</option>
-                            <option value="lastYear">@lang('app.lastYear')</option>
-                        </x-select>
-
-                        <div class="flex items-center w-full gap-2">
-                            <x-datepicker wire:model.change='startDate' placeholder="@lang('app.selectStartDate')" />
-                            <span class="mx-2 text-gray-500 dark:text-gray-100 whitespace-nowrap">@lang('app.to')</span>
-                            <x-datepicker wire:model.live='endDate' placeholder="@lang('app.selectEndDate')" />
-                        </div>
-
-                        <div class="lg:flex items-center gap-2 ms-2">
-                            <div class="w-full max-w-[15rem]">
-                                <label for="start-time" class="sr-only">@lang('modules.reservation.timeStart'):</label>
-                                <div x-on:input.debounce.500ms="$wire.set('startTime', $event.detail)">
-                                    <x-time-picker value="{{ $startTime }}" />
-                                </div>
-                            </div>
-                            <span class="mx-2 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
-                            <div class="w-full max-w-[15rem]">
-                                <label for="end-time" class="sr-only">@lang('modules.reservation.timeEnd'):</label>
-                                <div x-on:input.debounce.500ms="$wire.set('endTime', $event.detail)">
-                                    <x-time-picker value="{{ $endTime }}" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-4 lg:items-center w-full lg:w-auto">
-                <div class="relative w-full sm:w-auto">
-                    <x-input id="menu_name" class="block w-full pr-10" type="text"
+            <div class="flex flex-row items-center gap-4 w-full min-w-0 sm:flex-1">
+                <div class="relative flex-1 min-w-0">
+                    <x-input id="menu_name" class="block  pr-10" type="text"
                         placeholder="{{ __('placeholders.searchMenuItems') }}" wire:model.live.debounce.500ms="searchTerm" />
                     @if($searchTerm)
                         <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3" wire:click="$set('searchTerm', '')">
@@ -96,19 +57,74 @@
                     @endif
                 </div>
 
-                <select wire:model.live="selectedWaiter" wire:change="filterWaiter" class="px-3 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-4 focus:ring-primary-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
-                    <option value="">@lang('modules.report.allUsers')</option>
-                    @foreach($waiters ?? [] as $user)
-                        <option value="{{ $user->id }}">{{ $user->name }}</option>
-                    @endforeach
-                </select>
-
-                <a href="javascript:;" wire:click='exportReport'
-                    class="inline-flex items-center  w-1/2 px-3 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:ring-primary-300 sm:w-auto dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
-                    <svg class="w-5 h-5 mr-2 -ml-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M6 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.414A2 2 0 0 0 15.414 6L12 2.586A2 2 0 0 0 10.586 2zm5 6a1 1 0 1 0-2 0v3.586l-1.293-1.293a1 1 0 1 0-1.414 1.414l3 3a1 1 0 0 0 1.414 0l3-3a1 1 0 0 0-1.414-1.414L11 11.586z" clip-rule="evenodd"/></svg>
-                    @lang('app.export')
-                </a>
+                <div class="shrink-0">
+                    <a href="javascript:;" wire:click='exportReport'
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:ring-primary-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
+                        <svg class="w-5 h-5 mr-2 -ml-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M6 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.414A2 2 0 0 0 15.414 6L12 2.586A2 2 0 0 0 10.586 2zm5 6a1 1 0 1 0-2 0v3.586l-1.293-1.293a1 1 0 1 0-1.414 1.414l3 3a1 1 0 0 0 1.414 0l3-3a1 1 0 0 0-1.414-1.414L11 11.586z" clip-rule="evenodd"/></svg>
+                        @lang('app.export')
+                    </a>
+                </div>
             </div>
+            <div class="lg:flex items-center mb-4 sm:mb-0">
+                <form class="sm:pr-3" action="#" method="GET">
+                    <div class="lg:flex gap-2 items-center">
+                        <select id="dateRangeType" class="px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600" wire:model.defer="dateRangeType" wire:change="setDateRange">
+                            <option value="today">@lang('app.today')</option>
+                            <option value="currentWeek">@lang('app.currentWeek')</option>
+                            <option value="lastWeek">@lang('app.lastWeek')</option>
+                            <option value="last7Days">@lang('app.last7Days')</option>
+                            <option value="currentMonth">@lang('app.currentMonth')</option>
+                            <option value="lastMonth">@lang('app.lastMonth')</option>
+                            <option value="currentYear">@lang('app.currentYear')</option>
+                            <option value="lastYear">@lang('app.lastYear')</option>
+                        </select>
+
+                        <select
+                            wire:model.live="selectedHandler"
+                            wire:change="filterHandler"
+                            class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600">
+                            <option value="">@lang('modules.report.allHandlers')</option>
+                            @foreach($handlers ?? [] as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <select
+                            wire:model.live="selectedWaiter"
+                            wire:change="filterWaiter"
+                            class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600">
+                            <option value="">@lang('modules.report.allWaiters')</option>
+                            @foreach($waiters ?? [] as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <div class="lg:flex items-center gap-1">
+                            <div class="w-full max-w-[15rem]" wire:key="start-date-{{ $startDate }}">
+                                <x-datepicker wire:model.change='startDate' placeholder="@lang('app.selectStartDate')" />
+                            </div>
+                            <span class="mx-1 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
+                            <div class="w-full max-w-[15rem]" wire:key="end-date-{{ $endDate }}">
+                                <x-datepicker wire:model.live='endDate' placeholder="@lang('app.selectEndDate')" />
+                            </div>
+                        </div>
+
+                        <div class="lg:flex items-center gap-2 ms-2">
+                            <div class="w-full max-w-[15rem]">
+                                <label for="start-time" class="sr-only">@lang('modules.reservation.timeStart'):</label>
+                                <x-time-picker wire:model.live.debounce.500ms="startTime" value="{{ $startTime }}" />
+                            </div>
+                            <span class="mx-2 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
+                            <div class="w-full max-w-[15rem]">
+                                <label for="end-time" class="sr-only">@lang('modules.reservation.timeEnd'):</label>
+                                <x-time-picker wire:model.live.debounce.500ms="endTime" value="{{ $endTime }}" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+
         </div>
     </div>
 

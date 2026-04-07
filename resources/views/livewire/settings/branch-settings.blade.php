@@ -85,6 +85,19 @@
                         <x-input-error for="branchAddress" class="mt-2" />
                     </div>
 
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1">
+                            <x-label for="branchCrNumber" value="{{ __('modules.settings.branchCrNumber') }}" />
+                            <x-input id="branchCrNumber" class="block mt-1 w-full" type="text" wire:model='branchCrNumber' placeholder="{{ __('modules.settings.enterBranchCrNumber') }}" />
+                            <x-input-error for="branchCrNumber" class="mt-2" />
+                        </div>
+                        <div class="flex-1">
+                            <x-label for="branchVatNumber" value="{{ __('modules.settings.branchVatNumber') }}" />
+                            <x-input id="branchVatNumber" class="block mt-1 w-full" type="text" wire:model='branchVatNumber' placeholder="{{ __('modules.settings.enterBranchVatNumber') }}" />
+                            <x-input-error for="branchVatNumber" class="mt-2" />
+                        </div>
+                    </div>
+
                     <!-- Search Box -->
                     <div id="place-autocomplete-card" class="mb-2" wire:ignore>
                         <p id="location-search"> </p>
@@ -168,12 +181,12 @@
                                         wire:key='member-{{ $item->id . rand(1111, 9999) . microtime() }}'
                                         wire:loading.class.delay='opacity-10'>
                                         <td
-                                            class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                             {{ $item->name }}
                                         </td>
 
                                         <td
-                                            class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                            class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                             {{ $item->address }}
                                         </td>
 

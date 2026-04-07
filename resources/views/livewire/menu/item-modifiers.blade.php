@@ -2,7 +2,7 @@
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.itemModifiers')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.itemModifiers')</h1>
             </div>
             <div class="items-center justify-between block sm:flex md:divide-x md:divide-gray-100 dark:divide-gray-700">
                 <div class="flex items-center mb-4 sm:mb-0">
@@ -40,7 +40,7 @@
                         <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                             @forelse ($itemModifiers as $modifier)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $modifier->menuItem->item_name }}
                                     @if ($modifier->variation)
                                         <span class="text-xs font-medium px-1.5 py-0.5 rounded-full bg-skin-base/20 text-skin-base dark:bg-skin-base/10 dark:text-skin-base shadow-sm border border-skin-base dark:border-skin-base inline-flex items-center">
@@ -53,13 +53,13 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">{{ $modifier->modifierGroup->name }}</td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">{{ $modifier->modifierGroup->name }}</td>
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <span class="px-2 py-1 text-xs font-medium rounded {{ $modifier->is_required ? 'text-white bg-red-500' : 'text-gray-600 bg-gray-200' }}">
                                         @lang($modifier->is_required ? 'modules.modifier.required' : 'modules.modifier.optional')
                                     </span>
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <span class="px-2 py-1 text-xs font-medium rounded {{ $modifier->allow_multiple_selection ? 'text-white bg-green-500' : 'text-gray-600 bg-gray-200' }}">
                                         @lang($modifier->allow_multiple_selection ? 'app.yes' : 'app.no')
                                     </span>

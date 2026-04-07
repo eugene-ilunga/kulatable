@@ -118,7 +118,9 @@ class CreateMenuItem extends Component
         $this->menus = Menu::all();
         $this->kitchenTypes = KotPlace::where('is_active', true)->get();
         $this->taxes = Tax::all();
-        $this->orderTypes = OrderType::where('is_active', 1)->get();
+        $this->orderTypes = OrderType::where('is_active', 1)
+            ->availableForRestaurant()
+            ->get();
         $this->deliveryApps = DeliveryPlatform::where('is_active', 1)->get();
     }
 
@@ -128,7 +130,7 @@ class CreateMenuItem extends Component
     private function initializeLanguages(): void
     {
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
-        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
+        $this->globalLocale = global_setting()->locale;
         $this->currentLanguage = $this->globalLocale;
         $this->translationNames = array_fill_keys(array_keys($this->languages), '');
         $this->translationDescriptions = array_fill_keys(array_keys($this->languages), '');
@@ -551,6 +553,8 @@ class CreateMenuItem extends Component
         $this->dispatch('hideAddMenuItem');
         $this->dispatch('menuItemAdded');
         $this->dispatch('refreshCategories');
+
+        cache()->flush();
 
         $this->redirect(route('menu-items.index'), true);
 

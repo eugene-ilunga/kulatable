@@ -1,0 +1,965 @@
+<?php
+
+namespace Modules\Loyalty\Services;
+
+use App\Models\Order;
+use App\Models\Customer;
+use Modules\Loyalty\Entities\LoyaltyAccount;
+use Modules\Loyalty\Entities\LoyaltyLedger;
+use Modules\Loyalty\Entities\LoyaltySetting;
+use Modules\Loyalty\Entities\LoyaltyTier;
+use Modules\Loyalty\Entities\LoyaltyStampRule;
+use Modules\Loyalty\Entities\CustomerStamp;
+use Modules\Loyalty\Entities\LoyaltyStampTransaction;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class LoyaltyService
+{
+    /**
+     * Check if Loyalty module is in restaurant's package.
+     */
+    protected function isModuleInPackage($restaurantId): bool
+    {
+        if (!function_exists('restaurant_modules')) {
+            return false;
+        }
+
+        $restaurant = \App\Models\Restaurant::find($restaurantId);
+        if (!$restaurant) {
+            return false;
+        }
+
+        $restaurantModules = restaurant_modules($restaurant);
+        return in_array('Loyalty', $restaurantModules);
+    }
+
+    /**
+     * Get or create loyalty account for a customer.
+     */
+    public function getOrCreateAccount($restaurantId, $customerId): LoyaltyAccount
+    {
+        return LoyaltyAccount::firstOrCreate(
+            [
+                'restaurant_id' => $restaurantId,
+                'customer_id' => $customerId,
+            ],
+            [
+                'points_balance' => 0,
+            ]
+        );
+    }
+
+    /**
+     * Get customer's available points.
+     */
+    public function getAvailablePoints($restaurantId, $customerId): int
+    {
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return 0;
+        }
+
+        $account = LoyaltyAccount::where('restaurant_id', $restaurantId)
+            ->where('customer_id', $customerId)
+            ->first();
+
+        return $account ? $account->points_balance : 0;
+    }
+
+    /**
+     * Calculate points that can be earned for an order.
+     */
+    public function calculateEarnablePoints(Order $order): int
+    {
+        if (!$order->customer_id) {
+            return 0;
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return 0;
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return 0;
+        }
+
+        // If points were redeemed, no points earned
+        if ($order->loyalty_points_redeemed > 0) {
+            return 0;
+        }
+
+        $basePoints = $settings->calculatePointsEarned($order->sub_total ?? 0);
+        
+        // Apply tier multiplier if customer has a tier
+        $account = LoyaltyAccount::where('restaurant_id', $restaurantId)
+            ->where('customer_id', $order->customer_id)
+            ->first();
+        
+        if ($account && $account->tier_id) {
+            $tier = LoyaltyTier::find($account->tier_id);
+            if ($tier && $tier->earning_multiplier > 0) {
+                $basePoints = (int) floor($basePoints * $tier->earning_multiplier);
+            }
+        }
+        
+        return $basePoints;
+    }
+
+    /**
+     * Earn points for a completed order.
+     */
+    public function earnPoints(Order $order): bool
+    {
+        if (!$order->customer_id) {
+            return false;
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return false;
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return false;
+        }
+
+        // If points were redeemed, no points earned
+        if ($order->loyalty_points_redeemed > 0) {
+            return false;
+        }
+
+        // If stamps were redeemed (discount applied or free item added), no points earned
+        if ($order->stamp_discount_amount > 0) {
+            return false;
+        }
+
+        // Check if any free items from stamp redemption exist in order
+        $hasFreeItemFromStamp = $order->items()
+            ->where('is_free_item_from_stamp', true)
+            ->exists();
+        
+        if ($hasFreeItemFromStamp) {
+            return false;
+        }
+
+        $points = $this->calculateEarnablePoints($order);
+
+        if ($points <= 0) {
+            return false;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Get or create account
+            $account = $this->getOrCreateAccount($restaurantId, $order->customer_id);
+
+            // Create ledger entry
+            LoyaltyLedger::create([
+                'restaurant_id' => $restaurantId,
+                'customer_id' => $order->customer_id,
+                'order_id' => $order->id,
+                'type' => 'EARN',
+                'points' => $points,
+                'reason' => __('loyalty::app.pointsEarnedForOrder', ['order_number' => $order->order_number]),
+            ]);
+
+            // Update account balance
+            $account->updateBalance();
+            
+            // Update tier based on new balance
+            $account->updateTier();
+
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Loyalty: Failed to earn points', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Calculate maximum discount available for redemption.
+     */
+    public function calculateMaxDiscount($restaurantId, $customerId, $orderSubtotal): array
+    {
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return [
+                'available_points' => 0,
+                'max_discount' => 0,
+                'points_required' => 0,
+            ];
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return [
+                'available_points' => 0,
+                'max_discount' => 0,
+                'points_required' => 0,
+            ];
+        }
+
+        $availablePoints = $this->getAvailablePoints($restaurantId, $customerId);
+
+        if ($availablePoints < $settings->min_redeem_points) {
+            return [
+                'available_points' => $availablePoints,
+                'max_discount' => 0,
+                'points_required' => 0,
+            ];
+        }
+
+        $maxDiscount = $orderSubtotal * ($settings->max_discount_percent / 100);
+        $discountFromPoints = $availablePoints * $settings->value_per_point;
+        $actualDiscount = min($discountFromPoints, $maxDiscount);
+        $pointsRequired = $settings->calculatePointsForDiscount($actualDiscount);
+
+        return [
+            'available_points' => $availablePoints,
+            'max_discount' => round($actualDiscount, 2),
+            'points_required' => $pointsRequired,
+        ];
+    }
+
+    /**
+     * Redeem points for an order.
+     */
+    public function redeemPoints(Order $order, int $pointsToRedeem): array
+    {
+        if (!$order->customer_id) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.orderMustHaveCustomer'),
+            ];
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.loyaltyModuleNotInPackage'),
+            ];
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.loyaltyProgramNotEnabled'),
+            ];
+        }
+
+        $availablePoints = $this->getAvailablePoints($restaurantId, $order->customer_id);
+
+        if ($pointsToRedeem < $settings->min_redeem_points) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.minPointsRequired', ['min_points' => $settings->min_redeem_points]),
+            ];
+        }
+
+        if ($pointsToRedeem > $availablePoints) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.insufficientPoints'),
+            ];
+        }
+
+        // Calculate discount with tier multiplier
+        $subtotal = $order->sub_total ?? 0;
+        $maxDiscount = $subtotal * ($settings->max_discount_percent / 100);
+        $baseDiscountFromPoints = $pointsToRedeem * $settings->value_per_point;
+        
+        // Apply tier redemption multiplier if customer has a tier
+        $account = $this->getOrCreateAccount($restaurantId, $order->customer_id);
+        $tierMultiplier = 1.00;
+        if ($account->tier_id) {
+            $tier = LoyaltyTier::find($account->tier_id);
+            if ($tier && $tier->redemption_multiplier > 0) {
+                $tierMultiplier = $tier->redemption_multiplier;
+            }
+        }
+        
+        $discountFromPoints = $baseDiscountFromPoints * $tierMultiplier;
+        $actualDiscount = min($discountFromPoints, $maxDiscount);
+
+        // Recalculate points needed based on actual discount
+        $actualPointsNeeded = $settings->calculatePointsForDiscount($actualDiscount);
+
+        if ($actualPointsNeeded > $availablePoints) {
+            $actualPointsNeeded = $availablePoints;
+            $actualDiscount = $actualPointsNeeded * $settings->value_per_point;
+            $actualDiscount = min($actualDiscount, $maxDiscount);
+        }
+        
+        // Don't proceed if no points can be redeemed (subtotal is 0 or too low)
+        if ($actualPointsNeeded <= 0 || $actualDiscount <= 0) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.noPointsCanBeRedeemed'),
+            ];
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Get or create account
+            $account = $this->getOrCreateAccount($restaurantId, $order->customer_id);
+
+            // Delete any existing REDEEM ledger entries for this order to prevent duplicates
+            LoyaltyLedger::where('restaurant_id', $restaurantId)
+                ->where('customer_id', $order->customer_id)
+                ->where('order_id', $order->id)
+                ->where('type', 'REDEEM')
+                ->delete();
+
+            // Create ledger entry ONLY if points are actually being redeemed
+            LoyaltyLedger::create([
+                'restaurant_id' => $restaurantId,
+                'customer_id' => $order->customer_id,
+                'order_id' => $order->id,
+                'type' => 'REDEEM',
+                'points' => -$actualPointsNeeded,
+                'reason' => __('loyalty::app.pointsRedeemedForOrder', ['order_number' => $order->order_number]),
+            ]);
+
+            // Update account balance
+            $account->updateBalance();
+            
+            // Update tier based on new balance
+            $account->updateTier();
+
+            // Update order - preserve stamp_discount_amount if it exists
+            Log::info('REDEEM POINTS - BEFORE SAVE', [
+                'order_id' => $order->id,
+                'loyalty_points_redeemed' => $actualPointsNeeded,
+                'loyalty_discount_amount' => $actualDiscount,
+                'existing_stamp_discount' => $order->stamp_discount_amount,
+                'sub_total' => $order->sub_total,
+            ]);
+            
+            $order->loyalty_points_redeemed = $actualPointsNeeded;
+            $order->loyalty_discount_amount = $actualDiscount;
+            
+            // CRITICAL: Preserve stamp_discount_amount if stamps were also redeemed
+            // Without this, save() will overwrite with null/0
+            if ($order->stamp_discount_amount > 0) {
+                // Don't modify it - it's already set
+            }
+            
+            $order->save();
+            
+            Log::info('REDEEM POINTS - AFTER SAVE', [
+                'order_id' => $order->id,
+                'loyalty_points_redeemed' => $order->loyalty_points_redeemed,
+                'loyalty_discount_amount' => $order->loyalty_discount_amount,
+                'stamp_discount_amount' => $order->stamp_discount_amount,
+                'sub_total' => $order->sub_total,
+                'total' => $order->total,
+            ]);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'points_redeemed' => $actualPointsNeeded,
+                'discount_amount' => $actualDiscount,
+                'message' => __('loyalty::app.pointsRedeemedSuccessfully'),
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Loyalty: Failed to redeem points', [
+                'order_id' => $order->id,
+                'points' => $pointsToRedeem,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.failedToRedeemPoints', ['error' => $e->getMessage()]),
+            ];
+        }
+    }
+
+    /**
+     * Remove redemption from an order (if order is cancelled or payment fails).
+     */
+    public function removeRedemption(Order $order): bool
+    {
+        if (!$order->loyalty_points_redeemed || $order->loyalty_points_redeemed <= 0) {
+            return false;
+        }
+
+        if (!$order->customer_id) {
+            return false;
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        try {
+            DB::beginTransaction();
+
+            // Find and delete ALL REDEEM ledger entries for this order (to handle duplicates)
+            $deletedCount = LoyaltyLedger::where('restaurant_id', $restaurantId)
+                ->where('customer_id', $order->customer_id)
+                ->where('order_id', $order->id)
+                ->where('type', 'REDEEM')
+                ->delete();
+
+            if ($deletedCount > 0) {
+                // Update account balance after deleting entries
+                $account = $this->getOrCreateAccount($restaurantId, $order->customer_id);
+                $account->updateBalance();
+            }
+
+            // Clear order redemption
+            $order->loyalty_points_redeemed = 0;
+            $order->loyalty_discount_amount = 0;
+            $order->save();
+
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Loyalty: Failed to remove redemption', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Earn stamps for order items.
+     */
+    public function earnStamps(Order $order): bool
+    {
+        if (!$order->customer_id) {
+            return false;
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return false;
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return false;
+        }
+
+        // If stamps were redeemed (discount applied or free item added), no stamps earned
+        // Only block earning if stamps were actually redeemed (not just if field exists)
+        $hasStampRedemption = $order->stamp_discount_amount > 0;
+        
+        // Check if any free items from stamp redemption exist in order
+        $hasFreeItemFromStamp = $order->items()
+            ->where('is_free_item_from_stamp', true)
+            ->exists();
+        
+        // Only block earning if stamps were actually redeemed
+        if ($hasStampRedemption || $hasFreeItemFromStamp) {
+            return false;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $stampsEarned = false;
+
+            // Get all stamp rules for this restaurant
+            $stampRules = LoyaltyStampRule::getActiveRulesForRestaurant($restaurantId);
+
+            // Group order items by menu_item_id and count quantities
+            // Exclude free items from stamp redemption
+            $orderItems = $order->items()
+                ->where('is_free_item_from_stamp', false)
+                ->get();
+            $itemCounts = [];
+            foreach ($orderItems as $item) {
+                $menuItemId = $item->menu_item_id;
+                if (!isset($itemCounts[$menuItemId])) {
+                    $itemCounts[$menuItemId] = 0;
+                }
+                $itemCounts[$menuItemId] += $item->quantity;
+            }
+
+            // Process each stamp rule
+            foreach ($stampRules as $rule) {
+                $menuItemId = $rule->menu_item_id;
+                if (isset($itemCounts[$menuItemId]) && $itemCounts[$menuItemId] > 0) {
+                    // Customer earns 1 stamp per item ordered
+                    $stampsToEarn = $itemCounts[$menuItemId];
+
+                    // Get or create customer stamp record
+                    $customerStamp = CustomerStamp::getOrCreate(
+                        $restaurantId,
+                        $order->customer_id,
+                        $rule->id
+                    );
+
+                    // Update stamps earned
+                    $customerStamp->stamps_earned += $stampsToEarn;
+                    $customerStamp->last_earned_at = now();
+                    $customerStamp->save();
+
+                    // Create transaction record
+                    LoyaltyStampTransaction::create([
+                        'restaurant_id' => $restaurantId,
+                        'customer_id' => $order->customer_id,
+                        'stamp_rule_id' => $rule->id,
+                        'order_id' => $order->id,
+                        'type' => 'EARN',
+                        'stamps' => $stampsToEarn,
+                        'reason' => __('loyalty::app.stampsEarnedForOrder', [
+                            'order_number' => $order->order_number,
+                            'item_name' => $rule->menuItem->item_name ?? 'Item',
+                        ]),
+                    ]);
+
+                    $stampsEarned = true;
+                }
+            }
+
+            DB::commit();
+            return $stampsEarned;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Loyalty: Failed to earn stamps', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get customer's available stamps for a stamp rule.
+     */
+    public function getAvailableStamps($restaurantId, $customerId, $stampRuleId): int
+    {
+        $customerStamp = CustomerStamp::where('restaurant_id', $restaurantId)
+            ->where('customer_id', $customerId)
+            ->where('stamp_rule_id', $stampRuleId)
+            ->first();
+
+        return $customerStamp ? $customerStamp->getAvailableStampsAttribute() : 0;
+    }
+
+    /**
+     * Get all customer stamps with rules.
+     */
+    public function getCustomerStamps($restaurantId, $customerId)
+    {
+        return CustomerStamp::where('restaurant_id', $restaurantId)
+            ->where('customer_id', $customerId)
+            ->with(['stampRule.menuItem', 'stampRule.rewardMenuItem'])
+            ->get()
+            ->map(function ($customerStamp) {
+                return [
+                    'rule' => $customerStamp->stampRule,
+                    'stamps_earned' => $customerStamp->stamps_earned,
+                    'stamps_redeemed' => $customerStamp->stamps_redeemed,
+                    'available_stamps' => $customerStamp->getAvailableStampsAttribute(),
+                    'can_redeem' => $customerStamp->canRedeem(),
+                    'stamps_required' => $customerStamp->stampRule->stamps_required,
+                ];
+            });
+    }
+
+    /**
+     * Redeem stamps for an order.
+     */
+    public function redeemStamps(Order $order, int $stampRuleId): array
+    {
+        if (!$order->customer_id) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.orderMustHaveCustomer'),
+            ];
+        }
+
+        $restaurantId = $order->branch->restaurant_id;
+
+        // Check if module is in package
+        if (!$this->isModuleInPackage($restaurantId)) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.loyaltyModuleNotInPackage'),
+            ];
+        }
+
+        $settings = LoyaltySetting::getForRestaurant($restaurantId);
+
+        if (!$settings->isEnabled()) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.loyaltyProgramNotEnabled'),
+            ];
+        }
+
+        $stampRule = LoyaltyStampRule::find($stampRuleId);
+
+        if (!$stampRule || $stampRule->restaurant_id != $restaurantId || !$stampRule->is_active) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.stampRuleNotFound'),
+            ];
+        }
+
+        $customerStamp = CustomerStamp::getOrCreate($restaurantId, $order->customer_id, $stampRuleId);
+
+        if (!$customerStamp->canRedeem()) {
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.insufficientStamps', [
+                    'required' => $stampRule->stamps_required,
+                    'available' => $customerStamp->getAvailableStampsAttribute(),
+                ]),
+            ];
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Calculate reward value
+            $baseRewardValue = $stampRule->calculateRewardValue($order->sub_total ?? 0);
+            
+            // Apply tier redemption multiplier for discount rewards (not for free items)
+            $tierMultiplier = 1.00;
+            if (in_array($stampRule->reward_type, ['discount_percent', 'discount_amount'])) {
+                $account = $this->getOrCreateAccount($restaurantId, $order->customer_id);
+                if ($account && $account->tier_id) {
+                    $tier = LoyaltyTier::find($account->tier_id);
+                    if ($tier && $tier->redemption_multiplier > 0) {
+                        $tierMultiplier = $tier->redemption_multiplier;
+                    }
+                }
+            }
+            
+            $rewardValue = $baseRewardValue * $tierMultiplier;
+
+            // Track if reward was successfully applied (for stamp deduction)
+            $rewardApplied = false;
+            
+            // Apply reward based on reward type
+            switch ($stampRule->reward_type) {
+                case 'free_item':
+                    // Add free item to order
+                    // Allow multiple free items if customer has enough stamps
+                    if ($stampRule->reward_menu_item_id) {
+                        $rewardMenuItem = $stampRule->rewardMenuItem;
+                        if ($rewardMenuItem) {
+                            // Get item price (use variation price if exists, otherwise base price)
+                            $itemPrice = $rewardMenuItem->price ?? 0;
+                            $variationId = null;
+                            
+                            // If variation is specified, use variation price
+                            if ($stampRule->reward_menu_item_variation_id) {
+                                $variation = $stampRule->rewardMenuItemVariation;
+                                if ($variation) {
+                                    $variationId = $variation->id;
+                                    $itemPrice = $variation->price ?? $itemPrice;
+                                }
+                            }
+                            
+                            // Check if free item already exists in order (to avoid duplicates)
+                            $freeItemExists = $order->items()
+                                ->where('menu_item_id', $rewardMenuItem->id)
+                                ->where('is_free_item_from_stamp', true)
+                                ->where('stamp_rule_id', $stampRuleId)
+                                ->when($variationId, function($query) use ($variationId) {
+                                    return $query->where('menu_item_variation_id', $variationId);
+                                })
+                                ->exists();
+                            
+                            // Only add free item if it doesn't already exist
+                            if (!$freeItemExists) {
+                                // Add free item to order (amount = 0, but keep price for display)
+                                $order->items()->create([
+                                    'menu_item_id' => $rewardMenuItem->id,
+                                    'menu_item_variation_id' => $variationId,
+                                    'quantity' => 1,
+                                    'price' => $itemPrice, // Original price for display
+                                    'amount' => 0, // Free item - no charge
+                                    'is_free_item_from_stamp' => true,
+                                    'stamp_rule_id' => $stampRuleId,
+                                ]);
+                            }
+                            
+                            // For free items, DON'T change the subtotal
+                            // The free item has amount=0, so it doesn't affect the subtotal
+                            // The subtotal should remain as the sum of all paid items
+                            $order->refresh();
+                            $order->load('items');
+                            
+                            // Subtotal should be sum of all item amounts (free items have amount=0)
+                            $newSubTotal = $order->items->sum('amount');
+                            
+                            // Only update if subtotal actually changed (it shouldn't for free items)
+                            // But we still need to preserve loyalty values
+                            $updateData = [];
+                            if ($newSubTotal != $order->sub_total) {
+                                $updateData['sub_total'] = $newSubTotal;
+                            }
+                            
+                            // CRITICAL: Preserve loyalty values
+                            if ($order->loyalty_points_redeemed > 0) {
+                                $updateData['loyalty_points_redeemed'] = $order->loyalty_points_redeemed;
+                            }
+                            if ($order->loyalty_discount_amount > 0) {
+                                $updateData['loyalty_discount_amount'] = $order->loyalty_discount_amount;
+                            }
+                            
+                            // Only update if there's something to update
+                            if (!empty($updateData)) {
+                                $order->update($updateData);
+                            }
+                            
+                            $rewardApplied = true;
+                        }
+                    }
+                    break;
+                    
+                case 'discount_percent':
+                case 'discount_amount':
+                    // Apply discount to order
+                    // Use separate stamp_discount_amount field to track stamp discounts separately
+                    $currentStampDiscount = $order->stamp_discount_amount ?? 0;
+                    $stampDiscount = $rewardValue;
+                    
+                    // If discount was already applied (e.g., in POS when discount was applied to item amount),
+                    // use the existing value instead of adding to it to avoid double discounting
+                    $discountAlreadyApplied = ($currentStampDiscount > 0);
+                    
+                    if ($discountAlreadyApplied) {
+                        // Discount was already applied to items, keep it as is
+                        $finalStampDiscount = $currentStampDiscount;
+                    } else {
+                        // No existing discount, apply the calculated discount
+                        $finalStampDiscount = $stampDiscount;
+                    }
+                    
+                    // Update order with stamp discount
+                    $order->update([
+                        'stamp_discount_amount' => $finalStampDiscount,
+                    ]);
+                    
+                    // If discount was already applied to items, don't recalculate total
+                    // The total is already correct because the discount is in the item amounts
+                    if ($discountAlreadyApplied) {
+                        // Check if stamps were already deducted for this order
+                        $stampsAlreadyDeducted = \Modules\Loyalty\Entities\LoyaltyStampTransaction::where('restaurant_id', $restaurantId)
+                            ->where('customer_id', $order->customer_id)
+                            ->where('stamp_rule_id', $stampRuleId)
+                            ->where('order_id', $order->id)
+                            ->where('type', 'REDEEM')
+                            ->exists();
+                        
+                        if ($stampsAlreadyDeducted) {
+                            // Stamps already deducted, just refresh and mark as applied (won't deduct again)
+                            $order->refresh();
+                            $rewardApplied = true;
+                            break;
+                        }
+                        // If discount applied but stamps not deducted yet, continue to deduct stamps below
+                        // Just refresh the order and continue - total is already correct
+                        $order->refresh();
+                    }
+                    
+                    // Also update total discount amount (combine ALL discounts: regular + loyalty points + stamp)
+                    $regularDiscount = $order->discount_amount ?? 0;
+                    $loyaltyDiscount = $order->loyalty_discount_amount ?? 0;
+                    $stampDiscount = $order->stamp_discount_amount ?? 0;
+                    $totalDiscount = $regularDiscount + $loyaltyDiscount + $stampDiscount;
+                    
+                    // Recalculate order total
+                    $order->refresh();
+                    $order->load(['items', 'taxes.tax', 'charges.charge']);
+                    
+                    $newSubTotal = $order->items->sum('amount');
+                    $discountedSubTotal = $newSubTotal - $totalDiscount;
+                    
+                    // Recalculate taxes on discounted subtotal (AFTER all discounts: regular + loyalty + stamp)
+                    $taxAmount = 0;
+                    if ($order->tax_mode === 'order' && $order->taxes) {
+                        foreach ($order->taxes as $orderTax) {
+                            $tax = $orderTax->tax ?? null;
+                            if ($tax) {
+                                $taxAmount += ($tax->tax_percent / 100) * max(0, $discountedSubTotal);
+                            }
+                        }
+                    } else {
+                        $taxAmount = $order->items->sum('tax_amount') ?? 0;
+                    }
+                    
+                    // Calculate final total
+                    $finalTotal = max(0, $discountedSubTotal) + $taxAmount;
+                    
+                    // Add charges, tip, delivery
+                    if ($order->charges) {
+                        foreach ($order->charges as $chargeRelation) {
+                            $charge = $chargeRelation->charge;
+                            if ($charge) {
+                                $finalTotal += $charge->getAmount($discountedSubTotal);
+                            }
+                        }
+                    }
+                    
+                    $finalTotal += ($order->tip_amount ?? 0);
+                    $finalTotal += ($order->delivery_fee ?? 0);
+                    
+                    // Preserve loyalty fields when updating order after stamp redemption
+                    $updateData = [
+                        'sub_total' => $newSubTotal,
+                        'total' => round($finalTotal, 2),
+                        'total_tax_amount' => round($taxAmount, 2),
+                    ];
+                    
+                    // Preserve loyalty fields if they exist (in case points were also redeemed)
+                    if ($order->loyalty_points_redeemed > 0) {
+                        $updateData['loyalty_points_redeemed'] = $order->loyalty_points_redeemed;
+                    }
+                    if ($order->loyalty_discount_amount > 0) {
+                        $updateData['loyalty_discount_amount'] = $order->loyalty_discount_amount;
+                    }
+                    
+                    $order->update($updateData);
+                    $rewardApplied = true;
+                    break;
+            }
+
+            // Only deduct stamps if reward was successfully applied
+            if (!$rewardApplied) {
+                DB::rollBack();
+                return [
+                    'success' => false,
+                    'message' => __('loyalty::app.failedToRedeemStamps', ['error' => 'Reward could not be applied']),
+                ];
+            }
+
+            // Update customer stamp
+            $customerStamp->stamps_redeemed += $stampRule->stamps_required;
+            $customerStamp->last_redeemed_at = now();
+            $customerStamp->save();
+
+            // Create transaction record
+            LoyaltyStampTransaction::create([
+                'restaurant_id' => $restaurantId,
+                'customer_id' => $order->customer_id,
+                'stamp_rule_id' => $stampRuleId,
+                'order_id' => $order->id,
+                'type' => 'REDEEM',
+                'stamps' => -$stampRule->stamps_required,
+                'reason' => __('loyalty::app.stampsRedeemedForOrder', [
+                    'order_number' => $order->order_number,
+                ]),
+            ]);
+
+            // Reload order to get updated items/discounts
+            $order->refresh();
+            $order->load('items');
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'stamps_redeemed' => $stampRule->stamps_required,
+                'reward_value' => $rewardValue,
+                'reward_type' => $stampRule->reward_type,
+                'reward_menu_item_id' => $stampRule->reward_menu_item_id,
+                'reward_menu_item_variation_id' => $stampRule->reward_menu_item_variation_id,
+                'message' => __('loyalty::app.stampsRedeemedSuccessfully'),
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Loyalty: Failed to redeem stamps', [
+                'order_id' => $order->id,
+                'stamp_rule_id' => $stampRuleId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => __('loyalty::app.failedToRedeemStamps', ['error' => $e->getMessage()]),
+            ];
+        }
+    }
+
+    /**
+     * Load tier information for a customer
+     * Returns array with tier data that can be used in components
+     */
+    public function getTierInformation($restaurantId, $customerId): array
+    {
+        $result = [
+            'currentTier' => null,
+            'nextTier' => null,
+            'pointsToNextTier' => null,
+            'tierProgress' => 0,
+        ];
+
+        if (!class_exists(LoyaltyTier::class)) {
+            return $result;
+        }
+
+        try {
+            // Get loyalty account
+            $account = $this->getOrCreateAccount($restaurantId, $customerId);
+            $pointsBalance = $account->points_balance;
+
+            // Get current tier
+            $currentTier = LoyaltyTier::getTierForPoints($restaurantId, $pointsBalance);
+            $result['currentTier'] = $currentTier;
+
+            if ($currentTier) {
+                // Get next tier
+                $nextTier = $currentTier->getNextTier();
+                $result['nextTier'] = $nextTier;
+
+                if ($nextTier) {
+                    $pointsToNextTier = $currentTier->getPointsToNextTier($pointsBalance);
+                    $result['pointsToNextTier'] = $pointsToNextTier;
+
+                    // Calculate progress percentage
+                    $pointsInCurrentTier = $pointsBalance - $currentTier->min_points;
+                    $pointsNeededForNextTier = $nextTier->min_points - $currentTier->min_points;
+                    if ($pointsNeededForNextTier > 0) {
+                        $result['tierProgress'] = min(100, ($pointsInCurrentTier / $pointsNeededForNextTier) * 100);
+                    }
+                } else {
+                    // Already at highest tier
+                    $result['tierProgress'] = 100;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error loading tier information: ' . $e->getMessage());
+        }
+
+        return $result;
+    }
+}
+

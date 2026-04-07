@@ -1,11 +1,11 @@
 <div class="py-8 px-4 mx-auto lg:px-6">
     <div class="mx-auto">
-        <div class="flex justify-between items-center mb-6">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
                 @lang('menu.myAddresses')
             </h2>
             @if(!$showAddressForm && $addresses->isNotEmpty() && $addresses->count() < \App\Livewire\Shop\Addresses::MAX_ADDRESSES)
-            <x-button wire:click="createNewAddress" type="button">
+            <x-button wire:click="createNewAddress" type="button" class="w-full justify-center sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-flex" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -28,13 +28,23 @@
                     </div>
 
                     <!-- Search Box -->
-                    <div id="place-autocomplete-card" class="mb-2" wire:ignore>
+                    <div id="place-autocomplete-card" class="mb-2 border dark:border-gray-500 rounded-lg p-1" wire:ignore>
                         <p id="location-search"> </p>
                     </div>
 
                     <div class="mb-4">
                         <section id="address-map" class="h-96 rounded-lg shadow-md border border-gray-200 mb-2" wire:ignore></section>
                         <x-input-error for="lat" custom-message="{{ __('modules.delivery.pleaseSelectLocation') }}" />
+                        <div class="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">{{ __('modules.delivery.latitude') }}:</span>
+                                {{ $lat ?? 'N/A' }}
+                            </span>
+                            <span>
+                                <span class="font-medium text-gray-700 dark:text-gray-300">{{ __('modules.delivery.longitude') }}:</span>
+                                {{ $lng ?? 'N/A' }}
+                            </span>
+                        </div>
                     </div>
 
                     <div class="mb-4">
@@ -43,11 +53,11 @@
                         <x-input-error for="address" />
                     </div>
 
-                    <div class="flex justify-end space-x-2">
-                        <x-secondary-button wire:click="cancelForm" type="button">
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <x-secondary-button wire:click="cancelForm" type="button" class="w-full justify-center sm:w-auto">
                             @lang('app.cancel')
                         </x-secondary-button>
-                        <x-button type="submit">
+                        <x-button type="submit" class="w-full justify-center sm:w-auto">
                             {{ $editMode ? __('modules.delivery.updateAddress') : __('modules.delivery.saveAddress') }}
                         </x-button>
                     </div>
@@ -88,7 +98,7 @@
                                     Lat: {{ $address->lat }}, Lng: {{ $address->lng }}
                                 </div>
                             </div>
-                            <div class="flex space-x-2">
+                        <div class="ml-3 flex flex-shrink-0 space-x-2">
                                 <button wire:click="editAddress({{ $address->id }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -129,6 +139,7 @@
         </x-slot>
     </x-confirmation-modal>
 
+    @script
     <script>
         const MAP_API_KEY = atob('{{ base64_encode($mapApiKey) }}');
 
@@ -142,30 +153,34 @@
             locationPermissionDenied: "@lang('modules.delivery.locationPermissionDenied')",
         };
 
+        let addressMap, addressMarker, addressAutocomplete, mapInitialized = false;
+
+        // Defined before use so window assignment is safe
+        function initAddressMap() {
+            if (document.getElementById('address-map')) {
+                setTimeout(() => setupAddressMap(), 300);
+            }
+        }
+
+        // Expose globally AFTER function declaration so Google Maps callback can find it
+        window.initAddressMap = initAddressMap;
+
+        // Listen for Livewire event to re-init map with coordinates (e.g. edit mode)
+        Livewire.on('initAddressMap', (params) => {
+            setTimeout(() => setupAddressMap(params), 300);
+        });
+
         // Load Google Maps JS if not already loaded
-        if (!window.google || !google.maps) {
+        // NOTE: do NOT use loading=async with callback= — they are incompatible
+        if (!window.google || !window.google.maps) {
             const script = document.createElement('script');
             script.src = MAP_API_KEY
                 ? `https://maps.googleapis.com/maps/api/js?key=${MAP_API_KEY}&loading=async&libraries=places,geocoding,marker&callback=initAddressMap`
-                : `https://maps.googleapis.com/maps/api/js?&loading=async&libraries=places,geocoding,marker&callback=initAddressMap`;
+                : `https://maps.googleapis.com/maps/api/js?libraries=places,geocoding,marker&callback=initAddressMap`;
             script.async = true;
             document.head.appendChild(script);
         } else {
             initAddressMap();
-        }
-
-        let addressMap, addressMarker, addressAutocomplete, mapInitialized = false;
-
-        function initAddressMap() {
-            document.addEventListener('livewire:navigated', () => {
-                Livewire.on('initAddressMap', (params) => {
-                    setTimeout(() => setupAddressMap(params), 300);
-                });
-            });
-
-            if (document.getElementById('address-map')) {
-                setTimeout(() => setupAddressMap(), 300);
-            }
         }
 
         function setupAddressMap(params = {}) {
@@ -293,5 +308,7 @@
             }
             });
         }
+
     </script>
+    @endscript
 </div>

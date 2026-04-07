@@ -45,6 +45,9 @@ class GeneralSettings extends Component
     public $filteredPhoneCodes;
     public $predefinedAmounts = [];
     public $showPredefinedAmountsForm = false;
+    public $country;
+    public $phoneCode;
+    public $status;
 
     public function mount()
     {
@@ -62,10 +65,11 @@ class GeneralSettings extends Component
 
         $this->countries = Country::all();
 
+        //  Set default status to active
+        $this->restaurantPhoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
         // Initialize phone codes
         $this->allPhoneCodes = collect(Country::pluck('phonecode')->unique()->filter()->values());
         $this->filteredPhoneCodes = $this->allPhoneCodes;
-
         // Initialize predefined amounts
         $this->loadPredefinedAmounts();
     }
@@ -102,7 +106,7 @@ class GeneralSettings extends Component
     public function fatchData()
     {
 
-        $reciptSetting = restaurant()->receiptSetting;
+        $reciptSetting = branch()->receiptSetting;
         $this->showTax = (bool)$reciptSetting->show_tax;
         $taxes = RestaurantTax::all();
 
@@ -152,8 +156,11 @@ class GeneralSettings extends Component
         ]);
     }
 
-    public function showConfirmationField($id = null, $index)
+    public function showConfirmationField($id = null, $index = null)
     {
+        if ($index === null) {
+            return;
+        }
 
         if (is_null($id)) {
             $this->removeLastTaxField($index);
@@ -213,7 +220,7 @@ class GeneralSettings extends Component
             );
         }
 
-        $reciptSetting = restaurant()->receiptSetting;
+        $reciptSetting = branch()->receiptSetting;
         $reciptSetting->show_tax = $this->showTax;
         $reciptSetting->save();
 
@@ -337,7 +344,7 @@ class GeneralSettings extends Component
 
     public function render()
     {
-        $orderTypes = OrderType::all();
+        $orderTypes = OrderType::availableForRestaurant()->get();
         return view('livewire.settings.general-settings', [
             'charges' => RestaurantCharge::paginate(5),
             'phonecodes' => $this->filteredPhoneCodes,

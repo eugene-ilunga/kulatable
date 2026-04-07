@@ -1,9 +1,10 @@
 <div>
-    <aside id="sidebar"
-        class="fixed top-0 ltr:left-0 rtl:right-0 z-20 flex flex-col flex-shrink-0 hidden w-64 h-full pt-16 font-normal duration-75 lg:flex transition-width menu-collapsed:hidden"
-        aria-label="Sidebar">
-        <div class="relative flex flex-col flex-1 min-h-0 pt-0 bg-gray-50 ltr:border-r rtl:border-l border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-            <div class="flex flex-col flex-1 pt-5 pb-4 overflow-y-auto mb-16 [&::-webkit-scrollbar]:w-1.5
+    <aside  id="sidebar" 
+    class="fixed top-0 ltr:left-0 rtl:right-0 z-20 flex flex-col flex-shrink-0 hidden w-56 min-w-[224px] bg-white h-full pt-16 font-normal duration-75 lg:flex transition-width menu-collapsed:hidden"
+    aria-label="Sidebar">
+        <!-- Logo -->
+        <div class="relative flex flex-col flex-1 min-h-0 pt-0 ltr:border-r rtl:border-l border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+            <div class="flex flex-col flex-1 pt-5 pb-4 overflow-y-auto mb-16 [&::-webkit-scrollbar]:w-1
                 [&::-webkit-scrollbar-track]:rounded-xl
                 [&::-webkit-scrollbar-thumb]:rounded-xl
                 [&::-webkit-scrollbar-track]:bg-gray-300
@@ -12,7 +13,7 @@
                 dark:[&::-webkit-scrollbar-track]:bg-gray-700
                 dark:[&::-webkit-scrollbar-thumb]:bg-gray-500
                 dark:hover:[&::-webkit-scrollbar-thumb]:bg-gray-400">
-                <div class="flex-1 px-3 space-y-1 bg-gray-50 divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                <div class="flex-1 px-3 space-y-1 divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
 
                     @if (user()->hasRole('Admin_'.user()->restaurant_id))
                         @livewire('forms.change-branch')
@@ -27,7 +28,7 @@
                         </div>
                     @endif
 
-                    <ul class="py-2 space-y-2">
+                    <ul class="py-2 space-y-1.5">
 
                         @livewire('sidebar-menu-item', ['name' => __('menu.dashboard'), 'icon' => 'dashboard', 'link' => route('dashboard'), 'active' => request()->routeIs('dashboard')])
 
@@ -90,7 +91,7 @@
                         @endif
 
                         @if ($this->hasModule('Order') && user_can('Create Order'))
-                            @livewire('sidebar-menu-item', ['name' => __('menu.pos'), 'icon' => 'pos', 'link' => route('pos.index'), 'active' => request()->routeIs('pos.*')])
+                            @livewire('sidebar-menu-item', ['name' => __('menu.pos'), 'icon' => 'pos', 'link' => route('pos.index'), 'active' => request()->routeIs('pos.*'), 'navigate' => false])
                         @endif
 
                         @if ($this->hasModule('Kitchen') && in_array('kitchen', custom_module_plugins()))
@@ -131,7 +132,10 @@
 
                         @if($this->hasModule('Delivery Executive'))
                             @if (user_can('Show Delivery Executive'))
-                                @livewire('sidebar-menu-item', ['name' => __('menu.deliveryExecutive'), 'icon' => 'delivery', 'link' => route('delivery-executives.index'), 'active' => request()->routeIs('delivery-executives.index')])
+                                <x-sidebar-dropdown-menu :name='__("menu.deliveryExecutive")' icon='delivery' :active='request()->routeIs(["delivery-executives.*"])'>
+                                    @livewire('sidebar-dropdown-menu', ['name' => __('menu.deliveryExecutive'), 'link' => route('delivery-executives.index'), 'active' => request()->routeIs('delivery-executives.index')])
+                                    @livewire('sidebar-dropdown-menu', ['name' => __('menu.codMonitoring'), 'link' => route('delivery-executives.cash-monitoring'), 'active' => request()->routeIs('delivery-executives.cash-monitoring')])
+                                </x-sidebar-dropdown-menu>
                             @endif
                         @endif
 
@@ -152,11 +156,12 @@
                         @endif
                         @if ($this->hasModule('Report'))
                             @if (user_can('Show Reports'))
-                                <x-sidebar-dropdown-menu :name='__("menu.reports")' icon='reports' :active='request()->routeIs(["reports.*", "multi-pos.reports.*"])'>
+                                <x-sidebar-dropdown-menu :name='__("menu.reports")' icon='reports' :active='request()->routeIs(["reports.*", "multi-pos.reports.*", "loyalty.reports.*"])'>
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.salesReport'), 'link' => route('reports.sales'), 'active' => request()->routeIs('reports.sales')])
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.itemReport'), 'link' => route('reports.item'), 'active' => request()->routeIs('reports.item')])
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.categoryReport'), 'link' => route('reports.category'), 'active' => request()->routeIs('reports.category')])
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.deliveryAppReport'), 'link' => route('reports.delivery'), 'active' => request()->routeIs('reports.delivery')])
+                                    @livewire('sidebar-dropdown-menu', ['name' => __('menu.codReport'), 'link' => route('reports.cod'), 'active' => request()->routeIs('reports.cod')])
                                     @if ($this->hasModule('Expense'))
                                         @livewire('sidebar-dropdown-menu', ['name' => __('menu.expenseReports'), 'link' => route('reports.expenseReports'), 'active' => request()->routeIs('reports.expenseReports')])
                                     @endif
@@ -167,6 +172,9 @@
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.removedKotItemReport'), 'link' => route('reports.removedKotItem'), 'active' => request()->routeIs('reports.removedKotItem')])
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.taxReport'), 'link' => route('reports.tax'), 'active' => request()->routeIs('reports.tax')])
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.refundReport'), 'link' => route('reports.refund'), 'active' => request()->routeIs('reports.refund')])
+                                    @if (module_enabled('Loyalty'))
+                                        @includeIf('loyalty::sections.reports-sidebar')
+                                    @endif
                                     @livewire('sidebar-dropdown-menu', ['name' => __('menu.duePaymentsReceivedReport'), 'link' => route('reports.duePaymentReceived'), 'active' => request()->routeIs('reports.duePaymentReceived')])
 
 
@@ -178,10 +186,8 @@
                             @includeIf(strtolower($item) . '::sections.sidebar')
                         @endforeach
 
-                        @if($this->hasModule('Settings'))
-                            @if (user_can('Manage Settings'))
-                                @livewire('sidebar-menu-item', ['name' => __('menu.settings'), 'icon' => 'settings', 'link' => route('settings.index'), 'active' => request()->routeIs('settings.index')])
-                            @endif
+                        @if (user_can('Manage Settings'))
+                            @livewire('sidebar-menu-item', ['name' => __('menu.settings'), 'icon' => 'settings', 'link' => route('settings.index'), 'active' => request()->routeIs('settings.index')])
                         @endif
 
                     </ul>

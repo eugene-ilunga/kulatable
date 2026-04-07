@@ -18,18 +18,16 @@ use App\Models\AdminPaystackPayment;
 use App\Events\SendOrderBillEvent;
 use App\Models\XenditPayment;
 use App\Models\EpayPayment;
-use App\Models\FreshpayPayment;
 use App\Notifications\SendOrderBill;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use App\Models\PaymentGatewayCredential;
 use App\Models\OfflinePaymentMethod;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Mollie\Api\MollieApiClient;
 use App\Models\AdminMolliePayment;
 use App\Models\TapPayment;
-use App\Support\FreshpayNetworkDetector;
+use App\Services\RestaurantAvailabilityService;
 
 class OrderDetail extends Component
 {
@@ -50,9 +48,9 @@ class OrderDetail extends Component
     public $flutterwaveStatus;
     public $showPaymentModal = false;
     public $paymentOrder;
-    public $freshpayCustomerNumber = '';
     public $showQrCode = false;
     public $showPaymentDetail = false;
+    public $selectedOfflinePaymentMethod = null;
     public $qrCodeImage;
     public $total;
     public $canAddTip;
@@ -101,8 +99,9 @@ class OrderDetail extends Component
     {
 
         $customer = customer();
+        
         $this->order = Order::withoutGlobalScopes()
-            ->with(['taxes.tax', 'items', 'items.menuItem', 'items.menuItemVariation', 'items.modifierOptions', 'charges.charge', 'orderType'])
+            ->with(['taxes.tax', 'items', 'items.menuItem', 'items.menuItemVariation', 'items.modifierOptions', 'charges.charge', 'orderType', 'orderCashCollection'])
             ->where('id', $this->id)
             ->when(optional($customer)->id, fn($query) => $query->where('customer_id', $customer->id))
             ->firstOrFail();
@@ -125,7 +124,6 @@ class OrderDetail extends Component
         $this->customer = $customer;
         $this->orderType = $this->order->order_type;
         $this->paymentOrder = $this->order;
-        $this->freshpayCustomerNumber = (string) ($this->order->customer?->phone ?? '');
 
         $this->paymentGateway = PaymentGatewayCredential::withoutGlobalScopes()->where('restaurant_id', $this->restaurant->id)->first();
         $this->razorpayStatus = (bool)$this->paymentGateway->razorpay_status;
@@ -136,7 +134,7 @@ class OrderDetail extends Component
         $this->offlinePaymentMethods = OfflinePaymentMethod::where('restaurant_id', $this->restaurant->id)->where('status', 'active')->orderBy('created_at', 'desc')->get();
 
         $this->qrCodeImage = $this->restaurant->qr_code_image;
-        $this->canAddTip = $this->restaurant->enable_tip_shop && $this->order->status !== 'paid';
+        $this->canAddTip = $this->restaurant->enable_tip_shop && !$this->order->isFullyPaid();
         $this->tipAmount = $this->order->tip_amount;
         $this->tipNote = $this->order->tip_note;
 
@@ -539,7 +537,7 @@ class OrderDetail extends Component
             return;
         }
 
-        if ($this->order->status === 'paid') {
+        if ($this->order->isFullyPaid()) {
             $this->alert('info', __('Cannot redeem points for a paid order.'), [
                 'toast' => true,
                 'position' => 'top-end',
@@ -659,7 +657,7 @@ class OrderDetail extends Component
     {
         try {
             // Ensure loyalty values are up to date
-            if (!$this->isLoyaltyEnabled() || !$this->customer || $this->order->status === 'paid') {
+            if (!$this->isLoyaltyEnabled() || !$this->customer || $this->order->isFullyPaid()) {
                 return;
             }
 
@@ -864,7 +862,7 @@ class OrderDetail extends Component
             return false;
         }
 
-        if ($order->status === 'paid') {
+        if ($order->isFullyPaid()) {
             return false;
         }
 
@@ -920,7 +918,7 @@ class OrderDetail extends Component
      */
     public function calculateLoyaltyDiscountPreview()
     {
-        if (!$this->isLoyaltyEnabled() || !$this->customer || $this->order->status === 'paid') {
+        if (!$this->isLoyaltyEnabled() || !$this->customer || $this->order->isFullyPaid()) {
             return;
         }
 
@@ -1099,7 +1097,7 @@ class OrderDetail extends Component
             return;
         }
 
-        if ($this->order->status === 'paid') {
+        if ($this->order->isFullyPaid()) {
             $this->alert('info', __('Cannot redeem stamps for a paid order.'), [
                 'toast' => true,
                 'position' => 'top-end',
@@ -1179,7 +1177,7 @@ class OrderDetail extends Component
             return;
         }
 
-        if ($this->order->status === 'paid') {
+        if ($this->order->isFullyPaid()) {
             $this->alert('info', __('Cannot redeem stamps for a paid order.'), [
                 'toast' => true,
                 'position' => 'top-end',
@@ -1414,7 +1412,7 @@ class OrderDetail extends Component
      */
     public function removeStampRedemption()
     {
-        if ($this->order->status === 'paid') {
+        if ($this->order->isFullyPaid()) {
             $this->alert('info', __('Cannot remove stamp redemption for a paid order.'), [
                 'toast' => true,
                 'position' => 'top-end',
@@ -1991,14 +1989,20 @@ class OrderDetail extends Component
 
     public function InitializePayment()
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         $this->total = floatval($this->paymentOrder->total) - floatval($this->paymentOrder->amount_paid ?: 0);
-        $this->freshpayCustomerNumber = (string) ($this->paymentOrder?->customer?->phone ?? '');
         $this->showPaymentModal = true;
     }
 
     public function hidePaymentModal()
     {
         $this->showPaymentModal = false;
+        $this->showQrCode = false;
+        $this->showPaymentDetail = false;
+        $this->selectedOfflinePaymentMethod = null;
     }
 
     public function toggleQrCode()
@@ -2011,8 +2015,28 @@ class OrderDetail extends Component
         $this->showPaymentDetail = !$this->showPaymentDetail;
     }
 
+    /**
+     * Select an offline payment method inside the payment modal.
+     * The actual payment/order placement happens when the user clicks
+     * the modal footer "paymentDone" button.
+     */
+    public function selectOfflinePaymentMethod($method)
+    {
+        if (empty($method)) {
+            return;
+        }
+
+        $this->selectedOfflinePaymentMethod = $method;
+        $this->showQrCode = false;
+        $this->showPaymentDetail = true;
+    }
+
     public function initiatePayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         $payment = RazorpayPayment::create([
             'order_id' => $id,
             'amount' => $this->total
@@ -2037,6 +2061,10 @@ class OrderDetail extends Component
 
     public function initiateStripePayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         $payment = StripePayment::create([
             'order_id' => $id,
             'amount' => $this->total
@@ -2102,14 +2130,19 @@ class OrderDetail extends Component
     }
     public function initiatePaypalPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         $amount = $this->total;
         $currency = strtoupper($this->restaurant->currency->currency_code);
 
+        $order = Order::find($id);
         $unsupportedCurrencies = ['INR'];
         if (in_array($currency, $unsupportedCurrencies)) {
-            session()->flash('flash.banner', 'Currency not supported by PayPal.');
+            session()->flash('flash.banner', __('messages.paypalCurrencyNotSupported'));
             session()->flash('flash.bannerStyle', 'warning');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
 
         $clientId = $this->paymentGateway->paypal_payment_client_id;
@@ -2181,6 +2214,10 @@ class OrderDetail extends Component
 
     public function initiatePayfastPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         $paymentGateway = $this->restaurant->paymentGateways;
         $isSandbox = $paymentGateway->payfast_mode === 'sandbox';
         $merchantId = $isSandbox ? $paymentGateway->test_payfast_merchant_id : $paymentGateway->payfast_merchant_id;
@@ -2221,6 +2258,10 @@ class OrderDetail extends Component
 
     public function initiatePaystackPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
             $paymentGateway = $this->restaurant->paymentGateways;
 
@@ -2231,7 +2272,7 @@ class OrderDetail extends Component
             $data = [
                 "reference" => $reference,
                 "amount" => (int)($amount * 100), // Paystack expects amount in kobo
-                "email" => $user->email,
+                "email" => $user->email ?? 'guest@example.com',
                 "currency" =>  $this->restaurant->currency->currency_code,
                 "callback_url" => route('paystack.success'),
                 "metadata" => [
@@ -2257,7 +2298,7 @@ class OrderDetail extends Component
                 return redirect($responseData['data']['authorization_url']);
             } else {
 
-                session()->flash('error', 'Payment initiation failed.');
+                session()->flash('error', __('messages.paymentInitiationFailed'));
                 return redirect()->route('paystack.failed');
             }
         } catch (\Exception $e) {
@@ -2267,6 +2308,10 @@ class OrderDetail extends Component
 
     public function initiateXenditPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
             $paymentGateway = $this->restaurant->paymentGateways;
             $secretKey = $paymentGateway->xendit_secret_key;
@@ -2319,11 +2364,11 @@ class OrderDetail extends Component
 
                 return redirect($responseData['invoice_url']);
             } else {
-                session()->flash('error', 'Xendit payment initiation failed: ' . ($responseData['message'] ?? 'Unknown error'));
+                session()->flash('error', __('messages.xenditPaymentInitiationFailed', ['message' => $responseData['message'] ?? 'Unknown error']));
                 return redirect()->route('xendit.failed');
             }
         } catch (\Exception $e) {
-            session()->flash('error', 'Xendit payment error: ' . $e->getMessage());
+            session()->flash('error', __('messages.xenditPaymentError', ['message' => $e->getMessage()]));
             return redirect()->route('xendit.failed');
         }
     }
@@ -2332,12 +2377,16 @@ class OrderDetail extends Component
 
     public function makePayment($id, $method)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         if (!$id || !$method) {
             return;
         }
 
         $allowedMethods = ['cash', 'card', 'upi', 'due', 'others', 'bank_transfer'];
-        
+
         // Allow dynamic offline payment method names
         if (!empty($this->offlinePaymentMethods) && is_iterable($this->offlinePaymentMethods)) {
             $offlineMethodNames = collect($this->offlinePaymentMethods)->pluck('name')->toArray();
@@ -2396,7 +2445,7 @@ class OrderDetail extends Component
 
     public function addTipModal()
     {
-        if ($this->order->status === 'paid') {
+        if ($this->order->isFullyPaid()) {
             $this->alert('error', __('messages.notHavePermission'), ['toast' => true]);
             return;
         }
@@ -2436,6 +2485,10 @@ class OrderDetail extends Component
 
     public function initiateFlutterwavePayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
             $paymentGateway = $this->restaurant->paymentGateways;
             $apiSecret = $paymentGateway->flutterwave_secret;
@@ -2483,6 +2536,10 @@ class OrderDetail extends Component
 
     public function initiateEpayPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
             $paymentGateway = $this->restaurant->paymentGateways;
             $amount = $this->total;
@@ -2492,17 +2549,17 @@ class OrderDetail extends Component
             $clientSecret = $isSandbox ? $paymentGateway->test_epay_client_secret : $paymentGateway->epay_client_secret;
             $terminalId = $isSandbox ? $paymentGateway->test_epay_terminal_id : $paymentGateway->epay_terminal_id;
 
-            if (!$clientId || !$clientSecret || !$terminalId) {
-                session()->flash('flash.banner', 'Epay credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $id);
-            }
-
             $order = Order::find($id);
             if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
+                session()->flash('flash.banner', __('messages.orderNotFound'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->back();
+            }
+
+            if (!$clientId || !$clientSecret || !$terminalId) {
+                session()->flash('flash.banner', __('messages.epayCredentialsNotConfigured'));
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
             }
 
             // Generate secret hash (random string for security)
@@ -2543,9 +2600,10 @@ class OrderDetail extends Component
             if (!$tokenResponse || !isset($tokenResponse['access_token'])) {
                 $epayPayment->payment_status = 'failed';
                 $epayPayment->save();
-                session()->flash('flash.banner', 'Failed to authenticate with Epay. Please try again.');
+                $order = Order::find($id);
+                session()->flash('flash.banner', __('messages.epayFailedToAuthenticate'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->route('order_success', $order->uuid ?? $id);
             }
 
             // Store full token response as JSON in payment record
@@ -2566,9 +2624,10 @@ class OrderDetail extends Component
             $this->dispatch('epayPaymentInitiated', payment: $epayPayment);
         } catch (\Exception $e) {
             Log::error('Epay Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
+            $order = Order::find($id);
+            session()->flash('flash.banner', __('messages.paymentInitiationFailedWithError', ['message' => $e->getMessage()]));
             session()->flash('flash.bannerStyle', 'danger');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
     }
 
@@ -2579,7 +2638,7 @@ class OrderDetail extends Component
         $terminalId = $isSandbox ? $paymentGateway->test_epay_terminal_id : $paymentGateway->epay_terminal_id;
 
         if (!$clientId || !$clientSecret || !$terminalId) {
-            session()->flash('flash.banner', 'Epay credentials are not configured.');
+            session()->flash('flash.banner', __('messages.epayCredentialsNotConfigured'));
             session()->flash('flash.bannerStyle', 'warning');
             return null;
         }
@@ -2616,13 +2675,17 @@ class OrderDetail extends Component
 
         $errorResponse = $response->json();
         Log::error('Epay Token Error: ' . json_encode($errorResponse));
-        session()->flash('flash.banner', 'Failed to authenticate with Epay. Please check your credentials.');
+        session()->flash('flash.banner', __('messages.epayFailedToAuthenticateCheckCredentials'));
         session()->flash('flash.bannerStyle', 'danger');
         return null;
     }
 
     public function initiateMolliePayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
 
             $paymentGateway = $this->restaurant->paymentGateways;
@@ -2673,6 +2736,10 @@ class OrderDetail extends Component
 
     public function initiateTapPayment($id)
     {
+        if (!$this->ensureRestaurantOpenForPayments()) {
+            return;
+        }
+
         try {
             $paymentGateway = $this->restaurant->paymentGateways;
             $amount = $this->total;
@@ -2682,17 +2749,17 @@ class OrderDetail extends Component
             $publicKey = $isSandbox ? $paymentGateway->test_tap_public_key : $paymentGateway->live_tap_public_key;
             $merchantId = $paymentGateway->tap_merchant_id;
 
-            if (!$secretKey || !$publicKey || !$merchantId) {
-                session()->flash('flash.banner', 'Tap credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $id);
-            }
-
             $order = Order::find($id);
             if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
+                session()->flash('flash.banner', __('messages.orderNotFound'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->back();
+            }
+
+            if (!$secretKey || !$publicKey || !$merchantId) {
+                session()->flash('flash.banner', __('messages.tapCredentialsNotConfigured'));
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
             }
 
             $currency = strtoupper($this->restaurant->currency->currency_code);
@@ -2771,9 +2838,9 @@ class OrderDetail extends Component
                     if (isset($responseData['status']) && $responseData['status'] === 'CAPTURED') {
                         return redirect()->route('tap.success', ['order_id' => $id, 'tap_id' => $responseData['id']]);
                     } else {
-                        session()->flash('flash.banner', 'Payment initiation failed. Please try again.');
+                        session()->flash('flash.banner', __('messages.paymentInitiationFailedTryAgain'));
                         session()->flash('flash.bannerStyle', 'danger');
-                        return redirect()->route('order_success', $id);
+                        return redirect()->route('order_success', $order->uuid);
                     }
                 }
             } else {
@@ -2782,137 +2849,18 @@ class OrderDetail extends Component
                 $tapPayment->payment_error_response = $responseData;
                 $tapPayment->save();
 
-                $errorMessage = $responseData['errors'][0]['message'] ?? 'Payment initiation failed. Please try again.';
+                $errorMessage = $responseData['errors'][0]['message'] ?? __('messages.paymentInitiationFailedTryAgain');
                 session()->flash('flash.banner', $errorMessage);
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->route('order_success', $order->uuid);
             }
         } catch (\Exception $e) {
             Log::error('Tap Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
+            $order = Order::find($id);
+            session()->flash('flash.banner', __('messages.paymentInitiationFailedWithError', ['message' => $e->getMessage()]));
             session()->flash('flash.bannerStyle', 'danger');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
-    }
-
-    public function initiateFreshpayPayment($id)
-    {
-        $order = null;
-
-        try {
-            $order = Order::with('customer')->find($id);
-
-            if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
-                session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->back();
-            }
-
-            $paymentGateway = $this->restaurant->paymentGateways;
-            $merchantId = trim((string) ($paymentGateway->freshpay_merchant_id ?? ''));
-            $merchantSecret = trim((string) ($paymentGateway->freshpay_merchant_secret ?? ''));
-            $endpoint = $paymentGateway->freshpay_endpoint;
-
-            if ($merchantId === '' || $merchantSecret === '') {
-                session()->flash('flash.banner', 'FreshPay credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $phoneInput = $this->freshpayCustomerNumber !== ''
-                ? $this->freshpayCustomerNumber
-                : (string) ($order->customer?->phone ?? '');
-
-            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
-
-            if ($phoneNumber === '') {
-                session()->flash('flash.banner', 'FreshPay exige un numéro de téléphone client.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $method = FreshpayNetworkDetector::detectMethod($phoneNumber);
-            if (!$method) {
-                session()->flash('flash.banner', 'Préfixe non pris en charge. Impossible de détecter le réseau mobile.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            // Temporary diagnostic override to match the working FreshPay curl.
-            $firstName = 'AFRYA';
-            $lastName = 'AFRYA';
-            $email = 'kasisrael@gmail.com';
-            $amount = number_format((float) $this->total, 2, '.', '');
-            $reference = 'fp_' . $order->id . '_' . Str::upper(Str::random(8));
-
-            $freshpayPayment = FreshpayPayment::create([
-                'order_id' => $order->id,
-                'amount' => $amount,
-                'payment_status' => 'pending',
-                'freshpay_reference' => $reference,
-                'freshpay_action' => 'debit',
-                'freshpay_method' => $method,
-                'customer_number' => $phoneNumber,
-            ]);
-
-            $payload = [
-                'merchant_id' => $merchantId,
-                'merchant_secrete' => $merchantSecret,
-                'amount' => $amount,
-                'currency' => strtoupper((string) $this->restaurant->currency->currency_code),
-                'action' => 'debit',
-                'customer_number' => $phoneNumber,
-                'firstname' => $firstName,
-                'lastname' => $lastName,
-                'email' => $email,
-                'reference' => $reference,
-                'method' => $method,
-                'callback_url' => route('freshpay.webhook', ['hash' => $this->restaurant->hash]),
-            ];
-
-            $response = Http::timeout(30)->acceptJson()->post($endpoint, $payload);
-            $responseData = $response->json();
-
-            $freshpayPayment->freshpay_payment_id = $responseData['Transaction_id'] ?? null;
-            $freshpayPayment->payment_error_response = is_array($responseData) ? $responseData : ['body' => $response->body()];
-            $freshpayPayment->save();
-
-            if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
-                $order->update([
-                    'status' => 'pending_verification',
-                ]);
-
-                $this->sendNotifications($order);
-
-                session()->flash('flash.banner', 'FreshPay request submitted. Please confirm payment on the customer phone.');
-                session()->flash('flash.bannerStyle', 'success');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $freshpayPayment->payment_status = 'failed';
-            $freshpayPayment->save();
-
-            session()->flash('flash.banner', $responseData['Comment'] ?? 'FreshPay payment initiation failed.');
-            session()->flash('flash.bannerStyle', 'danger');
-
-            return redirect()->route('order_success', $order->uuid);
-        } catch (\Exception $e) {
-            Log::error('FreshPay Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
-            session()->flash('flash.bannerStyle', 'danger');
-            return $order
-                ? redirect()->route('order_success', $order->uuid)
-                : redirect()->back();
-        }
-    }
-
-    private function splitName(string $fullName): array
-    {
-        $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? '';
-        $lastName = $nameParts[1] ?? $firstName;
-
-        return [$firstName, $lastName];
     }
 
 
@@ -2937,9 +2885,30 @@ class OrderDetail extends Component
         return max(0, round((float)($this->order->total ?? 0), 2));
     }
 
+    private function ensureRestaurantOpenForPayments(): bool
+    {
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch);
+
+        if (!($availability['is_open'] ?? true)) {
+            $this->alert('error', RestaurantAvailabilityService::getMessage($availability, $this->restaurant), [
+                'toast' => false,
+                'position' => 'center',
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
     public function render()
     {
-        return view('livewire.shop.order-detail');
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch);
+
+        return view('livewire.shop.order-detail', [
+            'isRestaurantOpenForOrders' => (bool) ($availability['is_open'] ?? true),
+            'restaurantClosedMessage' => RestaurantAvailabilityService::getMessage($availability, $this->restaurant),
+        ]);
     }
 
     // Pusher Broadcast

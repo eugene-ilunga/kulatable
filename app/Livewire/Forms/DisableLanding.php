@@ -23,6 +23,7 @@ class DisableLanding extends Component
     public $instagram;
     public $twitter;
     public $yelp;
+    public $googleBusinessLink;
     public $metaKeyword;
     public $metaDescription;
     public $metaTitle;
@@ -58,6 +59,7 @@ class DisableLanding extends Component
         $this->instagram = $this->settings ? $this->settings->instagram_link : '';
         $this->twitter = $this->settings ? $this->settings->twitter_link : '';
         $this->yelp = $this->settings ? $this->settings->yelp_link : '';
+        $this->googleBusinessLink = $this->settings ? $this->settings->google_business_link : '';
         $this->metaTitle = $this->settings ? $this->settings->meta_title : '';
         $this->metaKeyword = $this->settings ? $this->settings->meta_keyword : '';
         $this->metaDescription = $this->settings ? $this->settings->meta_description : '';
@@ -92,6 +94,7 @@ class DisableLanding extends Component
         $this->settings->instagram_link = $this->instagram;
         $this->settings->twitter_link = $this->twitter;
         $this->settings->yelp_link = $this->yelp;
+        $this->settings->google_business_link = $this->googleBusinessLink;
         $this->settings->meta_title = $this->metaTitle;
         $this->settings->meta_keyword = $this->metaKeyword;
         $this->settings->meta_description = $this->metaDescription;

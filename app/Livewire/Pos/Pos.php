@@ -28,6 +28,8 @@ use App\Models\ModifierOption;
 use App\Traits\PrinterSetting;
 use Illuminate\Support\Carbon;
 use App\Events\NewOrderCreated;
+use App\Events\OrderTableAssigned;
+use App\Events\OrderWaiterAssigned;
 use App\Models\KotCancelReason;
 use Illuminate\Validation\Rule;
 use App\Models\DeliveryPlatform;
@@ -39,6 +41,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
+use App\Services\RestaurantAvailabilityService;
 
 class Pos extends Component
 {
@@ -169,6 +172,8 @@ class Pos extends Component
     public $mergedOrderItemIds = []; // Track OrderItem IDs from merged orders to transfer
     public $mergedCartKeys = []; // Track cart keys that correspond to merged OrderItems (to avoid duplicate creation)
     public $showErrorModal = true;
+    public $showRestaurantClosedBanner = false;
+    public $restaurantClosedMessage = '';
     public $showNewKotButton = false;
     public $orderDetail = null;
     public $showReservationModal = false;
@@ -251,6 +256,12 @@ class Pos extends Component
     public $menuItemsPerPage = 75;
     public $menuItemsLoaded = 75;
 
+    // Room Service properties (only used when Hotel module is enabled)
+    public $selectedStayId = null;
+    public $billTo = 'POST_TO_ROOM'; // POST_TO_ROOM or PAY_NOW
+    public $showRoomModal = false;
+    public $roomSearch = '';
+
     // MultiPOS properties
     public $hasPosMachine = false;
     public $machineStatus = null;
@@ -259,6 +270,18 @@ class Pos extends Component
     public $limitMessage = '';
     public $shouldBlockPos = false;
     public $restaurant;
+    public $showPrintOptionsModal = false;
+    public $printMode = null;
+    public $selectedSplitId = null;
+
+      /**
+     * Check if room service order type is active
+     */
+    protected function isRoomServiceOrder(): bool
+    {
+        return module_enabled('Hotel') && in_array('Hotel', restaurant_modules())
+            && ($this->orderType === 'room_service' || $this->orderTypeSlug === 'room_service');
+    }
 
     public function setCustomer($customerId = null)
     {
@@ -276,7 +299,7 @@ class Pos extends Component
 
     public function mount()
     {
-        $this->restaurant = restaurant()->load(['paymentGateways', 'package']);
+        $this->restaurant = Restaurant::with(['paymentGateways', 'package'])->findOrFail(restaurant()->id) ?? restaurant()->load(['paymentGateways', 'package']);
 
         $this->total = 0;
         $this->subTotal = 0;
@@ -308,14 +331,14 @@ class Pos extends Component
 
         $this->taxMode = $this->restaurant->tax_mode;
 
-        $this->taxes = cache()->remember('taxes_' . $this->restaurant->id, 60 * 60 * 24, function () {
+        $this->taxes = cache()->remember('taxes_branch_' . branch()->id, 60 * 60 * 24, function () {
             return Tax::all();
         });
 
         $this->selectWaiter = user()->id;
 
         $this->deliveryExecutives = cache()->remember('delivery_executives_' . $this->restaurant->id, 60 * 60 * 24, function () {
-            return DeliveryExecutive::where('status', 'available')->get();
+            return DeliveryExecutive::where('status', 'available')->where('is_online', true)->get();
         });
 
         if ($this->tableOrderID) {
@@ -400,6 +423,12 @@ class Pos extends Component
                 $this->orderTypeSlug = $orderType ? $orderType->slug : $order->order_type;
             } else {
                 $this->orderTypeSlug = $order->order_type;
+            }
+
+            // Load room service context if applicable
+            if ($this->isRoomServiceOrder() && $order->context_id) {
+                $this->selectedStayId = $order->context_id;
+                $this->billTo = $order->bill_to ?? 'POST_TO_ROOM';
             }
 
             // Set extraCharges BEFORE setupOrderItems and updatedOrderTypeId to prevent double calculation
@@ -827,7 +856,7 @@ class Pos extends Component
     /**
      * Update deliveryDateTime when pickup date changes
      */
-    public function updatedPickupDate($value)
+     public function updatedPickupDate($value)
     {
         $this->updateDeliveryDateTime();
     }
@@ -846,50 +875,51 @@ class Pos extends Component
     private function updateDeliveryDateTime()
     {
         if ($this->pickupDate && $this->pickupTime) {
-            try {
-                // Parse the date using restaurant date format
-                $dateFormat = global_setting()->date_format ?? 'd-m-Y' ?? 'd-m-Y';
-                $timezone = restaurant()->timezone ?? config('app.timezone');
-                $parsedDate = \Carbon\Carbon::createFromFormat($dateFormat, $this->pickupDate, $timezone);
+            // prepare timezone/date format up front so catch block can reuse them
+            $dateFormat = global_setting()->date_format ?? 'd-m-Y';
+            $timezone = restaurant()->timezone ?? config('app.timezone');
 
+            try {
+                // build a Carbon object in the restaurant timezone
+                $parsedDate = \Carbon\Carbon::createFromFormat($dateFormat, $this->pickupDate, $timezone);
                 // Parse time (already in H:i format)
                 [$hours, $minutes] = explode(':', $this->pickupTime);
                 $parsedDate->setTime((int)$hours, (int)$minutes, 0);
 
-                // Format for database (Y-m-d H:i:s format)
-                $this->deliveryDateTime = $parsedDate->copy()->utc()->format('Y-m-d H:i:s');
-
-                // Only validate time if the selected date is today
-                // If it's a future date, allow any time
+                // same‑day validation must happen before we convert to UTC
                 $today = now($timezone)->startOfDay();
                 $selectedDate = $parsedDate->copy()->startOfDay();
 
                 if ($selectedDate->equalTo($today)) {
-                    // Validate that the selected time is not in the past (only for today)
+                    // require strictly future (<= now + 1m is considered past)
                     $minDateTime = now($timezone)->addMinute();
-                    if ($parsedDate->lt($minDateTime)) {
-                        $this->pickupTime = now($timezone)->addMinute();
-                        // $this->isPastTime = true;
-                        // $this->deliveryDateTime = $minDateTime->format('Y-m-d H:i:s');
-                        // $this->pickupDate = $minDateTime->format(global_setting()->date_format ?? 'd-m-Y');
-                        // $this->pickupTime = $minDateTime->format('H:i');
-                        // $this->addError('pickupDateTime', 'Please select a future time');
+                    if ($parsedDate->lte($minDateTime)) {
+                        // bump the picker values and mark past
+                        $parsedDate = $minDateTime->copy();
+                        $this->pickupDate = $parsedDate->format($dateFormat);
+                        $this->pickupTime = $parsedDate->format('H:i');
+                        $this->isPastTime = true;
                     } else {
                         $this->isPastTime = false;
                     }
                 } else {
-                    // For future dates, no time validation needed - allow any time
+                    // future dates are always valid
                     $this->isPastTime = false;
                 }
+
+                // store local datetime string (database holds local value)
+                $this->deliveryDateTime = $parsedDate->format('Y-m-d H:i:s');
             } catch (\Exception $e) {
-                // If parsing fails, set to current time
+                // If parsing fails, reset to now + 1 minute
                 $minDateTime = now($timezone)->addMinute();
                 $this->deliveryDateTime = $minDateTime->format('Y-m-d H:i:s');
-                $this->pickupDate = $minDateTime->format(global_setting()->date_format ?? 'd-m-Y');
+                $this->pickupDate = $minDateTime->format($dateFormat);
                 $this->pickupTime = $minDateTime->format('H:i');
+                $this->isPastTime = false;
             }
         }
     }
+
 
     public function updatedOrderStatus($value)
     {
@@ -959,6 +989,13 @@ class Pos extends Component
         } else {
             $this->orderTypeSlug = $this->orderDetail->order_type;
         }
+
+        // Load room service context if applicable
+        if ($this->isRoomServiceOrder() && $this->orderDetail->context_id) {
+            $this->selectedStayId = $this->orderDetail->context_id;
+            $this->billTo = $this->orderDetail->bill_to ?? 'POST_TO_ROOM';
+        }
+
         $this->setupOrderItems();
     }
 
@@ -1368,6 +1405,7 @@ class Pos extends Component
             $this->showTableChangeConfirmationModal = true;
         } else {
             // No existing table or setting table programmatically (not from modal), apply immediately
+            $previousTable = $this->tableId ? Table::find($this->tableId) : null;
             $this->tableNo = $table->table_code;
             $this->tableId = $table->id;
 
@@ -1389,6 +1427,8 @@ class Pos extends Component
 
                 $this->orderDetail->fresh();
             }
+
+            $this->dispatchOrderTableAssignedEvent($table, $previousTable);
 
             $this->showTableModal = false;
 
@@ -1421,10 +1461,10 @@ class Pos extends Component
 
         // Apply the table change
         $table = $this->pendingTable;
+        $previousTable = $this->tableId ? Table::find($this->tableId) : null;
 
         // Release previous table lock if exists
         if ($this->tableId && $this->tableId !== $table->id) {
-            $previousTable = Table::find($this->tableId);
             if ($previousTable) {
                 $previousTable->unlock(null, true);
                 Table::where('id', $this->tableId)->update([
@@ -1454,6 +1494,8 @@ class Pos extends Component
 
             $this->orderDetail->fresh();
         }
+
+        $this->dispatchOrderTableAssignedEvent($table, $previousTable);
 
         // Clear pending table and close modals
         $this->pendingTable = null;
@@ -2249,7 +2291,7 @@ class Pos extends Component
     protected function recalculateTotalsForKotOrderWithoutModule(Order $order): void
     {
         $order->refresh();
-        $order->load(['kot.items.menuItem', 'kot.items.menuItemVariation', 'kot.items.modifierOptions', 'taxes.tax', 'charges.charge']);
+        $order->load(['kot.items.menuItem', 'kot.items.menuItemVariation', 'kot.items.modifierOptions', 'taxes.tax', 'charges.charge', 'items']);
 
         $subTotal = 0.0;
         foreach ($order->kot as $kot) {
@@ -2291,7 +2333,7 @@ class Pos extends Component
                 }
             }
         } else {
-            $taxAmount = (float)($order->total_tax_amount ?? 0);
+            $taxAmount = (float)($order->items->sum('tax_amount') ?? 0);
         }
 
         $total = $discountedBase + $serviceTotal;
@@ -2577,13 +2619,16 @@ class Pos extends Component
         $this->recalculateTaxTotals($this->taxBase);
 
 
-        // Add tip and delivery fees
-        if ($this->tipAmount > 0) {
-            $this->total += $this->tipAmount;
+        // Add tip and delivery fees (ensure numeric types)
+        $tipAmount = (float) ($this->tipAmount ?: 0);
+        $deliveryFee = (float) ($this->deliveryFee ?: 0);
+
+        if ($tipAmount > 0) {
+            $this->total += $tipAmount;
         }
 
-        if ($this->deliveryFee > 0) {
-            $this->total += $this->deliveryFee;
+        if ($deliveryFee > 0) {
+            $this->total += $deliveryFee;
         }
 
         // Final total recompute to ensure service charges and tax base rules are respected
@@ -2596,7 +2641,8 @@ class Pos extends Component
                 $finalTotal += $this->totalTaxAmount;
             }
         }
-        $finalTotal += ($this->tipAmount ?? 0) + ($this->deliveryFee ?? 0);
+        // Add tip and delivery (cast to float to avoid int + string errors)
+        $finalTotal += $tipAmount + $deliveryFee;
         $this->total = round($finalTotal, 2);
 
         // Calculate tax and charge amounts for display
@@ -2743,9 +2789,16 @@ class Pos extends Component
                 'discount_amount' => $this->discountAmount,
                 'total' => $this->total,
             ]);
-        }
 
-        $this->calculateTotal();
+            $this->orderDetail->refresh();
+
+            $this->resetCartArrays();
+            $this->setupOrderItems();
+
+            $this->persistTotalsToOrder();
+        }else{
+            $this->calculateTotal();
+        }
 
         $this->showDiscountModal = false;
     }
@@ -2754,18 +2807,27 @@ class Pos extends Component
     {
         $order = $this->tableOrderID ? $this->tableOrder->activeOrder : $this->orderDetail;
 
+        // Reset discount properties
+        $this->discountType = null;
+        $this->discountValue = null;
+        $this->discountAmount = null;
+
         if ($order) {
             $order->update([
                 'discount_type' => null,
                 'discount_value' => null,
                 'discount_amount' => null,
             ]);
-        }
 
-        $this->discountType = null;
-        $this->discountValue = null;
-        $this->discountAmount = null;
-        $this->calculateTotal();
+            $this->orderDetail->refresh();
+
+            $this->resetCartArrays();
+            $this->setupOrderItems();
+
+            $this->persistTotalsToOrder();
+        }else{
+            $this->calculateTotal();
+        }
     }
 
     public function removeExtraCharge($chargeId, $orderType)
@@ -2790,6 +2852,20 @@ class Pos extends Component
 
     public function saveOrder($action, $secondAction = null, $thirdAction = null)
     {
+        if ($action !== 'cancel') {
+            $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, branch());
+
+            if (!($availability['is_open'] ?? true)) {
+                $this->restaurantClosedMessage = RestaurantAvailabilityService::getMessage($availability, $this->restaurant);
+                $this->showRestaurantClosedBanner = true;
+                $this->alert('error', $this->restaurantClosedMessage, [
+                    'toast' => true,
+                    'position' => 'top-end',
+                ]);
+                return;
+            }
+        }
+
         // Check if table is locked by another user before saving order
         if ($this->tableId && $this->orderType === 'dine_in') {
             $table = Table::find($this->tableId);
@@ -2871,11 +2947,18 @@ class Pos extends Component
             $rules['selectWaiter'] = 'required_if:orderType,dine_in';
         }
 
+        // Require stay selection for room service orders
+        if ($this->isRoomServiceOrder() && $action !== 'cancel') {
+            $rules['selectedStayId'] = 'required|exists:hotel_stays,id';
+        }
+
         $messages = [
             'noOfPax.required_if' => __('messages.enterPax'),
             'tableNo.required_if' => __('messages.setTableNo'),
             'selectWaiter.required_if' => __('messages.selectWaiter'),
             'orderItemList.required' => __('messages.orderItemRequired'),
+            'selectedStayId.required' => __('hotel::modules.roomService.selectStayRequired'),
+            'selectedStayId.exists' => __('hotel::modules.roomService.invalidStay'),
         ];
 
         $this->validate($rules, $messages);
@@ -2970,6 +3053,13 @@ class Pos extends Component
                 'pos_machine_id' => (module_enabled('MultiPOS') && function_exists('pos_machine_id')) ? pos_machine_id() : null,
             ];
 
+            // Add room service context if order type is room_service
+            if ($this->isRoomServiceOrder()) {
+                $orderData['context_type'] = 'HOTEL_ROOM';
+                $orderData['context_id'] = $this->selectedStayId;
+                $orderData['bill_to'] = $this->billTo;
+            }
+
             // If stamp discount was already applied to an item, save it to order
             // This prevents the service from recalculating and double-applying the discount
             if (module_enabled('Loyalty')) {
@@ -3026,6 +3116,12 @@ class Pos extends Component
 
             $order = ($this->tableOrderID ? $this->tableOrder->activeOrder : $this->orderDetail);
 
+            // Load room service context if applicable (for existing orders)
+            if ($order && $this->isRoomServiceOrder() && $order->context_id && !$this->selectedStayId) {
+                $this->selectedStayId = $order->context_id;
+                $this->billTo = $order->bill_to ?? 'POST_TO_ROOM';
+            }
+
             // Store original status before update to check if converting from draft
             $wasDraft = $order->status === 'draft';
 
@@ -3065,6 +3161,13 @@ class Pos extends Component
                 'discount_amount' => $this->loyaltyPointsRedeemed > 0 ? 0 : $this->discountAmount,
                 'tax_base' => $this->taxBase,
             ];
+
+            // Update room service context if order type is room_service
+            if ($this->isRoomServiceOrder()) {
+                $updateData['context_type'] = 'HOTEL_ROOM';
+                $updateData['context_id'] = $this->selectedStayId ?? $order->context_id;
+                $updateData['bill_to'] = $this->billTo ?? $order->bill_to;
+            }
 
             // Only include total if loyalty points are NOT being redeemed
             // If loyalty points ARE being redeemed, redemption will calculate and save the correct total
@@ -3140,6 +3243,7 @@ class Pos extends Component
             if (!$preserveOrderItemsOnBill) {
                 $order->taxes()->delete();
             }
+
         }
 
         if ($status == 'canceled') {
@@ -3303,6 +3407,16 @@ class Pos extends Component
                 if ($table) {
                     $table->unlock(null, true);
                 }
+            }
+
+            // Post order to folio if room service and bill_to is POST_TO_ROOM
+            if ($this->isRoomServiceOrder()
+                && $order->bill_to === 'POST_TO_ROOM'
+                && $order->context_id
+                && ($status === 'billed' || $status === 'paid')
+                && !$order->posted_to_folio_at) {
+                $order->refresh();
+                $this->postOrderToFolio($order);
             }
 
             $this->dispatch('posOrderSuccess');
@@ -4172,6 +4286,15 @@ class Pos extends Component
                 ]);
             }
 
+            // Post order to folio if room service and bill_to is POST_TO_ROOM
+            if ($this->isRoomServiceOrder()
+                && $order->bill_to === 'POST_TO_ROOM'
+                && $order->context_id
+                && !$order->posted_to_folio_at) {
+                $order->refresh();
+                $this->postOrderToFolio($order);
+            }
+
             if ($order->placed_via == null || $order->placed_via == 'pos') {
                 NewOrderCreated::dispatch($order);
             }
@@ -4298,20 +4421,60 @@ class Pos extends Component
 
     public function printOrder($order)
     {
+        // Ensure $order is an Order model instance
+        if (is_numeric($order)) {
+            $order = Order::find($order);
+        }
+
+        if (!$order) {
+            $this->alert('error', __('messages.orderNotFound'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+            return;
+        }
+
+        // Check if order has split payments - if yes, show modal
+        if ($order->split_type && $order->splitOrders()->where('status', 'paid')->count() > 0) {
+            $this->showPrintOptionsModal = true;
+            $this->printMode = null;
+            $this->selectedSplitId = null;
+            return;
+        }
+
+        // No splits - execute normal print
+        $this->executePrint($order->id);
+    }
+
+    private function executePrint($orderId)
+    {
+        $order = Order::find($orderId);
+        if (!$order) {
+            return;
+        }
 
         $orderPlace = \App\Models\MultipleOrder::with('printerSetting')->first();
+        $printerSetting = $orderPlace?->printerSetting;
 
-        $printerSetting = $orderPlace->printerSetting;
-
-        switch ($printerSetting?->printing_choice) {
-
-            case 'directPrint':
-                $this->handleOrderPrint($order->id);
-                break;
-            default:
-                $url = route('orders.print', $order);
-                $this->dispatch('print_location', $url);
-                break;
+        try {
+            switch ($printerSetting?->printing_choice) {
+                case 'directPrint':
+                    $this->handleOrderPrint($orderId);
+                    break;
+                default:
+                    $url = route('orders.print', $orderId);
+                    $this->dispatch('print_location', $url);
+                    break;
+            }
+        } catch (\Throwable $e) {
+            $this->alert('error', __('messages.printerNotConnected') . ' : ' . $e->getMessage(), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
         }
     }
 
@@ -4642,6 +4805,19 @@ class Pos extends Component
 
     public function saveDeliveryExecutive()
     {
+        $selectedExecutive = DeliveryExecutive::find($this->selectDeliveryExecutive);
+
+        if (!$selectedExecutive || $selectedExecutive->status !== 'available' || !(bool) $selectedExecutive->is_online) {
+            $this->alert('error', __('messages.invalidRequest'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+
+            return;
+        }
+
         $this->orderDetail->update(['delivery_executive_id' => $this->selectDeliveryExecutive]);
         $this->orderDetail->refresh();
         $this->alert('success', __('messages.deliveryExecutiveAssigned'), [
@@ -4704,21 +4880,36 @@ class Pos extends Component
 
     public function updatedSelectWaiter($value)
     {
+        $order = null;
 
         if ($this->orderID) {
-            $order = Order::find($this->orderID);
+            $orderID = $this->orderID;
+        } elseif ($this->tableOrderID && $this->tableOrder?->activeOrder) {
+            $orderID = $this->tableOrder->activeOrder->id;
+        } else {
+            $orderID = null;
+        }
 
-            if ($order) {
-                $order->update(['waiter_id' => intval($value)]);
-                $this->alert('success', __('messages.waiterUpdated'), [
-                    'toast' => true,
-                    'position' => 'top-end',
-                    'showCancelButton' => false,
-                    'cancelButtonText' => __('app.close'),
-                ]);
-            } else {
-                $this->selectWaiter = $order->waiter_id;
+        $order = Order::with(['waiter', 'table', 'branch.restaurant', 'customer'])->find($orderID);
+
+        if ($order) {
+            $previousWaiter = $order->waiter;
+            $order->update(['waiter_id' => $value ? intval($value) : null]);
+            $order->refresh();
+            $order->loadMissing(['waiter', 'table', 'branch.restaurant', 'customer']);
+
+            if ($order->waiter_id) {
+                OrderWaiterAssigned::dispatch($order, $previousWaiter);
             }
+
+            $this->alert('success', __('messages.waiterUpdated'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close'),
+            ]);
+        } else {
+            $this->selectWaiter = null;
         }
     }
 
@@ -4726,6 +4917,27 @@ class Pos extends Component
     {
         $this->showErrorModal = false;
         $this->showNewKotButton = false;
+    }
+
+    protected function dispatchOrderTableAssignedEvent(Table $newTable, ?Table $previousTable = null): void
+    {
+        $order = null;
+
+        if ($this->orderID) {
+            $orderId = $this->orderID;
+        } elseif ($this->tableOrderID && $this->tableOrder?->activeOrder) {
+            $orderId = $this->tableOrder->activeOrder->id;
+        } else {
+            $orderId = null;
+        }
+
+        $order = Order::with(['waiter', 'table', 'branch.restaurant', 'customer'])->find($orderId);
+
+        if (!$order) {
+            return;
+        }
+
+        OrderTableAssigned::dispatch($order, $newTable, $previousTable);
     }
 
     #[Computed]
@@ -4861,6 +5073,7 @@ class Pos extends Component
         return OrderType::where('branch_id', branch()->id)
             ->where('is_active', true)
             ->when(!$showCustomOrderTypes, fn($q) => $q->where('is_default', true))
+            ->availableForRestaurant()
             ->get();
     }
 
@@ -4884,6 +5097,95 @@ class Pos extends Component
         }
 
         return $query->search('item_name', $this->search)->count();
+    }
+
+    public function openRoomModal()
+    {
+        if (!module_enabled('Hotel')) {
+            return;
+        }
+        $this->showRoomModal = true;
+        $this->roomSearch = ''; // Reset search when opening modal
+    }
+
+    /**
+     * Get active stays for room service (computed property)
+     */
+    #[Computed]
+    public function stays()
+    {
+        if (!$this->isRoomServiceOrder()) {
+            return collect();
+        }
+
+        $query = \Modules\Hotel\Entities\Stay::where('status', \Modules\Hotel\Enums\StayStatus::CHECKED_IN)
+            ->with(['room.roomType', 'stayGuests.guest']);
+
+        // Filter by search term (stay number or room number)
+        if (!empty($this->roomSearch)) {
+            $searchTerm = '%' . $this->roomSearch . '%';
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('stay_number', 'like', $searchTerm)
+                  ->orWhereHas('room', function($roomQuery) use ($searchTerm) {
+                      $roomQuery->where('room_number', 'like', $searchTerm);
+                  });
+            });
+        }
+
+        return $query->get();
+    }
+
+    public function setStay($stayId)
+    {
+        if (!module_enabled('Hotel')) {
+            return;
+        }
+
+        $this->selectedStayId = $stayId;
+        $this->showRoomModal = false;
+
+        if ($stayId) {
+            $stay = \Modules\Hotel\Entities\Stay::with(['room.roomType', 'stayGuests.guest'])->find($stayId);
+            if ($stay && $stay->stayGuests->isNotEmpty()) {
+                $primaryGuest = $stay->stayGuests->where('is_primary', true)->first()
+                    ?? $stay->stayGuests->first();
+                if ($primaryGuest && $primaryGuest->guest) {
+                    // Try to find customer by email or phone
+                    $customer = \App\Models\Customer::where('email', $primaryGuest->guest->email)
+                        ->orWhere('phone', $primaryGuest->guest->phone)
+                        ->first();
+                    if ($customer) {
+                        $this->setCustomer($customer->id);
+                    }
+                }
+            }
+        }
+    }
+
+    protected function postOrderToFolio($order)
+    {
+        if (!module_enabled('Hotel') || !$order->context_id) {
+            return;
+        }
+
+        try {
+            $stay = \Modules\Hotel\Entities\Stay::with('folio')->find($order->context_id);
+            if (!$stay || !$stay->folio) {
+                return;
+            }
+
+            $folio = $stay->folio;
+            if ($folio->status !== \Modules\Hotel\Enums\FolioStatus::OPEN) {
+                return;
+            }
+
+            // Use HotelHelper to post order to folio
+            if (class_exists(\Modules\Hotel\Helpers\HotelHelper::class)) {
+                \Modules\Hotel\Helpers\HotelHelper::postOrderToFolio($order, $folio);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to post order to folio: ' . $e->getMessage());
+        }
     }
 
     public function render()
@@ -4930,6 +5232,7 @@ class Pos extends Component
 
         // Check MultiPOS status and determine if POS should be blocked
         $this->shouldBlockPos = false;
+        $this->showRestaurantClosedBanner = false;
         $this->hasPosMachine = false;
         $this->machineStatus = null;
         $this->posMachine = null;
@@ -4971,6 +5274,12 @@ class Pos extends Component
 
             // Block POS if no machine, pending, or declined
             $this->shouldBlockPos = !$this->hasPosMachine || $this->machineStatus === 'pending' || $this->machineStatus === 'declined';
+        }
+
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, branch());
+        if (!($availability['is_open'] ?? true)) {
+            $this->restaurantClosedMessage = RestaurantAvailabilityService::getMessage($availability, $this->restaurant);
+            $this->showRestaurantClosedBanner = true;
         }
 
         return view('livewire.pos.pos');
@@ -5742,13 +6051,14 @@ class Pos extends Component
                     }
                 }
 
-                // Check if points were already redeemed
-                $pointsAlreadyRedeemed = ($order->loyalty_points_redeemed > 0 && $order->loyalty_discount_amount > 0);
+                // Redeem only additional points beyond what was already redeemed on this order.
+                $alreadyRedeemedPoints = (int) ($order->loyalty_points_redeemed ?? 0);
+                $requestedPoints = (int) ($this->loyaltyPointsRedeemed ?? 0);
+                $additionalPointsToRedeem = max(0, $requestedPoints - $alreadyRedeemedPoints);
 
-                // Redeem points if selected AND not already redeemed
-                if (module_enabled('Loyalty') && $this->loyaltyPointsRedeemed > 0 && $this->loyaltyDiscountAmount > 0 && $this->isPointsEnabledForPOS() && !$pointsAlreadyRedeemed) {
+                if (module_enabled('Loyalty') && $additionalPointsToRedeem > 0 && $this->loyaltyDiscountAmount > 0 && $this->isPointsEnabledForPOS()) {
                     $loyaltyService = app(\Modules\Loyalty\Services\LoyaltyService::class);
-                    $result = $loyaltyService->redeemPoints($order, $this->loyaltyPointsRedeemed);
+                    $result = $loyaltyService->redeemPoints($order, $additionalPointsToRedeem);
 
                     if ($result['success']) {
                         $order->refresh();
@@ -5890,6 +6200,100 @@ class Pos extends Component
     }
 
     /**
+     * Handle print option selection from modal
+     */
+    public function handlePrintOption($mode)
+    {
+        if (!$this->orderDetail) {
+            return;
+        }
+
+        $this->printMode = $mode;
+
+        switch ($mode) {
+            case 'all':
+                // Print summary + all individual splits
+                $this->printAllReceipts();
+                break;
+            case 'summary':
+                // Print summary only
+                $this->printSummaryReceipt();
+                break;
+            case 'individual':
+                // Print individual splits only
+                $this->printIndividualReceipts();
+                break;
+            case 'single':
+                // Show split selection - don't close modal yet
+                return;
+            default:
+                break;
+        }
+
+        // Close modal after printing (except for single mode)
+        if ($mode !== 'single') {
+            $this->showPrintOptionsModal = false;
+            $this->printMode = null;
+        }
+    }
+
+    public function printAllReceipts()
+    {
+        $url = route('orders.print-split-receipts', [
+            'orderId' => $this->orderDetail->id,
+            'includeSummary' => true
+        ]);
+
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printSummaryReceipt()
+    {
+        $url = route('orders.print', $this->orderDetail->id);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printIndividualReceipts()
+    {
+        // Use the optimized controller for all individual receipts on one page
+        $url = route('orders.print-split-receipts', ['orderId' => $this->orderDetail->id]);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printSingleSplit()
+    {
+        if (!$this->selectedSplitId) {
+            $this->alert('error', __('modules.order.selectSplitToPrint'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+            return;
+        }
+
+        // Use the optimized controller with specific split filter
+        $url = route('orders.print-split-receipts', [
+            'orderId' => $this->orderDetail->id,
+            'splitId' => $this->selectedSplitId
+        ]);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+        $this->selectedSplitId = null;
+    }
+
+    /**
      * Create order_items for KOT items (and link order_item_id) when KOT is generated.
      * This is used to keep order_items in sync for KOT orders without waiting for billing.
      *
@@ -5930,6 +6334,34 @@ class Pos extends Component
                     }
                 }
 
+                $taxAmount = null;
+                $taxPercentage = null;
+                $taxBreakup = null;
+                if ($this->taxMode === 'item' && !($kotItem->is_free_item_from_stamp ?? false)) {
+                    $menuItem = $kotItem->menuItem;
+                    if ($menuItem) {
+                        if (!$menuItem->relationLoaded('taxes')) {
+                            $menuItem->load('taxes');
+                        }
+
+                        $qty = max(1, (int) $kotItem->quantity);
+                        $perUnitAmount = round(((float) $itemAmount) / $qty, 2);
+                        $isInclusive = (bool) (restaurant()->tax_inclusive ?? false);
+                        $taxes = $menuItem->taxes ?? collect();
+
+                        if ($taxes->isNotEmpty()) {
+                            $taxResult = MenuItem::calculateItemTaxes($perUnitAmount, $taxes, $isInclusive);
+                            $taxAmount = round((float) ($taxResult['tax_amount'] ?? 0) * $qty, 2);
+                            $taxPercentage = $taxResult['tax_percentage'] ?? null;
+                            $taxBreakup = isset($taxResult['tax_breakdown']) ? json_encode($taxResult['tax_breakdown']) : null;
+                        } else {
+                            $taxAmount = 0;
+                            $taxPercentage = 0;
+                            $taxBreakup = json_encode([]);
+                        }
+                    }
+                }
+
                 $orderItem = OrderItem::create([
                     'order_type' => $order->order_type,
                     'order_type_id' => $order->order_type_id,
@@ -5940,6 +6372,9 @@ class Pos extends Component
                     'price' => $kotItem->price ?? ($kotItem->menuItem->price ?? 0),
                     'amount' => max(0, round($itemAmount, 2)),
                     'note' => $kotItem->note,
+                    'tax_amount' => $taxAmount,
+                    'tax_percentage' => $taxPercentage,
+                    'tax_breakup' => $taxBreakup,
                     'is_free_item_from_stamp' => $kotItem->is_free_item_from_stamp ?? false,
                     'stamp_rule_id' => $kotItem->stamp_rule_id,
                 ]);

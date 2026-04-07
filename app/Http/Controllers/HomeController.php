@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Module;
 use App\Models\Package;
 use App\Enums\PackageType;
 use App\Models\Contact;
@@ -15,6 +14,9 @@ use App\Models\LanguageSetting;
 use App\Models\Restaurant;
 use Froiden\Envato\Traits\AppBoot;
 use Illuminate\Support\Facades\File;
+use Illuminate\Http\Request;
+use App\Models\Module;
+use Nwidart\Modules\Facades\Module as  ModuleFacade;
 
 class HomeController extends Controller
 {
@@ -27,10 +29,16 @@ class HomeController extends Controller
     {
         parent::__construct();
 
-        $locale = normalize_locale(session('customer_locale'), global_setting()->locale ?? config('app.locale', 'en'));
+        $locale = session('customer_locale') ?? (global_setting()->locale ?? 'en');
+        $languageSetting = LanguageSetting::where('language_code', $locale)->first();
+
+        if (!$languageSetting) {
+            $locale = 'en';
+            $languageSetting = LanguageSetting::where('language_code', 'en')->first();
+        }
 
         if (!session()->has('customer_is_rtl')) {
-            session(['customer_is_rtl' => locale_is_rtl($locale)]);
+            session(['customer_is_rtl' => $languageSetting->is_rtl == 1]);
         }
 
         app()->setLocale($locale);
@@ -39,12 +47,12 @@ class HomeController extends Controller
 
     public function changeLocale($locale)
     {
-        $locale = normalize_locale($locale, global_setting()->locale ?? config('app.locale', 'en'));
-        abort_unless(in_array($locale, languages()->pluck('language_code')->all(), true), 404);
+        // Validate if the locale exists in language settings
+        $languageSetting = LanguageSetting::where('language_code', $locale)->first();
 
         // Set the customer locale in session
         session(['customer_locale' => $locale]);
-        session(['customer_is_rtl' => locale_is_rtl($locale)]);
+        session(['customer_is_rtl' => $languageSetting->is_rtl == 1]);
         app()->setLocale($locale);
         $this->language = $locale;
         return redirect()->back()->with('success', 'Language changed successfully');
@@ -86,30 +94,9 @@ class HomeController extends Controller
         $monthlyPackages = Package::where('package_type', PackageType::STANDARD)->where('monthly_status', true)->where('is_private', false)->get();
         $annualPackages = Package::where('package_type', PackageType::STANDARD)->where('annual_status', true)->where('is_private', false)->get();
         $lifetimePackages = Package::where('package_type', PackageType::LIFETIME)->where('is_private', false)->get();
-        $language = normalize_locale($this->language, global_setting()->locale ?? config('app.locale', 'en'));
+        $language = $this->language;
 
-        $languageCandidates = collect([
-            $language,
-            str_replace('_', '-', $language),
-            str_replace('-', '_', $language),
-        ])->filter()->unique()->values()->all();
-
-        $languageSetting = LanguageSetting::whereIn('language_code', $languageCandidates)->first();
-
-        if (! $languageSetting) {
-            $globalLocale = normalize_locale(global_setting()->locale, 'en');
-            $globalCandidates = collect([
-                $globalLocale,
-                str_replace('_', '-', $globalLocale),
-                str_replace('-', '_', $globalLocale),
-            ])->filter()->unique()->values()->all();
-
-            $languageSetting = LanguageSetting::whereIn('language_code', $globalCandidates)->first();
-        }
-
-        if (! $languageSetting) {
-            $languageSetting = LanguageSetting::whereIn('language_code', ['en', 'eng'])->first();
-        }
+        $languageSetting = LanguageSetting::where('language_code', $language)->first();
         $languageId = $languageSetting ? $languageSetting->id : null;
         $frontDetails = FrontDetail::where('language_setting_id', $languageId)->first();
         $frontFeatures = FrontFeature::where('language_setting_id', $languageId)->get();
@@ -184,5 +171,49 @@ class HomeController extends Controller
                 ]
             ]
         ]);
+    }
+
+
+
+    public function validatePartnerDomain(Request $request)
+    {
+        $restApiInstalled = ModuleFacade::has('RestApi');
+
+        if (!$restApiInstalled) {
+            return response()->json([
+                'status' => false,
+                'code' => 'REST_API_MODULE_NOT_INSTALLED',
+                'message' => __('messages.restApiModuleNotInstalledForDelivery'),
+            ], 422);
+        }
+
+        if (!module_enabled('RestApi')) {
+            return response()->json([
+                'status' => false,
+                'code' => 'REST_API_MODULE_NOT_ENABLED',
+                'message' => __('messages.restApiModuleNotEnabledForDelivery'),
+            ], 422);
+        }
+
+        $googleMapApiKey = global_setting()->google_map_api_key;
+
+        if (blank($googleMapApiKey)) {
+            return response()->json([
+                'status' => false,
+                'code' => 'GOOGLE_MAP_API_KEY_NOT_CONFIGURED',
+                'message' => __('messages.googleMapApiKeyMissingForDelivery'),
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'code' => 'VALIDATION_SUCCESSFUL',
+            'message' => __('messages.partnerValidationSuccessful'),
+            'restaurant' => [
+                'name' => global_setting()->name,
+                'theme_hex' => global_setting()->theme_hex,
+                'logo' => global_setting()->logoUrl,
+            ],
+        ], 200);
     }
 }

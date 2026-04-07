@@ -11,17 +11,21 @@ class DesktopApplicationSettings extends Component
     use LivewireAlert;
     public $windows_file_path = '';
     public $mac_file_path = '';
-    public $linux_file_path = '';
+    public $partner_app_ios = '';
+    public $partner_app_android = '';
     public $desktopApp;
+    public $subtab = 'desktop';
 
     protected $rules = [
         'windows_file_path' => 'nullable|string|url',
         'mac_file_path' => 'nullable|string|url',
-        'linux_file_path' => 'nullable|string|url',
+        'partner_app_ios' => 'nullable|string|url',
+        'partner_app_android' => 'nullable|string|url',
     ];
 
     public function mount()
     {
+        $this->subtab = request('subtab', 'desktop');
         $this->desktopApp = DesktopApplication::first();
         $this->loadExistingData();
     }
@@ -33,26 +37,25 @@ class DesktopApplicationSettings extends Component
         if ($this->desktopApp) {
             $this->windows_file_path = $this->desktopApp->windows_file_path ?? DesktopApplication::WINDOWS_FILE_PATH;
             $this->mac_file_path = $this->desktopApp->mac_file_path ?? DesktopApplication::MAC_FILE_PATH;
-            $this->linux_file_path = $this->desktopApp->linux_file_path ?? DesktopApplication::LINUX_FILE_PATH;
+            $this->partner_app_ios = $this->desktopApp->partner_app_ios ?? DesktopApplication::PARTNER_APP_IOS_URL;
+            $this->partner_app_android = $this->desktopApp->partner_app_android ?? DesktopApplication::PARTNER_APP_ANDROID_URL;
         }
     }
-
 
     public function saveAll()
     {
         $this->validate();
-        $desktopApp = DesktopApplication::first();
+        $app = DesktopApplication::first();
 
-        if (!$desktopApp) {
-            $desktopApp = DesktopApplication::create([]);
+        if (!$app) {
+            $app = DesktopApplication::create([]);
         }
 
-        $desktopApp->windows_file_path = $this->windows_file_path;
-        $desktopApp->linux_file_path = $this->linux_file_path;
-        $desktopApp->mac_file_path = $this->mac_file_path;
-
-        $desktopApp->save();
-
+        $app->windows_file_path = $this->windows_file_path;
+        $app->mac_file_path = $this->mac_file_path;
+        $app->partner_app_ios = $this->partner_app_ios ?: null;
+        $app->partner_app_android = $this->partner_app_android ?: null;
+        $app->save();
 
         $this->alert('success', __('messages.settingsUpdated'), [
             'toast' => true,
@@ -62,7 +65,6 @@ class DesktopApplicationSettings extends Component
         ]);
         $this->loadExistingData();
     }
-
 
     public function resetWindowsUrl()
     {
@@ -74,14 +76,20 @@ class DesktopApplicationSettings extends Component
         $this->mac_file_path = DesktopApplication::MAC_FILE_PATH;
     }
 
-    public function resetLinuxUrl()
+    public function resetPartnerAppIosUrl()
     {
-        $this->linux_file_path = DesktopApplication::LINUX_FILE_PATH;
+        $this->partner_app_ios = DesktopApplication::PARTNER_APP_IOS_URL ?: '';
+    }
+
+    public function resetPartnerAppAndroidUrl()
+    {
+        $this->partner_app_android = DesktopApplication::PARTNER_APP_ANDROID_URL ?: '';
     }
 
     public function render()
     {
         $desktopApplication = DesktopApplication::first();
-        return view('livewire.settings.desktop-application-settings', compact('desktopApplication'));
+        $subtab = request('subtab', 'desktop');
+        return view('livewire.settings.desktop-application-settings', compact('desktopApplication', 'subtab'));
     }
 }

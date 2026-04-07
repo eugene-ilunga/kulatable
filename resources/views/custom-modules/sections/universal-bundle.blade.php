@@ -1,7 +1,7 @@
 @if ($universalBundle)
     @php
         $fetchSetting = null;
-        if (in_array(strtolower($universalBundle->getName()), custom_module_plugins()) && config(strtolower($universalBundle->getName()) . '.setting')) {
+        if (config(strtolower($universalBundle->getName()) . '.setting')) {
             $fetchSetting = config(strtolower($universalBundle->getName()) . '.setting')::first();
         }
     @endphp

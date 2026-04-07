@@ -49,7 +49,7 @@
                             </div>
                         </div>
 
-                        <div x-show="open" @click.away="open = false" class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <div x-show="open" @click.away="open = false" wire:cloak class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             <div class="py-1">
                                 @foreach ($dateFormats as $format)
                                     <div wire:key="date-format-{{ $format }}"
@@ -77,7 +77,7 @@
                             </div>
                         </div>
 
-                        <div x-show="open" @click.away="open = false" class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <div x-show="open" @click.away="open = false" wire:cloak class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             <div class="p-2 sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">
                                 <x-input type="text" x-model="search" class="w-full" placeholder="{{ __('placeholders.search') }}" />
                             </div>
@@ -105,11 +105,11 @@
                     </x-select>
                 </div>
 
-                <div>
+                 <div>
                     <x-label for="customerLanguage" value="{{ __('modules.settings.customerSiteLanguage') }}" />
                     <x-select id="customerLanguage" class="block mt-1 w-full" wire:model='customerLanguage'>
                         @foreach (languages() as $item)
-                            <option value="{{ $item->language_code }}">{{ locale_label($item->language_code) }}</option>
+                            <option value="{{ $item->language_code }}">{{  isset(\App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code]) ? \App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code] . ' (' . $item->language_name . ')' : $item->language_name }}</option>
                         @endforeach
                     </x-select>
 

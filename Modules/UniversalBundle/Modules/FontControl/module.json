@@ -1,0 +1,15 @@
+{
+    "name": "FontControl",
+    "alias": "fontcontrol",
+    "description": "Control application font-family and base font-size per language without touching the core.",
+    "keywords": [
+        "font",
+        "localization",
+        "ui"
+    ],
+    "priority": 0,
+    "providers": [
+        "Modules\\FontControl\\Providers\\FontControlServiceProvider"
+    ],
+    "files": []
+}

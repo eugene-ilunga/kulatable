@@ -55,7 +55,7 @@ class CustomerOrderBoard extends Component
             ->where('orders.date_time', '<=', $end)
             ->with(['order' => function ($query) {
                 $query->select(['id', 'order_number', 'formatted_order_number', 'order_type_id'])
-                    ->with('orderType:id,order_type_name');
+                    ->with('orderType:id,order_type_name,show_order_number_on_board');
             }])
             ->orderBy('kots.id', 'desc');
 
@@ -77,6 +77,7 @@ class CustomerOrderBoard extends Component
                 'display_number' => $kot->order?->show_formatted_order_number,
                 'token' => $kot->token_number,
                 'order_type' => $kot->order?->orderType?->order_type_name,
+                'show_order_number' => (bool) ($kot->order?->orderType?->show_order_number_on_board ?? false),
             ];
         })->toArray();
 
@@ -86,6 +87,7 @@ class CustomerOrderBoard extends Component
                 'display_number' => $kot->order?->show_formatted_order_number,
                 'token' => $kot->token_number,
                 'order_type' => $kot->order?->orderType?->order_type_name,
+                'show_order_number' => (bool) ($kot->order?->orderType?->show_order_number_on_board ?? false),
             ];
         })->toArray();
     }

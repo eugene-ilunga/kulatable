@@ -118,7 +118,7 @@
         </div>
         <!-- End Card Section -->
 
-        <div class="col-span-1 space-y-3">
+        <div class="col-span-1 space-y-3 dark:text-gray-400">
             <h4 class="text-base font-medium">@lang('modules.reservation.todayReservations')</h4>
 
             @forelse ($reservations as $item)

@@ -13,7 +13,7 @@
                 <div class="mx-auto max-w-3xl space-y-6 sm:space-y-8">
 
                     <div class="mb-4">
-                        <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('app.hello')
+                        <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('app.hello')
                             {{ user()->name }}!</h1>
                     </div>
 

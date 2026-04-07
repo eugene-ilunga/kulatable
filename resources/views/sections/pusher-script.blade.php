@@ -61,6 +61,75 @@
         });
     }
 
+    (function initGlobalKotPusherChannel() {
+        const kotPusherCurrentUserId = @json(auth()->check() ? auth()->id() : null);
+        const kotPusherSoundUrl = @json(asset('sound/new_order.wav'));
+
+        function deliverKotPusherPayload(raw) {
+            if (!window.Livewire || typeof window.Livewire.getByName !== 'function') {
+                return;
+            }
+            const data = raw && typeof raw === 'object' ? Object.assign({}, raw) : {};
+
+            window.Livewire.getByName('kot.kots').forEach(function (wire) {
+                if (wire && typeof wire.call === 'function') {
+                    wire.call('refreshKotsFromPusher', data);
+                }
+            });
+
+            window.Livewire.getByName('kot.kot-pusher-listener').forEach(function (wire) {
+                if (wire && typeof wire.call === 'function') {
+                    wire.call('showKotStatusToast', data);
+                }
+            });
+
+            if (data.type === 'status_updated') {
+                const actorId = data.updated_by_user_id != null ? Number(data.updated_by_user_id) : null;
+                const selfId = kotPusherCurrentUserId != null ? Number(kotPusherCurrentUserId) : null;
+                if (actorId === null || selfId === null || actorId !== selfId) {
+                    try {
+                        new Audio(kotPusherSoundUrl).play();
+                    } catch (e) { /* ignore */ }
+                }
+            }
+        }
+
+        function bindGlobalKotChannel() {
+            if (!window.PUSHER) {
+                return;
+            }
+            try {
+                window.__kotsPusherChannel = window.__kotsPusherChannel || window.PUSHER.subscribe('kots');
+                const channel = window.__kotsPusherChannel;
+                channel.unbind('kot.updated');
+                channel.bind('kot.updated', function (data) {
+                    try {
+                        deliverKotPusherPayload(data);
+                    } catch (error) {
+                        console.error('❌ kot.updated handler:', error);
+                    }
+                });
+            } catch (error) {
+                console.error('❌ KOT Pusher channel bind failed:', error);
+            }
+        }
+
+        document.addEventListener('livewire:init', function () {
+            bindGlobalKotChannel();
+        });
+
+        if (!window.__kotPusherGlobalNavigateBound) {
+            window.__kotPusherGlobalNavigateBound = true;
+            document.addEventListener('livewire:navigated', function () {
+                bindGlobalKotChannel();
+            });
+        }
+
+        if (window.Livewire && typeof window.Livewire.getByName === 'function') {
+            bindGlobalKotChannel();
+        }
+    })();
+
     function reloadKots() {
         document.addEventListener('livewire:initialized', function () {
             // Safe to call Livewire.emit now

@@ -3,7 +3,7 @@
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.expenses.expensesCategory')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.expenses.expensesCategory')</h1>
             </div>
             <div class="items-center justify-between block sm:flex md:divide-x md:divide-gray-100 dark:divide-gray-700">
                 <div class="flex items-center mb-4 sm:mb-0">
@@ -54,13 +54,13 @@
                             <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                                 @if ($expenseCategories->count() > 0)
                                     @foreach ($expenseCategories as $expenseCategory)
-                                        <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
 
-                                            <td class="py-2.5 px-4 text-gray-900 text-start dark:text-white text-center">
+                                            <td class="py-2.5 px-4 text-gray-900 text-start dark:text-white">
                                                 {{ $expenseCategory->name }}</td>
                                             <td class="py-2.5 px-4 text-gray-900 dark:text-white text-center">
                                                 {{ $expenseCategory->description }}</td>
-                                            <td class="py-2.5 px-4 space-x-2 text-end">
+                                            <td class="py-2.5 px-4 space-x-2 text-end text-sm">
                                                 {{-- Action buttons --}}
                                                 @if (user_can('Update Expense Category'))
                                                     <x-secondary-button-table

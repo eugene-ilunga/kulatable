@@ -88,7 +88,7 @@ class CreateModifierGroup extends Component
 
         // Load languages
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
-        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
+        $this->globalLocale = global_setting()->locale;
         $this->currentLanguage = $this->globalLocale;
 
         // Initialize translation arrays
@@ -97,7 +97,7 @@ class CreateModifierGroup extends Component
         $this->translationDescriptions = array_fill_keys($languageKeys, '');
 
         // Initialize pricing collections
-        $this->orderTypes = OrderType::where('is_active', 1)->get();
+        $this->orderTypes = OrderType::where('is_active', 1)->availableForRestaurant()->get();
         $this->deliveryApps = DeliveryPlatform::where('is_active', 1)->get();
 
         // Add first empty modifier option

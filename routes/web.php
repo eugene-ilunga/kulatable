@@ -24,16 +24,18 @@ use App\Http\Controllers\StripeController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PosAjaxController;
 use App\Http\Controllers\ViewPngController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\OtpLoginController;
+use App\Http\Controllers\DeliveryPortalController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryExecutiveAuthController;
 use App\Http\Controllers\CustomMenuController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\TapPaymentController;
 use App\Http\Controllers\EpayPaymentController;
-use App\Http\Controllers\FreshpayPaymentController;
 use App\Http\Controllers\LandingSiteController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Middleware\CheckRestaurantPackage;
@@ -65,13 +67,13 @@ use App\Http\Controllers\FlutterwavePaymentController;
 use App\Http\Controllers\SuperAdmin\PayfastController;
 use App\Http\Controllers\SuperAdmin\PaystackController;
 use App\Http\Controllers\SuperAdmin\FlutterwaveController;
-use App\Http\Controllers\SuperAdmin\FreshpayController as SuperAdminFreshpayController;
 use App\Http\Controllers\SuperAdmin\StripeWebhookController;
 use App\Http\Controllers\SuperAdmin\XenditWebhookController;
 use App\Http\Controllers\SuperAdmin\PayFastWebhookController;
 use App\Http\Controllers\SuperAdmin\PaystackWebhookController;
 use App\Http\Controllers\SuperAdmin\RazorpayWebhookController;
 use App\Http\Controllers\SuperAdmin\FlutterwaveWebhookController;
+use App\Http\Middleware\EnsureDeliveryExecutiveAuthenticated;
 
 Route::get('/manifest.json', [HomeController::class, 'manifest'])->name('manifest');
 
@@ -81,29 +83,26 @@ Route::get('/menus/pdf/{restaurant}', [MenuController::class, 'downloadPdf'])
     ->where('restaurant', '[0-9]+')
     ->middleware('signed');
 
-Route::middleware([CustomerSiteMiddleware::class])->group(function () {
-    Route::get('/qr/table/{hash}', [ShopController::class, 'qrTableLanding'])->name('qr_table_landing');
+Route::get('/qr/table/{hash}', [ShopController::class, 'qrTableLanding'])->name('qr_table_landing');
 
-    Route::group(['prefix' => 'restaurant'], function () {
-        Route::get('/table/{hash}', [ShopController::class, 'tableOrder'])->name('table_order')->where('id', '.*');
-        Route::get('/my-orders/{hash}', [ShopController::class, 'myOrders'])->name('my_orders');
-        Route::get('/my-bookings/{hash}', [ShopController::class, 'myBookings'])->name('my_bookings');
-        Route::get('/my-addresses/{hash}',  [ShopController::class, 'myAddresses'])->name('my_addresses');
-        Route::get('/book-a-table/{hash}', [ShopController::class, 'bookTable'])->name('book_a_table');
-        Route::get('/contact/{hash}', [ShopController::class, 'contact'])->name('contact');
-        Route::get('/about-us/{hash}', [ShopController::class, 'about'])->name('about');
-        Route::get('/profile/{hash}', [ShopController::class, 'profile'])->name('profile');
-        Route::get('/orders-success/{id}', [ShopController::class, 'orderSuccess'])->name('order_success');
-    });
-
-    Route::get('/restaurant/{hash}', [ShopController::class, 'cart'])->name('shop_restaurant');
+Route::group(['prefix' => 'restaurant'], function () {
+    Route::get('/table/{hash}', [ShopController::class, 'tableOrder'])->name('table_order')->where('id', '.*');
+    Route::get('/my-orders/{hash}', [ShopController::class, 'myOrders'])->name('my_orders');
+    Route::get('/my-bookings/{hash}', [ShopController::class, 'myBookings'])->name('my_bookings');
+    Route::get('/my-addresses/{hash}',  [ShopController::class, 'myAddresses'])->name('my_addresses');
+    Route::get('/book-a-table/{hash}', [ShopController::class, 'bookTable'])->name('book_a_table');
+    Route::get('/contact/{hash}', [ShopController::class, 'contact'])->name('contact');
+    Route::get('/about-us/{hash}', [ShopController::class, 'about'])->name('about');
+    Route::get('/profile/{hash}', [ShopController::class, 'profile'])->name('profile');
+    Route::get('/orders-success/{id}', [ShopController::class, 'orderSuccess'])->name('order_success');
 });
+
+Route::get('/restaurant/{hash}', [ShopController::class, 'cart'])->name('shop_restaurant');
 
 
 // Only register the root route if Subdomain module is not enabled
 if (!function_exists('module_enabled') || !module_enabled('Subdomain')) {
     Route::get('/', [HomeController::class, 'landing'])->name('home')->middleware(DisableFrontend::class);
-    Route::view('/mentions-legales', 'landing.legal-notice')->name('legal.notice')->middleware(DisableFrontend::class);
     Route::get('/change-locale/{locale}', [HomeController::class, 'changeLocale'])->name('change.locale');
 }
 
@@ -126,6 +125,23 @@ Route::get('/otp-login', [OtpLoginController::class, 'showOtpLoginForm'])->name(
 Route::post('/otp/send', [OtpLoginController::class, 'sendOtp'])->name('otp.send');
 Route::post('/otp/verify', [OtpLoginController::class, 'verifyOtp'])->name('otp.verify');
 Route::post('/otp/resend', [OtpLoginController::class, 'resendOtp'])->name('otp.resend');
+
+Route::prefix('delivery')->name('delivery.')->group(function () {
+    Route::get('/login', [DeliveryExecutiveAuthController::class, 'showOtpLoginForm'])->name('login');
+    Route::post('/otp/send', [DeliveryExecutiveAuthController::class, 'sendOtp'])->name('otp.send');
+    Route::post('/otp/verify', [DeliveryExecutiveAuthController::class, 'verifyOtp'])->name('otp.verify');
+    Route::post('/otp/resend', [DeliveryExecutiveAuthController::class, 'resendOtp'])->name('otp.resend');
+
+    Route::middleware(EnsureDeliveryExecutiveAuthenticated::class)->group(function () {
+        Route::get('/dashboard', [DeliveryPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/assigned-orders', [DeliveryPortalController::class, 'assignedOrders'])->name('assigned-orders');
+        Route::get('/orders/{uuid}', [DeliveryPortalController::class, 'orderDetails'])->name('orders.show');
+        Route::get('/history', [DeliveryPortalController::class, 'history'])->name('history');
+        Route::get('/cod-settlement', [DeliveryPortalController::class, 'codSettlement'])->name('cod-settlement');
+        Route::get('/profile', [DeliveryPortalController::class, 'profile'])->name('profile');
+        Route::get('/logout', [DeliveryExecutiveAuthController::class, 'logout'])->name('logout');
+    });
+});
 
 Route::post('/paypal/initiate-payment', [PaypalController::class, 'initiatePayment'])->name('paypal.initiate-payment');
 Route::get('billing/paypal-recurring', [PaypalController::class, 'payWithPaypalRecurrring'])->name('billing.paypal-recurring');
@@ -151,6 +167,9 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', VerifyR
     Route::resource('menus', MenuController::class);
     Route::get('menu-items/sort-entities', [MenuController::class, 'unifiedSort'])->name('menu-items.entities.sort');
     Route::get('menu-items/bulk-import', [MenuItemController::class, 'bulkImport'])->name('menu-items.bulk-import');
+    Route::get('menu-items/export', [MenuItemController::class, 'exportPage'])->name('menu-items.export');
+    Route::get('menu-items/export/download', [MenuItemController::class, 'downloadExport'])->name('menu-items.export.download');
+    Route::get('menu-items/export/direct', [MenuItemController::class, 'exportDirect'])->name('menu-items.export.direct');
     Route::resource('menu-items', MenuItemController::class);
     Route::resource('item-categories', ItemCategoryController::class);
     Route::resource('item-modifiers', ItemModifierController::class);
@@ -161,6 +180,11 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', VerifyR
 
     Route::get('orders/print/{id}', [OrderController::class, 'printOrder'])->name('orders.print');
     Route::get('orders/pdf/{id}', [OrderController::class, 'generateOrderPdf'])->name('orders.pdf');
+    Route::post('orders/{uuid}/waiter/accept', [OrderController::class, 'waiterAccept'])->name('orders.waiter.accept');
+    Route::post('orders/{uuid}/waiter/decline', [OrderController::class, 'waiterDecline'])->name('orders.waiter.decline');
+    Route::post('orders/{uuid}/waiter/status', [OrderController::class, 'updateWaiterResponse'])->name('orders.waiter.status');
+    Route::get('orders/print-split/{orderId}', [OrderController::class, 'printSplitOrder'])->name('orders.print-split');
+    Route::get('orders/print-split-receipts/{orderId}', [\App\Http\Controllers\SplitPaymentReceiptController::class, 'printSplitReceipts'])->name('orders.print-split-receipts');
     Route::resource('orders', OrderController::class);
 
     // POS routes with machine tracking middleware (registered in module service provider)
@@ -204,6 +228,7 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', VerifyR
         Route::get('expense-summary-report', [ReportController::class, 'expenseSummaryReport'])->name('reports.expensesummaryreport');
         Route::get('print-log', [ReportController::class, 'printLog'])->name('reports.printLog');
         Route::get('delivery-report', [ReportController::class, 'deliveryReport'])->name('reports.delivery');
+        Route::get('cod-report', [ReportController::class, 'codReport'])->name('reports.cod');
         Route::get('cancelled-order-report', [ReportController::class, 'cancelledOrderReport'])->name('reports.cancelledOrder');
         Route::get('removed-kot-item-report', [ReportController::class, 'removedKotItemReport'])->name('reports.removedKotItem');
         Route::get('tax-report', [ReportController::class, 'taxReport'])->name('reports.tax');
@@ -212,7 +237,11 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', VerifyR
 
     Route::resource('staff', StaffController::class);
 
+    Route::get('delivery-executives/cash-monitoring', [DeliveryExecutiveController::class, 'cashMonitoring'])
+        ->name('delivery-executives.cash-monitoring');
     Route::resource('delivery-executives', DeliveryExecutiveController::class);
+    Route::get('delivery-executives/{delivery_executive}/orders/{order}/tracking', [DeliveryExecutiveController::class, 'trackingData'])
+        ->name('delivery-executives.tracking-data');
     Route::get('billing/upgrade-plan', [PlanController::class, 'index'])->name('pricing.plan');
 
     Route::get('/pusher/beams-auth', [DashboardController::class, 'beamAuth'])->name('beam_auth');
@@ -296,7 +325,6 @@ Route::match(["get", "post"], "/xendit/subscription/failed", [XenditController::
 
 // Xendit Webhook Routes
 Route::post('/webhook/save-xendit-webhook/{hash}', [XenditWebhookController::class, 'handleSubscriptionWebhook'])->name('billing.save-xendit-webhook');
-Route::post('/webhook/save-freshpay-webhook/{hash?}', [SuperAdminFreshpayController::class, 'webhook'])->name('billing.save-freshpay-webhook');
 
 // Tap Plan Payment Routes
 Route::post('/tap/initiate-payment', [TapController::class, 'initiatePayment'])->name('tap.initiate-payment');
@@ -316,7 +344,6 @@ Route::post('/mollie/plan/webhook', [MollieController::class, 'handleWebhook'])-
 Route::match(['get', 'post'], '/tap/success', [TapPaymentController::class, 'success'])->name('tap.success');
 Route::match(['get', 'post'], '/tap/cancel', [TapPaymentController::class, 'cancel'])->name('tap.cancel');
 Route::post('/webhook/tap-webhook/{hash}', [TapPaymentController::class, 'webhook'])->name('tap.webhook');
-Route::post('/webhook/freshpay-webhook/{hash}', [FreshpayPaymentController::class, 'webhook'])->name('freshpay.webhook');
 
 // Mollie Payment Routes
 Route::post('/webhook/mollie-webhook/{hash}', [MolliePaymentController::class, 'handleGatewayWebhook'])->name('mollie.webhook');
@@ -342,11 +369,11 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified'])->group
         Route::get('/orders/{id}', [PosApiController::class, 'getOrder']);
         Route::get('/get-order-number', [PosApiController::class, 'getOrderNumber']);
         Route::get('/waiters', [PosApiController::class, 'getWaiters']);
-        Route::get('/categories', [PosApiController::class, 'getCategories']);
-        Route::get('/items', [PosApiController::class, 'getMenuItems']);
+        Route::get('/categories', [PosApiController::class, 'getCategories'])->name('api.pos.categories');
+        Route::get('/items', [PosApiController::class, 'getMenuItems'])->name('api.pos.items');
         Route::get('/items/category/{categoryId}', [PosApiController::class, 'getMenuItemsByCategory']);
         Route::get('/items/menu/{menuId}', [PosApiController::class, 'getMenuItemsByMenu']);
-        Route::get('/extra-charges/{orderType}', [PosApiController::class, 'getExtraCharges']);
+        Route::get('/extra-charges/{orderType}', [PosApiController::class, 'getExtraCharges'])->name('api.pos.extra-charges');
         Route::get('/tables', [PosApiController::class, 'getTables']);
         Route::get('/reservations/today', [PosApiController::class, 'getTodayReservations']);
         Route::post('/tables/{tableId}/unlock', [PosApiController::class, 'forceUnlockTable']);
@@ -358,5 +385,90 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified'])->group
         Route::post('/customers', [PosApiController::class, 'saveCustomer']);
         Route::get('/taxes', [PosApiController::class, 'getTaxes']);
         Route::get('/restaurants', [PosApiController::class, 'getRestaurants']);
+
+        // Additional POS AJAX routes
+        Route::post('/add-cart-item', [PosApiController::class, 'addCartItem'])->name('api.pos.add-cart-item');
+        Route::post('/update-cart-item', [PosApiController::class, 'updateCartItem'])->name('api.pos.update-cart-item');
+        Route::post('/delete-cart-item', [PosApiController::class, 'deleteCartItem'])->name('api.pos.delete-cart-item');
+        Route::post('/set-table', [PosApiController::class, 'setTable'])->name('api.pos.set-table');
+        Route::post('/set-customer', [PosApiController::class, 'setCustomer'])->name('api.pos.set-customer');
+        Route::post('/save-order', [PosApiController::class, 'saveOrder'])->name('api.pos.save-order');
+        Route::post('/order-type/default', [PosApiController::class, 'saveDefaultOrderTypePreference'])->name('api.pos.order-type-default');
+        Route::get('/menu-item/{id}', [PosApiController::class, 'getMenuItem'])->name('api.pos.menu-item');
+        Route::get('/menu-item/{id}/variations', [PosApiController::class, 'getMenuItemVariations'])->name('api.pos.menu-item-variations');
+        Route::get('/menu-item/{id}/modifiers', [PosApiController::class, 'getMenuItemModifiers'])->name('api.pos.menu-item-modifiers');
+        Route::post('/calculate-total', [PosApiController::class, 'calculateTotal'])->name('api.pos.calculate-total');
+        Route::post('/update-customer-display', [PosApiController::class, 'updateCustomerDisplay'])->name('api.pos.update-customer-display');
+        Route::get('/tables-with-unpaid-orders', [PosApiController::class, 'getTablesWithUnpaidOrders'])->name('api.pos.tables-with-unpaid-orders');
+        Route::post('/merge-tables', [PosApiController::class, 'mergeTables'])->name('api.pos.merge-tables');
+        Route::post('/clear-merge-session', [PosApiController::class, 'clearMergeSession'])->name('api.pos.clear-merge-session');
+        Route::post('/update-order-status/{id}', [PosApiController::class, 'updateOrderStatus'])->name('api.pos.update-order-status');
+        Route::post('/cancel-order/{id}', [PosApiController::class, 'cancelOrder'])->name('api.pos.cancel-order');
+        Route::delete('/delete-order/{id}', [PosApiController::class, 'deleteOrder'])->name('api.pos.delete-order');
+        Route::delete('/orders/{orderId}/items/{itemId}', [PosApiController::class, 'deleteOrderItem'])->name('api.pos.delete-order-item');
+        Route::post('/orders/{id}/cancel', [PosApiController::class, 'cancelOrder'])->name('api.pos.orders.cancel');
+        Route::post('/orders/{orderId}/remove-charge/{chargeId}', [PosApiController::class, 'removeExtraCharge'])->name('api.pos.remove-extra-charge');
+        Route::post('/orders/{orderId}/update-waiter', [PosApiController::class, 'updateWaiter'])->name('api.pos.update-waiter');
+    });
+
+    Route::prefix('ajax/pos')->group(function () {
+        Route::get('/menus', [PosAjaxController::class, 'getMenus']);
+        Route::get('/orders/{id}', [PosAjaxController::class, 'getOrder']);
+        Route::get('/get-order-number', [PosAjaxController::class, 'getOrderNumber']);
+        Route::get('/waiters', [PosAjaxController::class, 'getWaiters']);
+        Route::get('/categories', [PosAjaxController::class, 'getCategories'])->name('ajax.pos.categories');
+        Route::get('/items', [PosAjaxController::class, 'getMenuItems'])->name('ajax.pos.items');
+        Route::get('/items/category/{categoryId}', [PosAjaxController::class, 'getMenuItemsByCategory']);
+        Route::get('/items/menu/{menuId}', [PosAjaxController::class, 'getMenuItemsByMenu']);
+        Route::get('/extra-charges/{orderType}', [PosAjaxController::class, 'getExtraCharges'])->name('ajax.pos.extra-charges');
+        Route::get('/tables', [PosAjaxController::class, 'getTables']);
+        Route::get('/reservations/today', [PosAjaxController::class, 'getTodayReservations']);
+        Route::post('/tables/{tableId}/unlock', [PosAjaxController::class, 'forceUnlockTable']);
+        Route::get('/order-types', [PosAjaxController::class, 'getOrderTypes']);
+        Route::get('/delivery-platforms', [PosAjaxController::class, 'getDeliveryPlatforms']);
+        Route::post('/orders', [PosAjaxController::class, 'submitOrder']);
+        Route::get('/customers', [PosAjaxController::class, 'getCustomers']);
+        Route::get('/phone-codes', [PosAjaxController::class, 'getPhoneCodes']);
+        Route::post('/customers', [PosAjaxController::class, 'saveCustomer']);
+        Route::get('/taxes', [PosAjaxController::class, 'getTaxes']);
+        Route::get('/restaurants', [PosAjaxController::class, 'getRestaurants']);
+
+        // Additional POS AJAX routes
+        Route::post('/add-cart-item', [PosAjaxController::class, 'addCartItem'])->name('ajax.pos.add-cart-item');
+        Route::post('/update-cart-item', [PosAjaxController::class, 'updateCartItem'])->name('ajax.pos.update-cart-item');
+        Route::post('/delete-cart-item', [PosAjaxController::class, 'deleteCartItem'])->name('ajax.pos.delete-cart-item');
+        Route::post('/set-table', [PosAjaxController::class, 'setTable'])->name('ajax.pos.set-table');
+        Route::post('/set-customer', [PosAjaxController::class, 'setCustomer'])->name('ajax.pos.set-customer');
+        Route::post('/save-order', [PosAjaxController::class, 'saveOrder'])->name('ajax.pos.save-order');
+        Route::post('/order-type/default', [PosAjaxController::class, 'saveDefaultOrderTypePreference'])->name('ajax.pos.order-type-default');
+        Route::get('/menu-item/{id}', [PosAjaxController::class, 'getMenuItem'])->name('ajax.pos.menu-item');
+        Route::get('/menu-item/{id}/variations', [PosAjaxController::class, 'getMenuItemVariations'])->name('ajax.pos.menu-item-variations');
+        Route::get('/menu-item/{id}/modifiers', [PosAjaxController::class, 'getMenuItemModifiers'])->name('ajax.pos.menu-item-modifiers');
+        Route::post('/calculate-total', [PosAjaxController::class, 'calculateTotal'])->name('ajax.pos.calculate-total');
+        Route::post('/update-customer-display', [PosAjaxController::class, 'updateCustomerDisplay'])->name('ajax.pos.update-customer-display');
+        Route::get('/tables-with-unpaid-orders', [PosAjaxController::class, 'getTablesWithUnpaidOrders'])->name('ajax.pos.tables-with-unpaid-orders');
+        Route::post('/merge-tables', [PosAjaxController::class, 'mergeTables'])->name('ajax.pos.merge-tables');
+        Route::post('/clear-merge-session', [PosAjaxController::class, 'clearMergeSession'])->name('ajax.pos.clear-merge-session');
+        Route::post('/update-order-status/{id}', [PosAjaxController::class, 'updateOrderStatus'])->name('ajax.pos.update-order-status');
+        Route::post('/cancel-order/{id}', [PosAjaxController::class, 'cancelOrder'])->name('ajax.pos.cancel-order');
+        Route::delete('/delete-order/{id}', [PosAjaxController::class, 'deleteOrder'])->name('ajax.pos.delete-order');
+        Route::delete('/orders/{orderId}/items/{itemId}', [PosAjaxController::class, 'deleteOrderItem'])->name('ajax.pos.delete-order-item');
+        Route::post('/orders/{id}/cancel', [PosAjaxController::class, 'cancelOrder'])->name('ajax.pos.orders.cancel');
+        Route::post('/orders/{orderId}/remove-charge/{chargeId}', [PosAjaxController::class, 'removeExtraCharge'])->name('ajax.pos.remove-extra-charge');
+        Route::post('/orders/{orderId}/update-discount', [PosAjaxController::class, 'updateOrderDiscount'])->name('ajax.pos.update-order-discount');
+        Route::post('/orders/{orderId}/update-waiter', [PosAjaxController::class, 'updateWaiter'])->name('ajax.pos.update-waiter');
+        Route::post('/orders/{orderId}/update-delivery-executive', [PosAjaxController::class, 'updateDeliveryExecutive'])->name('ajax.pos.update-delivery-executive');
+        Route::post('/orders/{orderId}/print', [PosAjaxController::class, 'ajaxPrintOrder'])->name('ajax.pos.print-order');
+        Route::post('/orders/{orderId}/print-kot', [PosAjaxController::class, 'ajaxPrintKotForOrder'])->name('ajax.pos.print-kot-order');
+        Route::post('/kot/{kotId}/print', [PosAjaxController::class, 'ajaxPrintKot'])->name('ajax.pos.print-kot');
+
+        // Loyalty (optional module) - JS/AJAX POS integration
+        Route::get('/loyalty/summary', [PosAjaxController::class, 'getLoyaltySummary'])->name('ajax.pos.loyalty.summary');
+        Route::post('/loyalty/redeem', [PosAjaxController::class, 'redeemLoyaltyPoints'])->name('ajax.pos.loyalty.redeem');
+        Route::post('/loyalty/reset', [PosAjaxController::class, 'resetLoyaltyRedemption'])->name('ajax.pos.loyalty.reset');
+        Route::post('/loyalty/stamp-auto-preview', [PosAjaxController::class, 'getAutoStampPreview'])->name('ajax.pos.loyalty.stamp-auto-preview');
+
+        // Hotel room-service integrations for AJAX POS
+        Route::get('/hotel/stays', [PosAjaxController::class, 'getHotelStays'])->name('ajax.pos.hotel.stays');
     });
 });

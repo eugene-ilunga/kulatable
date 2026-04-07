@@ -19,6 +19,7 @@ class RestaurantDetail extends Component
     public $restaurant;
     public $restaurantAdmin;
     public $showPasswordModal = false;
+    public $showImpersonateModal = false;
     public $password;
     public $hash;
     public $search;

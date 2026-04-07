@@ -52,17 +52,17 @@ class UpdateMenuItem extends Component
     #[Validate('nullable|integer|min:0')]
     public ?int $preparationTime = null;
 
-    #[Validate('required|boolean')]
-    public bool $isAvailable = true;
+    #[Validate('required')]
+    public $isAvailable = '1';
 
     #[Validate('nullable|string')]
     public ?string $kitchenType = null;
 
-    #[Validate('required|boolean')]
-    public bool $showOnCustomerSite = true;
+    #[Validate('required')]
+    public $showOnCustomerSite = '1';
 
-    #[Validate('required|boolean')]
-    public bool $inStock = true;
+    #[Validate('required')]
+    public $inStock = '1';
 
     #[Validate('nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048')]
     public $itemImageTemp;
@@ -85,7 +85,7 @@ class UpdateMenuItem extends Component
     public array $variationName = [];
     public array $variationPrice = [];
     public array $variationIds = [];
-    
+
     // Batch Recipe Properties (for Inventory module)
     public ?int $batchRecipeId = null;
     public ?float $batchServingSize = null;
@@ -143,7 +143,9 @@ class UpdateMenuItem extends Component
         $this->menus = Menu::all();
         $this->kitchenTypes = KotPlace::where('is_active', true)->get();
         $this->taxes = Tax::where('restaurant_id', restaurant()->id)->get();
-        $this->orderTypes = OrderType::where('is_active', 1)->get();
+        $this->orderTypes = OrderType::where('is_active', 1)
+            ->availableForRestaurant()
+            ->get();
         $this->deliveryApps = DeliveryPlatform::where('is_active', 1)->get();
     }
 
@@ -155,7 +157,7 @@ class UpdateMenuItem extends Component
         $this->languages = languages()->pluck('language_name', 'language_code')->toArray();
         $this->translationNames = array_fill_keys(array_keys($this->languages), '');
         $this->translationDescriptions = array_fill_keys(array_keys($this->languages), '');
-        $this->globalLocale = normalize_locale(global_setting()->locale, array_key_first($this->languages) ?? 'en');
+        $this->globalLocale = global_setting()->locale;
         $this->currentLanguage = $this->globalLocale;
     }
 
@@ -170,12 +172,12 @@ class UpdateMenuItem extends Component
         $this->itemPrice = (string)$this->menuItem->price;
         $this->preparationTime = $this->menuItem->preparation_time;
         $this->itemType = $this->menuItem->type;
-        $this->isAvailable = (bool)$this->menuItem->is_available;
-        $this->inStock = (bool)$this->menuItem->in_stock;
+        $this->isAvailable = $this->menuItem->is_available ? '1' : '0';
+        $this->inStock = $this->menuItem->in_stock ? '1' : '0';
         $this->kitchenType = $this->menuItem->kot_place_id ? (string)$this->menuItem->kot_place_id : null;
-        $this->showOnCustomerSite = (bool)$this->menuItem->show_on_customer_site;
+        $this->showOnCustomerSite = $this->menuItem->show_on_customer_site ? '1' : '0';
         $this->itemImage = $this->menuItem->image;
-        
+
         // Load batch recipe data
         if (in_array('Inventory', restaurant_modules())) {
             $this->batchRecipeId = $this->menuItem->batch_recipe_id;
@@ -375,7 +377,7 @@ class UpdateMenuItem extends Component
         // Initialize variation name and price as empty
         $this->variationName[$i] = '';
         $this->variationPrice[$i] = '';
-        
+
         // Initialize batch recipe properties if Inventory module is enabled
         if (in_array('Inventory', restaurant_modules())) {
             $this->variationBatchRecipeId[$i] = null;
@@ -560,8 +562,8 @@ class UpdateMenuItem extends Component
             'baseDeliveryPrice' => 'nullable|numeric|min:0',
             'itemCategory' => 'required',
             'menu' => 'required',
-            'isAvailable' => 'required|boolean',
-            'showOnCustomerSite' => 'required|boolean',
+            'isAvailable' => 'required',
+            'showOnCustomerSite' => 'required',
             'platformAvailability.*' => 'nullable|boolean',
         ];
 
@@ -664,15 +666,15 @@ class UpdateMenuItem extends Component
             'type' => $this->itemType,
             'preparation_time' => $this->preparationTime,
             'menu_id' => $this->menu,
-            'is_available' => $this->isAvailable,
+            'is_available' => $this->normalizeBoolean($this->isAvailable),
             'kot_place_id' => $this->kitchenType,
-            'show_on_customer_site' => $this->showOnCustomerSite,
+            'show_on_customer_site' => $this->normalizeBoolean($this->showOnCustomerSite),
             'tax_inclusive' => $this->isTaxModeItem ? $this->taxInclusive : (restaurant()->tax_inclusive ?? false),
         ];
 
         // Add inStock and batch recipe data only if Inventory module is enabled
         if (in_array('Inventory', restaurant_modules())) {
-            $updateData['in_stock'] = $this->inStock;
+            $updateData['in_stock'] = $this->normalizeBoolean($this->inStock);
             $updateData['batch_recipe_id'] = $this->batchRecipeId;
             $updateData['batch_serving_size'] = $this->batchServingSize;
         }
@@ -683,6 +685,31 @@ class UpdateMenuItem extends Component
 
         // Refresh the model to get updated data
         $this->menuItem->refresh();
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+
+            if (in_array($normalized, ['0', 'false', 'no', 'off', ''], true)) {
+                return false;
+            }
+        }
+
+        return (bool)$value;
     }
 
     private function handleTranslations(MenuItem $menuItem): void
@@ -758,15 +785,15 @@ class UpdateMenuItem extends Component
                     'price' => $this->variationPrice[$key],
                     'menu_item_id' => $menuItem->id
                 ];
-                
+
                 // Add batch recipe data if Inventory module is enabled
                 if (in_array('Inventory', restaurant_modules())) {
                     $variationData['batch_recipe_id'] = $this->variationBatchRecipeId[$key] ?? null;
-                    $variationData['batch_serving_size'] = isset($this->variationBatchServingSize[$key]) && $this->variationBatchServingSize[$key] 
-                        ? (float)$this->variationBatchServingSize[$key] 
+                    $variationData['batch_serving_size'] = isset($this->variationBatchServingSize[$key]) && $this->variationBatchServingSize[$key]
+                        ? (float)$this->variationBatchServingSize[$key]
                         : null;
                 }
-                
+
                 // Check if this is an existing variation (has ID) or a new one
                 if (isset($this->variationIds[$key]) && !empty($this->variationIds[$key])) {
                     // Update existing variation
@@ -822,6 +849,8 @@ class UpdateMenuItem extends Component
         $this->dispatch('hideUpdateMenuItem');
         $this->dispatch('menuItemUpdated');
         $this->dispatch('refreshCategories');
+
+        cache()->flush();
 
         $this->redirect(route('menu-items.index'), true);
         $this->alert('success', __('messages.menuItemUpdated'), [

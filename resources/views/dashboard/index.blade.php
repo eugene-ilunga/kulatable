@@ -2,16 +2,11 @@
 
 @section('content')
 
-<div class="p-4 bg-white block  dark:bg-gray-800 dark:border-gray-700">
+<div class="p-4 block  dark:bg-gray-800 dark:border-gray-700">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-        <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white leading-tight">@lang('menu.dashboard')</h1>
+        <h1 class="text-base font-semibold text-gray-900 dark:text-white leading-tight">@lang('menu.dashboard')</h1>
 
-        <div class="inline-flex items-center gap-2 text-xs sm:text-sm dark:text-white flex-wrap sm:flex-nowrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-event shrink-0" viewBox="0 0 16 16">
-                <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/>
-                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
-            </svg>
-
+        <div class="text-xs text-gray-400 mt-0.5 inline-flex items-center gap-1 font-medium dark:text-white flex-wrap sm:flex-nowrap">
             @php
                 $currentDateTime = now()->timezone(timezone());
             @endphp
@@ -117,12 +112,11 @@
 </div>
 @endif
 
-<div class="grid lg:grid-cols-3">
+<div class="grid">
 
-    <div class="sm:col-span-2 p-4">
-        <h1 class="text-xl font-semibold text-gray-900 sm:text-xl dark:text-white my-2 px-4">@lang('modules.dashboard.todayStats')</h1>
+    <div class="p-4">
 
-        <div class="grid w-full grid-cols-1 gap-4 xl:grid-cols-2">
+        <div class="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
             @if (user_can('Show Order'))
             @livewire('dashboard.todayOrderCount')
@@ -141,32 +135,31 @@
             @endif
 
         </div>
+    </div>
 
+    <div class="grid w-full grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 p-4">
         @if (user_can('Show Reports'))
-        <div class="grid w-full grid-cols-1 gap-4 py-4">
+        <div class="grid w-full col-span-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 p-5 dark:border-gray-700">
             @livewire('dashboard.weeklySalesChart')
         </div>
         @endif
 
-
-        @if (user_can('Show Reports'))
-        <div class="grid grid-cols-1 gap-4 mb-10">
-            @livewire('dashboard.todayPaymentMethodEarnings')
-
-            @livewire('dashboard.today-menu-item-earnings')
-
-            @livewire('dashboard.today-table-earnings')
-        </div>
-        @endif
-
-    </div>
-
-    <div class="p-4">
         @if (user_can('Show Order'))
         @livewire('dashboard.todayOrderList')
         @endif
 
     </div>
+
+    @if (user_can('Show Reports'))
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+        @livewire('dashboard.todayPaymentMethodEarnings')
+
+        @livewire('dashboard.today-menu-item-earnings')
+
+        @livewire('dashboard.today-table-earnings')
+    </div>
+    @endif
+
 </div>
 
 @endsection

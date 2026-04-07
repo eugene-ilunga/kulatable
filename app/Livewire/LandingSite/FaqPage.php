@@ -27,11 +27,20 @@ class FaqPage extends Component
     public function mount()
     {
         if (!$this->languageSettingid) {
-            $userLanguage = LanguageSetting::preferredForLocale(auth()->user()?->locale ?? global_setting()?->locale);
-            $this->languageSettingid = $userLanguage?->id;
+            $userLocale = auth()->user()?->locale;
+
+            if ($userLocale) {
+                $userLanguage = LanguageSetting::where('language_code', $userLocale)
+                    ->where('active', 1)
+                    ->first();
+
+                if ($userLanguage) {
+                    $this->languageSettingid = $userLanguage->id;
+                }
+            }
 
             if (!$this->languageSettingid) {
-                $defaultLanguage = LanguageSetting::availableForSelection()->first();
+                $defaultLanguage = LanguageSetting::where('active', 1)->first();
                 $this->languageSettingid = $defaultLanguage ? $defaultLanguage->id : null;
 
                 if (!$this->languageSettingid) {
@@ -60,6 +69,10 @@ class FaqPage extends Component
 
         $this->faqHeading = $frontDetail ? $frontDetail->faq_heading : '';
         $this->faqDescription = $frontDetail ? $frontDetail->faq_description : '';
+
+        // `wire:ignore` is used for the Trix editor on the blade.
+        // Dispatch a browser event so the editor can reload updated HTML on language change.
+        $this->dispatch('faq-description-updated', value: $this->faqDescription ?? '');
     }
 
     public function editFaqPage($id)
@@ -148,7 +161,7 @@ class FaqPage extends Component
 
     public function render()
     {
-        $languageEnable = LanguageSetting::availableForSelection();
+        $languageEnable = LanguageSetting::where('active', 1)->get();
         $faqDetails = FrontFaq::where('language_setting_id', $this->languageSettingid)->get();
 
         return view('livewire.landing-site.faq-page', [

@@ -23,9 +23,9 @@ return new class extends Migration
             // Insert data into FrontDetail
             FrontDetail::create([
                 'language_setting_id' => $languageSetting->id,
-                'header_title' => 'Logiciel de caisse pour restaurant simplifié !',
-                'header_description' => 'Gérez facilement vos commandes, menus et tables depuis une seule interface. Gagnez du temps, réduisez les erreurs et développez votre activité plus rapidement.',
-                'feature_with_image_heading' => 'Prenez le contrôle de votre restaurant',
+                'header_title' => 'Restaurant POS software made simple!',
+                'header_description' => 'Easily manage orders, menus, and tables in one place. Save time, reduce errors, and grow your business faster',
+                'feature_with_image_heading' => 'Take Control of Your Restaurant',
                 'feature_with_icon_heading' => 'Powerful Features Built to Elevate Your Restaurant Operations',
                 'review_heading' => 'What Restaurant Owners Are Saying',
                 'price_heading' => 'Simple, Transparent Pricing',

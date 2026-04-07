@@ -1,9 +1,9 @@
 <div class="px-4">
 
     @if($bookings->isNotEmpty())
-    <div class="flex justify-between items-center mb-4">
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-2xl font-extrabold dark:text-white">@lang('menu.myBookings')</h2>
-        <a href="{{ module_enabled('Subdomain') ? url('/book-a-table/' . $restaurant->hash) : route('book_a_table', $restaurant->hash) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-skin-base rounded-lg hover:bg-skin-base/80 focus:ring-4 focus:outline-none focus:ring-skin-base/30" wire:navigate>
+        <a href="{{ module_enabled('Subdomain') ? url('/book-a-table/' . $restaurant->hash) : route('book_a_table', $restaurant->hash) }}" class="inline-flex w-full items-center justify-center px-4 py-2 text-sm font-medium text-white bg-skin-base rounded-lg hover:bg-skin-base/80 focus:ring-4 focus:outline-none focus:ring-skin-base/30 sm:w-auto" wire:navigate>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             @lang('menu.bookTable')
         </a>
@@ -41,7 +41,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 p-3 bg-gray-100 rounded-md dark:bg-gray-700 dark:text-gray-300">
+                <div class="grid grid-cols-1 gap-3 p-3 bg-gray-100 rounded-md dark:bg-gray-700 dark:text-gray-300 sm:grid-cols-2 sm:gap-4">
                     <div class="text-xs inline-flex items-center gap-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
                             <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/>
@@ -50,7 +50,7 @@
                     </div>
 
                     @if (!is_null($reservation->customer->email))
-                    <div class="text-xs flex items-center gap-1 justify-end">
+                    <div class="text-xs flex items-center gap-1 sm:justify-end">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-envelope-at" viewBox="0 0 16 16">
                             <path d="M2 2a2 2 0 0 0-2 2v8.01A2 2 0 0 0 2 14h5.5a.5.5 0 0 0 0-1H2a1 1 0 0 1-.966-.741l5.64-3.471L8 9.583l7-4.2V8.5a.5.5 0 0 0 1 0V4a2 2 0 0 0-2-2zm3.708 6.208L1 11.105V5.383zM1 4.217V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v.217l-7 4.2z"/>
                             <path d="M14.247 14.269c1.01 0 1.587-.857 1.587-2.025v-.21C15.834 10.43 14.64 9 12.52 9h-.035C10.42 9 9 10.36 9 12.432v.214C9 14.82 10.438 16 12.358 16h.044c.594 0 1.018-.074 1.237-.175v-.73c-.245.11-.673.18-1.18.18h-.044c-1.334 0-2.571-.788-2.571-2.655v-.157c0-1.657 1.058-2.724 2.64-2.724h.04c1.535 0 2.484 1.05 2.484 2.326v.118c0 .975-.324 1.39-.639 1.39-.232 0-.41-.148-.41-.42v-2.19h-.906v.569h-.03c-.084-.298-.368-.63-.954-.63-.778 0-1.259.555-1.259 1.4v.528c0 .892.49 1.434 1.26 1.434.471 0 .896-.227 1.014-.643h.043c.118.42.617.648 1.12.648m-2.453-1.588v-.227c0-.546.227-.791.573-.791.297 0 .572.192.572.708v.367c0 .573-.253.744-.564.744-.354 0-.581-.215-.581-.8Z"/>

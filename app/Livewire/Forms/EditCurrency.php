@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Forms;
 
+use App\Models\Currency;
+use App\Models\GlobalCurrency;
 use Livewire\Component;
 
 class EditCurrency extends Component
@@ -43,8 +45,23 @@ class EditCurrency extends Component
         $this->currency->no_of_decimal = $this->numberOfDecimals;
         $this->currency->save();
 
-        session()->forget('global_currency_format_setting' . $this->currency->id);
-        session()->forget('currency_format_setting' . $this->currency->id);
+        $currencyId = (int) $this->currency->id;
+        session()->forget([
+            'global_currency_format_setting' . $currencyId,
+            'currency_format_setting' . $currencyId,
+        ]);
+
+        $refreshGlobalSettingCache = match ($this->currency::class) {
+            GlobalCurrency::class => $currencyId === (int) global_setting()->default_currency_id,
+            Currency::class => ($restaurant = restaurant()) && $currencyId === (int) $restaurant->currency_id,
+            default => false,
+        };
+
+        if ($refreshGlobalSettingCache) {
+            cache()->forget('global_setting');
+            session()->forget('restaurantOrGlobalSetting');
+        }
+
         $this->dispatch('hideEditCurrency');
     }
 

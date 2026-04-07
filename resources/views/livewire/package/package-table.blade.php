@@ -41,11 +41,11 @@
 
                             @forelse ($packages as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='member-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $loop->iteration }}
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     <div class="flex flex-col items-start gap-y-1">
                                         <span class="inline-flex items-center">
                                             {{ $item->package_name}}
@@ -114,21 +114,21 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     @if ($item->package_type->value != 'default' && $item->package_type->value != 'trial')
                                         {{ global_currency_format($item->monthly_price, $item->currency_id) }}
                                     @else
                                     --
                                     @endif
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     @if ($item->package_type->value != 'default' && $item->package_type->value != 'trial')
                                         {{ global_currency_format($item->annual_price, $item->currency_id) }}
                                     @else
                                     --
                                     @endif
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     @if ($item->package_type->value != 'default' && $item->package_type->value != 'trial')
                                         {{ global_currency_format($item->price, $item->currency_id) }}
                                     @else

@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Guarda de armazenamento',
+  'status_title' => 'Caminhos do sistema de proteção de armazenamento',
+  'permissions_badge' => 'Modo: 0775 (Dirs) / 0664 (Arquivos)',
+  'success_message' => 'Tentativa de reparo em itens :count (arquivos e diretórios).',
+  'error_alert' => 'Um ou mais caminhos de armazenamento precisam de atenção. Clique em “Reparo Recursivo” para corrigir as permissões.',
+  'recursive_repair' => 'Reparo Recursivo',
+  'secure_repair' => 'Permissões de segurança e reparo',
+  'refresh_status' => 'Atualizar status',
+  'path' => 'Caminho',
+  'status' => 'Status',
+  'perms' => 'Autorizações',
+  'readable' => 'Legível',
+  'writable' => 'Gravável',
+  'yes' => 'Sim',
+  'no' => 'Não',
+  'ok' => 'OK',
+  'issue' => 'Emitir',
+];

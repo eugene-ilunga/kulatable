@@ -70,7 +70,6 @@ class PaymentSettings extends Component
     public bool $isGlobalEpayEnabled = false;
     public bool $isGlobalMollieEnabled = false;
     public bool $isGlobalTapEnabled = false;
-    public bool $isGlobalFreshpayEnabled = false;
 
     public $paystackKey;
     public $paystackSecret;
@@ -126,15 +125,6 @@ class PaymentSettings extends Component
     public $testTapPublicKey;
     public $isTapEnabled;
 
-    // FreshPay properties
-    public $freshpayStatus;
-    public $freshpayMode;
-    public $freshpayMerchantId;
-    public $freshpayMerchantSecret;
-    public $freshpayCallbackSecretKey;
-    public $freshpayCallbackHmacKey;
-    public $isFreshpayEnabled;
-
     public function mount()
     {
          $settings = GlobalSetting::first();
@@ -150,7 +140,6 @@ class PaymentSettings extends Component
         $this->isGlobalEpayEnabled = (bool) $settings->enable_epay;
         $this->isGlobalMollieEnabled = (bool) $settings->enable_mollie;
         $this->isGlobalTapEnabled = (bool) ($settings->enable_tap ?? false);
-        $this->isGlobalFreshpayEnabled = (bool) ($settings->enable_freshpay ?? false);
         $this->paymentGateway = PaymentGatewayCredential::first();
 
         $this->setDefaultActivePaymentSetting();
@@ -177,7 +166,6 @@ class PaymentSettings extends Component
             'epay' => $this->isGlobalEpayEnabled,
             'mollie' => $this->isGlobalMollieEnabled,
             'tap' => $this->isGlobalTapEnabled,
-            'freshpay' => $this->isGlobalFreshpayEnabled,
             'offline' => true,
             'qr_code' => true,
             'serviceSpecific' => true,
@@ -210,7 +198,6 @@ class PaymentSettings extends Component
             'epay' => $this->isGlobalEpayEnabled,
             'mollie' => $this->isGlobalMollieEnabled,
             'tap' => $this->isGlobalTapEnabled,
-            'freshpay' => $this->isGlobalFreshpayEnabled,
             'offline' => true,
             'qr_code' => true,
             'serviceSpecific' => true,
@@ -332,15 +319,6 @@ class PaymentSettings extends Component
         $this->testTapPublicKey = $this->paymentGateway->test_tap_public_key ?? null;
         $this->isTapEnabled = (bool)($this->paymentGateway->tap_status ?? false);
 
-        // FreshPay credentials
-        $this->freshpayStatus = (bool)($this->paymentGateway->freshpay_status ?? false);
-        $this->freshpayMode = $this->paymentGateway->freshpay_mode ?? 'test';
-        $this->freshpayMerchantId = $this->paymentGateway->freshpay_merchant_id ?? null;
-        $this->freshpayMerchantSecret = $this->paymentGateway->freshpay_merchant_secret ?? null;
-        $this->freshpayCallbackSecretKey = $this->paymentGateway->freshpay_callback_secret_key ?? null;
-        $this->freshpayCallbackHmacKey = $this->paymentGateway->freshpay_callback_hmac_key ?? null;
-        $this->isFreshpayEnabled = (bool)($this->paymentGateway->freshpay_status ?? false);
-
         $hash = restaurant()->hash;
         $this->testFlutterwaveWebhookKey = $this->paymentGateway->flutterwave_webhook_secret_hash ? $this->paymentGateway->flutterwave_webhook_secret_hash : substr(md5($hash), 0, 10);
 
@@ -361,9 +339,6 @@ class PaymentSettings extends Component
         }
         if ($this->activePaymentSetting === 'tap') {
             $this->webhookUrl = route('tap.webhook', ['hash' => $hash]);
-        }
-        if ($this->activePaymentSetting === 'freshpay') {
-            $this->webhookUrl = route('freshpay.webhook', ['hash' => $hash]);
         }
     }
 
@@ -419,47 +394,6 @@ class PaymentSettings extends Component
             'live_tap_public_key' => $this->liveTapPublicKey,
             'test_tap_secret_key' => $this->testTapSecretKey,
             'test_tap_public_key' => $this->testTapPublicKey,
-        ]);
-
-        return 0;
-    }
-
-    public function submitFormFreshpay()
-    {
-        if ($this->freshpayStatus) {
-            $this->validate([
-                'freshpayMode' => 'required|in:test,live',
-                'freshpayMerchantId' => 'required|string',
-                'freshpayMerchantSecret' => 'required|string',
-            ]);
-        }
-
-        if ($this->saveFreshpaySettings() === 0) {
-            $this->paymentGateway = $this->paymentGateway->fresh();
-            $this->setCredentials();
-            $this->updatePaymentStatus();
-            $this->alertSuccess();
-        }
-    }
-
-    private function saveFreshpaySettings()
-    {
-        if (!$this->freshpayStatus) {
-            $this->paymentGateway->update([
-                'freshpay_status' => $this->freshpayStatus,
-            ]);
-
-            return 0;
-        }
-
-        $this->paymentGateway->update([
-            'freshpay_status' => $this->freshpayStatus,
-            'freshpay_mode' => $this->freshpayMode,
-            'freshpay_merchant_id' => $this->freshpayMerchantId,
-            'freshpay_merchant_secret' => $this->freshpayMerchantSecret,
-            'freshpay_method' => null,
-            'freshpay_callback_secret_key' => $this->freshpayCallbackSecretKey,
-            'freshpay_callback_hmac_key' => $this->freshpayCallbackHmacKey,
         ]);
 
         return 0;

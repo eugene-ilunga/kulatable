@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -99,9 +100,9 @@ class Order extends BaseModel
         return $this->hasMany(Payment::class);
     }
 
-    public function freshpayPayments(): HasMany
+    public function orderCashCollection(): HasOne
     {
-        return $this->hasMany(FreshpayPayment::class)->latest('id');
+        return $this->hasOne(OrderCashCollection::class);
     }
 
     public function splitOrders(): HasMany
@@ -142,6 +143,40 @@ class Order extends BaseModel
     public function deliveryPlatform(): BelongsTo
     {
         return $this->deliveryApp();
+    }
+
+    public function hasCollectedCodPayment(): bool
+    {
+        if ($this->order_type !== 'delivery') {
+            return false;
+        }
+
+        $cashCollectionStatus = $this->relationLoaded('orderCashCollection')
+            ? $this->orderCashCollection?->status
+            : $this->orderCashCollection()->value('status');
+
+        return in_array($cashCollectionStatus, ['collected', 'submitted', 'settled'], true);
+    }
+
+    public function isFullyPaid(): bool
+    {
+        $totalAmount = round((float) ($this->total ?? 0), 2);
+
+        if ($totalAmount <= 0) {
+            return false;
+        }
+
+        return round((float) ($this->amount_paid ?? 0), 2) >= $totalAmount
+            || $this->hasCollectedCodPayment();
+    }
+
+    public function remainingAmount(): float
+    {
+        if ($this->isFullyPaid()) {
+            return 0.0;
+        }
+
+        return round(max((float) ($this->total ?? 0) - (float) ($this->amount_paid ?? 0), 0), 2);
     }
 
     public static function generateOrderNumber($branch)

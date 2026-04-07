@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasBranch;
 use App\Models\OrderType;
+use App\Models\Tax;
 use Spatie\LaravelPackageTools\Concerns\Package\HasServiceProviders;
 
 class Branch extends BaseModel
@@ -26,6 +27,8 @@ class Branch extends BaseModel
     protected $fillable = [
         'name',
         'address',
+        'cr_number',
+        'vat_number',
         'phone',
         'email',
         'restaurant_id',
@@ -63,6 +66,11 @@ class Branch extends BaseModel
 
         // $this->createQrCode(route('table_order', [$this->getRestaurantId()]) . '?branch=' . $this->id);
         $this->createQrCode(route('table_order', [$this->restaurant_id]) . '?branch=' . $this->unique_hash . '&hash=' . $this->restaurant->hash . '&from_qr=1');
+    }
+
+    public function receiptSetting(): HasOne
+    {
+        return $this->hasOne(ReceiptSetting::class, 'branch_id');
     }
 
     public function deliverySetting()
@@ -123,6 +131,11 @@ class Branch extends BaseModel
     public function orderTypes()
     {
         return $this->hasMany(OrderType::class)->withoutGlobalScopes();
+    }
+
+    public function taxes(): HasMany
+    {
+        return $this->hasMany(Tax::class);
     }
 
     public function operationalShifts()

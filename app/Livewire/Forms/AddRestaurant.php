@@ -10,7 +10,6 @@ use App\Models\Country;
 use App\Models\Package;
 use Livewire\Component;
 use App\Models\Restaurant;
-use Illuminate\Support\Facades\Http;
 use App\Notifications\WelcomeRestaurantEmail;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Log;
@@ -44,6 +43,9 @@ class AddRestaurant extends Component
     public $filteredPhoneCodes;
     public $isSubmitting = false;
 
+    // new Google Business page link for restaurant
+    public $googleBusinessLink;
+
 
 
     #[\Livewire\Attributes\Computed]
@@ -53,7 +55,7 @@ class AddRestaurant extends Component
     }
 
     public function mount()
-    { 
+    {
         $this->domain = '.' . getDomain();
 
         $ipCountry = (new User)->getCountryFromIp();
@@ -116,6 +118,7 @@ class AddRestaurant extends Component
                 'required',
                 'regex:/^[0-9\s]{5,20}$/',
             ],
+            'googleBusinessLink' => 'nullable|url',
         ]);
 
         $this->showUserForm = false;
@@ -125,7 +128,7 @@ class AddRestaurant extends Component
     public function submitForm2()
     {
         abort_if((!user_can('Create Restaurant')), 403);
-        
+
         // Prevent double submission
         if ($this->isSubmitting) {
             return;
@@ -136,6 +139,8 @@ class AddRestaurant extends Component
         $timezone = (new User)->getTimezoneFromIp();
 
         try {
+
+
             $this->validate([
                 'address' => 'required',
                 'branchName' => 'required',
@@ -143,6 +148,7 @@ class AddRestaurant extends Component
 
             $restaurant = new Restaurant();
         $restaurant->name = $this->restaurantName;
+
         $package = Package::firstWhere('package_type', PackageType::DEFAULT);
 
         if (module_enabled('Subdomain')) {
@@ -163,6 +169,7 @@ class AddRestaurant extends Component
         $restaurant->facebook_link = $this->facebook;
         $restaurant->instagram_link = $this->instagram;
         $restaurant->twitter_link = $this->twitter;
+        $restaurant->google_business_link = $this->googleBusinessLink;
         $restaurant->customer_site_language = 'en';
         $restaurant->save();
 

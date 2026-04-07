@@ -62,7 +62,7 @@ class KotCard extends Component
                 ->update([
                     'status' => 'cooking'
                 ]);
-            
+
                 $kot->order->updateQuietly(['order_status' => 'preparing']);
         }
 
@@ -338,6 +338,24 @@ class KotCard extends Component
 
     public function render()
     {
+        // Always load KOT with full items from DB. When passed from parent (or after
+        // Pusher refresh), Livewire can pass truncated/stale relation data, so we
+        // never rely on it — load everything in one place with no item filter.
+        $kotId = is_object($this->kot) ? $this->kot->id : (int) $this->kot;
+        $this->kot = Kot::with([
+            'order',
+            'order.waiter',
+            'order.table',
+            'order.orderType',
+            'cancelReason',
+            'items' => function ($q) {
+                $q->with(['menuItem', 'menuItemVariation', 'modifierOptions']);
+            },
+        ])->find($kotId);
+
+        if (!$this->kot) {
+            return $this->skipRender();
+        }
 
         return view('livewire.kot.kot-card');
     }

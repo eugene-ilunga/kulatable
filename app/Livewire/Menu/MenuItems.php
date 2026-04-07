@@ -83,6 +83,10 @@ class MenuItems extends Component
             cache()->forget('restaurant_' . $restaurantId . '_menu_item_stats');
         }
 
+        // Clear cache so deleted menu item is immediately removed from
+        // POS and any other cached menu listings, consistent with create/update/import.
+        cache()->flush();
+
         $this->menuItem = null;
         $this->confirmDeleteMenuItem = false;
 

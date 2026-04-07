@@ -1,8 +1,4 @@
 <div>
-    @if($freshpayAwaitingConfirmation)
-        <div wire:poll.5s="pollFreshpaySubscriptionStatus" class="hidden"></div>
-    @endif
-
     <section class="p-4 overflow-hidden text-gray-700 border-gray-200 body-font sm:p-6 lg:p-8 dark:border-gray-700">
 
         <!-- Header Section - Made responsive -->
@@ -202,33 +198,17 @@
         <x-slot name="content">
             @if(!$free)
                 <div>
-                    @if($freshpayAwaitingConfirmation)
-                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-900/60 dark:bg-amber-950/30">
-                            <div class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
-                            <h3 class="mb-2 text-lg font-semibold text-amber-900 dark:text-amber-100">
-                                Verification du paiement FreshPay
-                            </h3>
-                            <p class="text-sm text-amber-800 dark:text-amber-200">
-                                Confirme le paiement sur ton telephone. Cette fenetre se fermera automatiquement quand le callback FreshPay confirmera la transaction.
-                            </p>
-                            @if($freshpayPendingReference)
-                                <p class="mt-3 text-xs text-amber-700 dark:text-amber-300">
-                                    Reference: {{ $freshpayPendingReference }}
-                                </p>
-                            @endif
-                        </div>
-                    @else
-                        @switch($show)
-                            @case('payment-method')
-                                @include('plans.payment-methods')
-                                @break
-                            @case('authorize')
-                                @include('plans.authorize-payment-method-form')
-                                @break
-                            @default
-                                <p>@lang('modules.billing.noPaymentMethodSelected')</p>
-                        @endswitch
-                    @endif
+                    @switch($show)
+                        @case('payment-method')
+                            @include('plans.payment-methods')
+                            @break
+                        @case('authorize')
+                            @include('plans.authorize-payment-method-form')
+                            @break
+                        @default
+                            <!-- Default case if no match -->
+                            <p>@lang('modules.billing.noPaymentMethodSelected')</p>
+                    @endswitch
                 </div>
             @else
                 <div class="inline-flex items-baseline text-center text-gray-500">
@@ -527,4 +507,5 @@
     @endif
 
 </div>
+
 

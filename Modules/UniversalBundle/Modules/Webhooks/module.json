@@ -1,0 +1,16 @@
+{
+    "name": "Webhooks",
+    "alias": "webhooks",
+    "description": "Tenant-isolated outbound webhooks with delivery logs, retries, and sandbox testing.",
+    "keywords": [
+        "webhook",
+        "events",
+        "integration"
+    ],
+    "priority": 0,
+    "version": "1.0.0",
+    "providers": [
+        "Modules\\Webhooks\\Providers\\WebhooksServiceProvider"
+    ],
+    "files": []
+}

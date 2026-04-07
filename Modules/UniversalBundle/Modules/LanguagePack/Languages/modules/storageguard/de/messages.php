@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Lagerwächter',
+  'status_title' => 'Speicherschutzsystempfade',
+  'permissions_badge' => 'Modus: 0775 (Verzeichnisse) / 0664 (Dateien)',
+  'success_message' => 'Versuchte Reparaturen an :count-Elementen (Dateien und Verzeichnissen).',
+  'error_alert' => 'Einer oder mehrere Speicherpfade erfordern Aufmerksamkeit. Klicken Sie auf „Rekursive Reparatur“, um Berechtigungen zu korrigieren.',
+  'recursive_repair' => 'Rekursive Reparatur',
+  'secure_repair' => 'Berechtigungen zum Sichern und Reparieren',
+  'refresh_status' => 'Status aktualisieren',
+  'path' => 'Weg',
+  'status' => 'Status',
+  'perms' => 'Dauerwellen',
+  'readable' => 'Lesbar',
+  'writable' => 'Beschreibbar',
+  'yes' => 'Ja',
+  'no' => 'NEIN',
+  'ok' => 'OK',
+  'issue' => 'Ausgabe',
+];

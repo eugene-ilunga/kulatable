@@ -19,7 +19,12 @@ class Kots extends Component
 {
     use LivewireAlert;
 
-    protected $listeners = ['refreshKots' => '$refresh'];
+    protected $listeners = ['refreshKots' => 'refreshKots'];
+
+    public function refreshKots(): void
+    {
+        $this->kotsGridKey = (int) (microtime(true) * 1000);
+    }
     public $filterOrders;
     public $dateRangeType;
     public $startDate;
@@ -43,6 +48,8 @@ class Kots extends Component
     public $hasMore = false;
     public $isLoadingMore = false;
     public $hasPendingDefault = true;
+    /** Used so child KotCards get fresh props after Pusher/refresh (avoids stale item count). */
+    public $kotsGridKey = 0;
 
     public function getSelectedKotItemProperty()
     {
@@ -414,6 +421,15 @@ class Kots extends Component
         ]);
     }
 
+    /**
+     * Called from global Pusher JS when a KOT event arrives (only when this screen is open).
+     * Toasts are handled by KotPusherListener (layout) on every page.
+     */
+    public function refreshKotsFromPusher(array $data = []): void
+    {
+        $this->dispatch('refreshKots')->self();
+    }
+
     private function fetchKots(): array
     {
         $tz = timezone();
@@ -426,6 +442,8 @@ class Kots extends Component
 
         $end = Carbon::createFromFormat($dateFormat, $this->endDate, $tz)
             ->endOfDay()
+                        ->addMinutes(5) // Add five minutes extra
+
             ->setTimezone('UTC')
             ->toDateTimeString();
 

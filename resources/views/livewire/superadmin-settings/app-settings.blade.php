@@ -18,7 +18,7 @@
                     <x-label for="defaultLanguage" value="{{ __('modules.settings.defaultLanguage') }}" />
                     <x-select id="defaultLanguage" class="block mt-1 w-full" wire:model='defaultLanguage'>
                         @foreach ($languageSettings as $item)
-                            <option value="{{ $item->language_code }}">{{ locale_label($item->language_code) }}</option>
+                            <option value="{{ $item->language_code }}">{{  isset(\App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code]) ? \App\Models\LanguageSetting::LANGUAGES_TRANS[$item->language_code] . ' (' . $item->language_name . ')' : $item->language_name }}</option>
                         @endforeach
                     </x-select>
 

@@ -21,6 +21,11 @@
 
         <!-- Modifiers List -->
         @foreach ($modifiers as $modifier)
+        @php
+            $isRequired = $modifier->itemModifiers->isNotEmpty() 
+                ? ($modifier->itemModifiers->first()->is_required ?? false) 
+                : false;
+        @endphp
         <div x-data="{ open: true }" class="flex flex-col items-start mb-4 border p-2 rounded-md bg-white dark:bg-gray-800 dark:border-gray-700">
 
             <!-- Modifier Header (Clickable) -->
@@ -29,6 +34,9 @@
                 <div class="flex flex-col justify-between w-full">
                     <div class="text-base font-semibold text-gray-900 dark:text-white">
                         {{ $modifier->name }}
+                        @if ($isRequired)
+                            <span class="text-red-500 text-xs">*</span>
+                        @endif
                     </div>
                     <div class="text-sm text-gray-500 dark:text-gray-400 mt-1 sm:mt-0">
                         {{ $modifier->description }}

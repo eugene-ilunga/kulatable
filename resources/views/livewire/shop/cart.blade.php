@@ -1,3 +1,8 @@
+@php
+
+app()->setLocale(session('customer_locale', app()->getLocale()));
+@endphp
+
 <div>
     <!-- Order Type Selection Modal -->
     <x-dialog-modal wire:model.live="showOrderTypeModal" maxWidth="xl">
@@ -14,6 +19,9 @@
         <x-slot name="content">
             <div class="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach($orderTypes ?? [] as $orderType)
+                    @if($orderType->type === 'room_service' || $orderType->slug === 'room_service')
+                        @continue
+                    @endif
                     <button
                         type="button"
                         wire:click="selectOrderTypeFromModal({{ $orderType->id }})"
@@ -180,7 +188,7 @@
                             @lang('messages.frontHeroHeading')</h1>
                     </div>
                 @endif
-            </section>
+        </section>
         @endif
 
 
@@ -196,7 +204,7 @@
                     'group flex items-center border shadow-sm rounded-lg hover:shadow-md transition dark:bg-gray-700 dark:border-gray-600',
                     'bg-skin-base dark:bg-skin-base' => is_null($menuId),
                     'bg-white' => !is_null($menuId),
-                ]) wire:key='menu-{{ 'all-' . microtime() }}'
+                    ]) wire:key='menu-{{ 'all-' . microtime() }}'
                     wire:click='filterMenuItems(null)' href="javascript:;">
                     <div class="p-2 sm:p-3">
                         <div class="flex items-center gap-3">
@@ -245,7 +253,7 @@
                                             'text-gray-800 dark:text-gray-200' => $menuId != $item->id,
                                             'text-white group-hover:text-white' => $menuId == $item->id,
                                         ])>
-                                            {{ $item->getTranslation('menu_name', session('customer_locale', app()->getLocale())) }}
+                                            {{ $item->getTranslation('menu_name', session('locale', app()->getLocale())) }}
                                         </h3>
                                         <p @class([
                                             'text-sm dark:text-neutral-500 hidden sm:block',
@@ -289,7 +297,7 @@
                 <button @click="open = !open" @click.away="open = false"
                     class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg px-4 py-2.5 flex items-center justify-between shadow-sm hover:bg-gray-50 transition-colors duration-200">
                     <span class="text-sm font-medium truncate">
-                        {{ is_null($filterCategories) ? __('app.showAll') : $this->categoryList->firstWhere('id', $filterCategories)?->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}
+                        {{ is_null($filterCategories) ? __('app.showAll') : $this->categoryList->firstWhere('id', $filterCategories)?->getTranslation('category_name', session('locale', app()->getLocale())) }}
                     </span>
                     <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +322,7 @@
                         @foreach ($this->categoryList as $item)
                             <button wire:click="filterMenu({{ $item->id }}); $nextTick(() => { open = false })"
                                 class="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-between {{ $filterCategories == $item->id ? 'bg-gray-50 dark:bg-gray-600 text-skin-base' : 'text-gray-700 dark:text-gray-200' }}">
-                                <span>{{ $item->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}</span>
+                                <span>{{ $item->getTranslation('category_name', session('locale', app()->getLocale())) }}</span>
                                 <span
                                     class="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded-full dark:bg-gray-600 dark:text-gray-300">
                                     {{ $item->items_count }}
@@ -347,7 +355,7 @@
                             'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' =>
                                 $filterCategories != $item->id,
                         ])>
-                            <span>{{ $item->getTranslation('category_name', session('customer_locale', app()->getLocale())) }}</span>
+                            <span>{{ $item->getTranslation('category_name', session('locale', app()->getLocale())) }}</span>
                             <span
                                 class="px-2 py-0.5 text-xs rounded-full {{ $filterCategories == $item->id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
                                 {{ $item->items_count }}
@@ -440,8 +448,8 @@
                             'flex items-center justify-between gap-6 border shadow-sm rounded-lg hover:shadow-md transition dark:border-gray-600 dark:lg:bg-gray-900 dark:shadow-sm lg:rounded-md',
                             'bg-gray-100 dark:bg-gray-800' => !$item->in_stock,
                             'bg-white dark:bg-gray-900' => $item->in_stock,
-                        ]) wire:key='menu-item-{{ $item->id . microtime() }}'>
-                            <div class="flex w-full p-3 space-x-4">
+                                ]) wire:key='menu-item-{{ $item->id . microtime() }}'>
+                             <div class="flex w-full p-3 space-x-4">
                                 @if ($restaurant && !$restaurant->hide_menu_item_image_on_customer_site)
                                     <img class="object-cover w-16 h-16 rounded-md cursor-pointer lg:w-24 lg:h-24"
                                         wire:click="showItemDetail({{ $item->id }})"
@@ -453,12 +461,12 @@
                                         class="inline-flex items-center text-sm font-semibold text-gray-900 lg:text-base dark:text-white">
                                         <img src="{{ asset('img/' . $item->type . '.svg') }}" class="h-4 mr-1"
                                             title="@lang('modules.menu.' . $item->type)" alt="" />
-                                        {{ $item->getTranslatedValue('item_name', session('customer_locale', app()->getLocale())) }}
+                                        {{ $item->getTranslatedValue('item_name', session('locale')) }}
                                     </div>
                                     @if ($item->description)
                                         <div class="w-full text-xs font-normal text-gray-500 cursor-pointer lg:text-sm dark:text-gray-400"
                                             wire:click="showItemDetail({{ $item->id }})">
-                                            {{ str($item->getTranslatedValue('description', session('customer_locale', app()->getLocale())))->limit(50) }}
+                                            {{ str($item->getTranslatedValue('description', session('locale')))->limit(50) }}
                                         </div>
                                     @endif
 
@@ -586,7 +594,7 @@
                 @endif
             </div>
 
-            <div class="fixed flex justify-center w-full max-w-lg gap-6 -ml-4 bottom-24 lg:hidden">
+            <div class="fixed inset-x-0 bottom-24 z-10 flex justify-center gap-3 px-4 lg:hidden">
                 @if ($this->shouldShowWaiterButtonMobile && $orderTypeSlug === 'dine_in')
                     @livewire('forms.callWaiterButton', ['tableNumber' => $table->id ?? null, 'shopBranch' => $shopBranch])
                 @endif
@@ -597,11 +605,13 @@
 
             @if ($cartQty > 0)
                 <div
-                    class="fixed z-10 flex items-center justify-between w-full max-w-lg p-4 mx-auto -ml-4 antialiased font-bold text-white rounded-md bg-skin-base lg:max-w-screen-xl dark:bg-gray-800 bottom-1">
-                    <div>@lang('modules.order.totalItem'): {{ $cartQty }} &nbsp;|&nbsp;
-                        {{ currency_format($subTotal, $restaurant->currency_id) }} + @lang('modules.order.taxes')</div>
+                    class="fixed inset-x-0 bottom-1 z-10 mx-3 flex items-center justify-between gap-3 rounded-md bg-skin-base p-3 text-white shadow-lg dark:bg-gray-800 sm:mx-auto sm:max-w-lg lg:max-w-screen-xl">
+                    <div class="min-w-0 text-sm font-bold leading-5 sm:text-base">
+                        <div class="truncate">@lang('modules.order.totalItem'): {{ $cartQty }}</div>
+                        <div class="truncate">{{ currency_format($subTotal, $restaurant->currency_id) }} + @lang('modules.order.taxes')</div>
+                    </div>
 
-                    <x-secondary-button wire:click="showCartItems">@lang('modules.order.viewCart')</x-secondary-button>
+                    <x-secondary-button wire:click="showCartItems" class="flex-shrink-0 whitespace-nowrap">@lang('modules.order.viewCart')</x-secondary-button>
 
                 </div>
             @endif
@@ -1048,8 +1058,11 @@
                     <div class="w-full h-auto pt-3 pb-4 text-center select-none"
                         wire:key='order-{{ microtime() }}'>
                         <div class="flex gap-2">
-
-                            @if (is_null($customer) && ($restaurant->customer_login_required || $orderTypeSlug == 'delivery'))
+                            @if (!$isRestaurantOpenForOrders)
+                                <div class="w-full p-3 text-sm font-medium text-center text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                                    {{ $restaurantClosedMessage }}
+                                </div>
+                            @elseif (is_null($customer) && ($restaurant->customer_login_required || $orderTypeSlug == 'delivery'))
                                 <x-button class="justify-center w-full" wire:click="$dispatch('showSignup')">
                                     @lang('app.next')
                                 </x-button>
@@ -1095,7 +1108,6 @@
                                             $paymentGateway->epay_status ||
                                             $paymentGateway->mollie_status ||
                                             $paymentGateway->tap_status ||
-                                            $paymentGateway->freshpay_status ||
                                             count($offlinePaymentMethods) > 0;
 
                                         $loadingSpinner = '
@@ -1471,7 +1483,20 @@
         </x-slot>
 
         <x-slot name="footer">
-            <x-button-cancel wire:click="$toggle('showItemDetailModal')" wire:loading.attr="disabled" />
+            <div class="flex justify-end space-x-2">
+                @if ($selectedItem && ($restaurant?->allow_customer_orders ?? false))
+                    <x-cart-button
+                        wire:click="addCartItems({{ $selectedItem->id }}, {{ $selectedItem->variations_count ?? 0 }}, {{ $selectedItem->modifier_groups_count ?? 0 }})"
+                        wire:key="item-input-{{ $selectedItem->id . microtime() }}">
+                        @lang('app.add')
+                    </x-cart-button>
+                @endif
+
+                <x-button-cancel
+                    wire:click="$toggle('showItemDetailModal')"
+                    wire:loading.attr="disabled"
+                />
+            </div>
         </x-slot>
     </x-dialog-modal>
 
@@ -1482,6 +1507,13 @@
             </x-slot>
 
             <x-slot name="content">
+                @php
+                    $offlinePaymentMethodMap = isset($offlinePaymentMethods)
+                        ? $offlinePaymentMethods->keyBy('name')
+                        : collect();
+                    $activeOfflinePaymentMethodName = $selectedOfflinePaymentMethod ?? 'bank_transfer';
+                    $activeOfflinePaymentMethod = $offlinePaymentMethodMap->get($activeOfflinePaymentMethodName);
+                @endphp
                 <div
                     class="flex items-center justify-between p-2 mb-6 rounded-md cursor-pointer bg-gray-50 dark:bg-gray-800">
                     <div class="flex items-center min-w-0">
@@ -1509,6 +1541,26 @@
                         @if ($showQrCode)
                             <img src="{{ $paymentGateway->qr_code_image_url }}" alt="QR Code Preview"
                                 class="object-cover rounded-md h-30 w-30">
+                        @elseif ($showPaymentDetail)
+                            @if ($activeOfflinePaymentMethod && !empty($activeOfflinePaymentMethod->description))
+                                <div class="w-full p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ ucwords(str_replace('_', ' ', $activeOfflinePaymentMethod->name)) }}
+                                    </p>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line break-words">
+                                        {!! nl2br(e($activeOfflinePaymentMethod->description)) !!}
+                                    </p>
+                                </div>
+                            @else
+                                <div class="w-full p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ ucwords(str_replace('_', ' ', $activeOfflinePaymentMethodName)) }}
+                                    </p>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                        @lang('app.noDescription')
+                                    </p>
+                                </div>
+                            @endif
                         @endif
                     </div>
                  @else
@@ -1518,7 +1570,7 @@
                                 wire:click="initiateStripePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 468 222.5"
                                         xml:space="preserve">
@@ -1535,7 +1587,7 @@
                                 wire:click="initiatePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" version="1.1" id="Layer_1"
                                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -1570,7 +1622,7 @@
                                 wire:click="initiateFlutterwavePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="h-5 dark:mix-blend-plus-lighter" xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 916.7 144.7">
@@ -1599,7 +1651,7 @@
                                 wire:click="initiatePaypalPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg height="21" viewBox="0 0 916.7 144.7" class="h-6 w-22"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -1640,7 +1692,7 @@
                                 wire:click="initiatePayfastPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg width="24" height="24" viewBox="0 0 24 24"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -1658,7 +1710,7 @@
                                 wire:click="initiatePaystackPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                         width="24" height="24" fill="#0AA5FF">
@@ -1677,7 +1729,7 @@
                                 wire:click="initiateXenditPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" id="Xendit--Streamline-Simple-Icons" height="24" width="24">
                                             <desc>
@@ -1696,7 +1748,7 @@
                                 wire:click="initiateEpayPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1721,7 +1773,7 @@
                                 wire:click="initiateMolliePayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 ltr:mr-1 rtl:ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="#C6D300">
                                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 1.5c5.799 0 10.5 4.701 10.5 10.5S17.799 22.5 12 22.5 1.5 17.799 1.5 12 6.201 1.5 12 1.5z"/>
@@ -1738,7 +1790,7 @@
                                 wire:click="initiateTapPayment({{ $paymentOrder?->id ?: 'null' }})"
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,placeOrder">
                                 <span class="inline-flex items-center">
                                     <svg class="w-4 h-4 mr-2 text-current" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
                                         <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="8" />
@@ -1747,31 +1799,6 @@
                                     @lang('modules.billing.tap')
                                 </span>
                             </x-secondary-button>
-                        @endif
-
-                        @if ($paymentGateway->freshpay_status)
-                            <x-secondary-button
-                                wire:click="initiateFreshpayPayment({{ $paymentOrder?->id ?: 'null' }})"
-                                wire:loading.attr="disabled"
-                                wire:loading.class="opacity-50 cursor-not-allowed"
-                                wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
-                                <span class="inline-flex items-center">
-                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-14 h-14 mr-2" />
-                                    @lang('modules.billing.freshpay')
-                                </span>
-                            </x-secondary-button>
-
-                            <div class="w-full mt-3">
-                                <label for="freshpay_customer_number_cart" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Numero de telephone FreshPay
-                                </label>
-                                <input
-                                    id="freshpay_customer_number_cart"
-                                    type="text"
-                                    wire:model.live="freshpayCustomerNumber"
-                                    placeholder="Ex: 0972148867"
-                                    class="w-full rounded-lg border-gray-300 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200" />
-                            </div>
                         @endif
 
                         @if ($paymentGateway->is_qr_payment_enabled && $paymentGateway->qr_code_image_url)
@@ -1799,10 +1826,10 @@
                         @if (count($offlinePaymentMethods) > 0)
                             @foreach ($offlinePaymentMethods as $offlineMethod)
                                 <x-secondary-button
-                                    wire:click="placeOrder(false, {{ $paymentOrder->id }}, '{{ $offlineMethod->name }}')"
+                                    wire:click="selectOfflinePaymentMethod('{{ $offlineMethod->name }}')"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-50 cursor-not-allowed"
-                                    wire:target="initiatePayment,initiateStripePayment,initiateFlutterwavePayment,initiatePaypalPayment,initiatePayfastPayment,initiatePaystackPayment,initiateXenditPayment,initiateEpayPayment,initiateMolliePayment,initiateTapPayment,initiateFreshpayPayment,placeOrder">
+                                    wire:target="selectOfflinePaymentMethod">
                                     <span class="inline-flex items-center">
                                         <svg class="w-4 h-4" width="24" height="24" viewBox="0 0 24 24"
                                             fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1835,7 +1862,7 @@
 
                 @elseif ($showPaymentDetail)
                     <x-button class="ml-3"
-                        wire:click="placeOrder(false, {{ $paymentOrder?->id ?? 'null' }}, 'bank_transfer')"
+                        wire:click="placeOrder(false, {{ $paymentOrder?->id ?? 'null' }}, '{{ $activeOfflinePaymentMethodName }}')"
                         wire:loading.attr="disabled"
                         wire:loading.class="opacity-50 cursor-not-allowed"
                         wire:target="placeOrder">@lang('modules.billing.paymentDone')</x-button>
@@ -1923,7 +1950,7 @@
                                                         </div>
                                                     </td>
                                                     <td
-                                                        class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                                        class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                                         {{ $item->price ? currency_format($item->price, $restaurant->currency_id) : '--' }}
                                                     </td>
 

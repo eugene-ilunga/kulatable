@@ -25,6 +25,7 @@ class GlobalSettingSeeder extends Seeder
         $setting->facebook_link = 'https://www.facebook.com/';
         $setting->instagram_link = 'https://www.instagram.com/';
         $setting->twitter_link = 'https://www.twitter.com/';
+        $setting->google_business_link = 'https://business.google.com/';
         $setting->default_currency_id = GlobalCurrency::first()->id;
         $setting->timezone = 'Asia/Kolkata';
         $setting->save();
@@ -41,7 +42,6 @@ class GlobalSettingSeeder extends Seeder
             DesktopApplication::create([
                 'windows_file_path' => DesktopApplication::WINDOWS_FILE_PATH,
                 'mac_file_path' => DesktopApplication::MAC_FILE_PATH,
-                'linux_file_path' => DesktopApplication::LINUX_FILE_PATH,
             ]);
         }
     }

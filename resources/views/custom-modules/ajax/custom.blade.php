@@ -398,7 +398,7 @@
                         @if ($settingClass)
                             @include('custom-modules.sections.version')
 
-                            @if ($plugins->where('envato_id', $envatoId)->first() && !(module_enabled('UniversalBundle') && isInstallFromUniversalBundleModule($key)))
+                            @if ($plugins->where('envato_id', $envatoId)->first() && !(module_enabled('UniversalBundle') && !isInstallFromUniversalBundleModule($key)))
                                 @include('custom-modules.sections.module-update')
                             @endif
                         @endif

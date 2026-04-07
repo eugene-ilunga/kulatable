@@ -3,7 +3,7 @@
         @csrf
 
         <div>
-            <x-label for="restaurantName" value="{{ __('modules.restaurant.name') }}" />
+            <x-label for="restaurantName" value="{{ __('modules.restaurant.name') }}" required />
             <x-input id="restaurantName" class="block mt-1 w-full" type="text" wire:model='restaurantName' />
             <x-input-error for="restaurantName" class="mt-2" />
         </div>
@@ -11,14 +11,14 @@
         @includeIf('subdomain::super-admin.restaurant.subdomain-field', ['restaurant' => $restaurant])
 
         <div class="mt-4">
-            <x-label for="email" value="{{ __('app.email') }}" />
+            <x-label for="email" value="{{ __('app.email') }}" required />
             <x-input id="email" class="block mt-1 w-full" type="email" wire:model='email' />
             <x-input-error for="email" class="mt-2" />
         </div>
 
         <div class="mt-4">
             <x-label class="mt-4" for="phone"
-                value="{{ __('modules.settings.restaurantPhoneNumber') }}" />
+                value="{{ __('modules.settings.restaurantPhoneNumber') }}" required/>
             <div class="flex gap-2 mt-2">
                 <!-- Phone Code Dropdown -->
                 <div x-data="{ isOpen: @entangle('phoneCodeIsOpen').live }" @click.away="isOpen = false" class="relative w-32">
@@ -75,13 +75,13 @@
         </div>
 
         <div class="mt-4">
-            <x-label for="address" value="{{ __('modules.settings.restaurantAddress') }}" />
+            <x-label for="address" value="{{ __('modules.settings.restaurantAddress') }}"  required/>
             <x-textarea id="address" class="block mt-1 w-full" wire:model='address' rows="3" />
             <x-input-error for="address" class="mt-2" />
         </div>
 
         <div class="mt-4">
-            <x-label for="country" value="{{ __('Country') }}" />
+            <x-label for="country" value="{{ __('Country') }}" required />
             <x-select id="restaurantCountry" class="mt-1 block w-full" wire:model.defer="country">
                 @foreach ($countries as $item)
                 <option value="{{ $item->id }}">{{ $item->countries_name }}</option>
@@ -109,6 +109,13 @@
                 <x-input id="twitter" class="block mt-1 w-full" type="url"
                    autofocus wire:model='twitter' />
                 <x-input-error for="twitter" class="mt-2" />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="googleBusiness" value="{{ __('modules.settings.google_business_link') }}" />
+                <x-input id="googleBusiness" class="block mt-1 w-full" type="url"
+                   autofocus wire:model='googleBusinessLink' placeholder="{{ __('placeholders.googleBusinessPlaceHolder') }}" />
+                <x-input-error for="googleBusinessLink" class="mt-2" />
             </div>
 
         <div class="mt-4">

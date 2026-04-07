@@ -27,7 +27,7 @@
 
                                 @forelse ($reasons as $reason)
                                 <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='reason-{{ $reason->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                    <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                    <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                         {{ $reason->reason }}
                                     </td>
 

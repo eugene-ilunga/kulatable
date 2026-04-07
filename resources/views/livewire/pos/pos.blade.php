@@ -11,23 +11,28 @@
         ])
     @endif
 
-
     {{-- Only render POS content if not blocked by registration/pending/declined --}}
     @if(!$shouldBlockPos)
+        @if($showRestaurantClosedBanner)
+            <div class="px-4 pt-2">
+                <div class="w-full p-3 text-sm font-medium text-center text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                    {{ $restaurantClosedMessage }}
+                </div>
+            </div>
+        @endif
+
         @if(!$orderTypeId)
         @livewire('forms.OrderTypeSelection')
         @endif
 
         <div class="flex-grow lg:flex h-auto">
             @include('pos.menu')
-            @if (!$orderDetail)
-            @include('pos.kot_items')
+            @if (!$orderDetail || ($orderDetail && $orderDetail->status == 'draft'))
+                @include('pos.kot_items')
             @elseif($orderDetail->status == 'kot')
                 @include('pos.order_items')
             @elseif($orderDetail->status == 'billed' || $orderDetail->status == 'paid')
                 @include('pos.order_detail')
-            @elseif($orderDetail->status == 'draft')
-                @include('pos.kot_items')
             @endif
         </div>
 
@@ -82,6 +87,10 @@
                 <x-button-cancel wire:click="$toggle('showTableModal')" wire:loading.attr="disabled" />
             </x-slot>
         </x-dialog-modal>
+
+        @if(module_enabled('Hotel')  && in_array('Hotel', restaurant_modules()))
+            @include('hotel::pos.show-stay')
+        @endif
 
         <x-dialog-modal wire:model.live="showDiscountModal" maxWidth="xl">
             <x-slot name="title">

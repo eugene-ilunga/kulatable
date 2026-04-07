@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Support\LocaleManager;
-use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
 use App\Models\BaseModel;
@@ -11,7 +9,6 @@ use App\Models\BaseModel;
 class LanguageSetting extends BaseModel
 {
     protected $guarded = ['id'];
-    private static ?Collection $selectionCache = null;
 
     const LANGUAGES_TRANS = [
         'en' => 'English',
@@ -173,83 +170,5 @@ class LanguageSetting extends BaseModel
         return Attribute::get(function (): string {
             return asset('flags/1x1/' . strtolower($this->flag_code) . '.svg');
         });
-    }
-
-    public static function availableForSelection(): Collection
-    {
-        if (self::$selectionCache instanceof Collection) {
-            return self::$selectionCache;
-        }
-
-        $availableLocales = collect(languages());
-
-        if ($availableLocales->isEmpty()) {
-            self::$selectionCache = static::query()->where('active', 1)->get();
-
-            return self::$selectionCache;
-        }
-
-        $orderedCodes = $availableLocales
-            ->pluck('language_code')
-            ->map(fn (?string $code) => LocaleManager::normalize($code))
-            ->filter()
-            ->values();
-
-        foreach ($availableLocales as $locale) {
-            $code = LocaleManager::normalize($locale->language_code ?? null);
-
-            if (! $code) {
-                continue;
-            }
-
-            static::query()->updateOrCreate(
-                ['language_code' => $code],
-                [
-                    'flag_code' => $locale->flag_code ?? LocaleManager::normalize($code),
-                    'language_name' => $locale->language_name ?? locale_label($code),
-                    'active' => 1,
-                    'is_rtl' => (int) ($locale->is_rtl ?? locale_is_rtl($code)),
-                ]
-            );
-        }
-
-        $languages = static::query()
-            ->whereIn('language_code', $orderedCodes->all())
-            ->get()
-            ->sortBy(fn (self $language) => array_search(
-                LocaleManager::normalize($language->language_code) ?? $language->language_code,
-                $orderedCodes->all(),
-                true
-            ))
-            ->values();
-
-        self::$selectionCache = $languages;
-
-        return self::$selectionCache;
-    }
-
-    public static function preferredForLocale(?string $locale): ?self
-    {
-        $available = static::availableForSelection();
-
-        if ($available->isEmpty()) {
-            return null;
-        }
-
-        $normalizedLocale = LocaleManager::normalize($locale);
-
-        if ($normalizedLocale) {
-            $match = $available->first(function (self $language) use ($normalizedLocale) {
-                $languageCode = LocaleManager::normalize($language->language_code) ?? $language->language_code;
-
-                return $languageCode === $normalizedLocale;
-            });
-
-            if ($match) {
-                return $match;
-            }
-        }
-
-        return $available->first();
     }
 }

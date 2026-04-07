@@ -1,6 +1,26 @@
-<div
-    class="lg:w-6/12 flex flex-col bg-white dark:border-gray-700 pr-4 px-2 py-4 dark:bg-gray-800 lg:sticky overflow-hidden rounded-md">
-    <div class="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 pb-36">
+<div class="w-full flex flex-col bg-white dark:border-gray-700 pr-4 px-2 py-4 dark:bg-gray-800 lg:sticky overflow-hidden pb-10 rounded-md">
+    <style>
+        .pos-hover-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .pos-hover-scrollbar::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        .pos-hover-scrollbar:hover {
+            scrollbar-width: thin;
+        }
+
+        .pos-hover-scrollbar:hover::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+    </style>
+
+    <div class="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-1 pb-36 pos-hover-scrollbar">
         <div class="flex items-center justify-between mt-1 mb-1">
             <div class="inline-flex items-center gap-2 py-1 font-medium text-gray-800 text-sm dark:text-neutral-200">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -10,32 +30,49 @@
                     <path
                         d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5m8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5" />
                 </svg>
-                @if(!isOrderPrefixEnabled())
-                    @lang('modules.order.orderNumber') #{{ $orderNumber }}
-                @else
-                    {{ $formattedOrderNumber }}
-                @endif
+                <span id="order-number-display">
+                    @if(!isOrderPrefixEnabled())
+                        @lang('modules.order.orderNumber') #<span class="order-number-value">{{ $orderNumber }}</span>
+                    @else
+                        <span class="formatted-order-number-value">{{ $formattedOrderNumber }}</span>
+                    @endif
+                </span>
             </div>
 
             @if ($orderType == 'dine_in')
-                <div class="inline-flex items-center gap-2 text-xs dark:text-gray-300">
-                    @if (!is_null($tableNo))
+                <div class="inline-flex items-center gap-2 text-xs dark:text-gray-300 table-display-container">
+                    <div id="table-info-section" style="display: {{ $tableNo ? 'flex' : 'none' }};" class="inline-flex items-center gap-2">
                         <svg fill="currentColor" class="w-4 h-4 transition duration-75 text-gray-700 dark:text-gray-200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44.999 44.999" xml:space="preserve"><g stroke-width="0"/><g stroke-linecap="round" stroke-linejoin="round"/><path d="m42.558 23.378 2.406-10.92a1.512 1.512 0 0 0-2.954-.652l-2.145 9.733h-9.647a1.512 1.512 0 0 0 0 3.026h.573l-3.258 7.713a1.51 1.51 0 0 0 1.393 2.102c.59 0 1.15-.348 1.394-.925l2.974-7.038 4.717.001 2.971 7.037a1.512 1.512 0 1 0 2.787-1.177l-3.257-7.713h.573a1.51 1.51 0 0 0 1.473-1.187m-28.35 1.186h.573a1.512 1.512 0 0 0 0-3.026H5.134L2.99 11.806a1.511 1.511 0 1 0-2.954.652l2.406 10.92a1.51 1.51 0 0 0 1.477 1.187h.573L1.234 32.28a1.51 1.51 0 0 0 .805 1.98 1.515 1.515 0 0 0 1.982-.805l2.971-7.037 4.717-.001 2.972 7.038a1.514 1.514 0 0 0 1.982.805 1.51 1.51 0 0 0 .805-1.98z"/><path d="M24.862 31.353h-.852V18.308h8.13a1.513 1.513 0 1 0 0-3.025H12.856a1.514 1.514 0 0 0 0 3.025h8.13v13.045h-.852a1.514 1.514 0 0 0 0 3.027h4.728a1.513 1.513 0 1 0 0-3.027"/></svg>
-                        <span class="font-medium">{{ $tableNo }}</span>
+                        <span id="table-code" class="font-medium">{{ $tableNo }}</span>
                         @if (user_can('Update Order'))
-                            <x-secondary-button wire:click="openTableChangeConfirmation" class="text-xs">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                    class="bi bi-gear" viewBox="0 0 16 16">
-                                    <path
-                                        d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
-                                    <path
-                                        d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1-.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115z" />
-                                </svg>
+                            <x-secondary-button onclick="showTableChangeConfirmationModal()" class="text-xs">
+                                <svg width="20" height="20"  viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.74 14H22v-4h-2.26v-.14a8.2 8.2 0 0 0-.82-1.92l1.6-1.6-2.86-2.83-1.6 1.6A8 8 0 0 0 14 4.25V2h-4v2.25a8 8 0 0 0-2.06.86l-1.6-1.6-2.83 2.83 1.6 1.6a8.2 8.2 0 0 0-.82 1.92V10H2v4h2.26v.14a8.2 8.2 0 0 0 .82 1.92l-1.6 1.6 2.83 2.83 1.6-1.6a8 8 0 0 0 2.06.86V22h4v-2.25a8 8 0 0 0 2.06-.86l1.6 1.6 2.83-2.83-1.6-1.6a8.2 8.2 0 0 0 .82-1.92Z"/></svg>
                             </x-secondary-button>
                         @endif
-                    @elseif(user_can('Update Order'))
-                        <x-secondary-button class="text-xs" wire:click="openTableChangeConfirmation">@lang('modules.order.setTable')</x-secondary-button>
-                    @endif
+                    </div>
+                    <div id="set-table-section" style="display: {{ $tableNo ? 'none' : 'block' }};">
+                        @if(user_can('Update Order'))
+                            <x-secondary-button class="text-xs" onclick="showTableChangeConfirmationModal()">@lang('modules.order.setTable')</x-secondary-button>
+                        @endif
+                    </div>
+                </div>
+            @else
+
+                <div class="mt-2 customer-display-container px-2">
+                    <div id="customer-info-section" class="flex items-center gap-2" style="display: {{ $customer ? 'flex' : 'none' }};">
+                        <div id="customer-name" class="font-semibold text-gray-700 dark:text-gray-300">{{ $customer->name ?? '' }}</div>
+                        @if(user_can('Update Order'))
+                            <button id="edit-customer-btn" onclick="showAddCustomerModal({{ $customer->id ?? 'null' }})" title="{{__('modules.order.updateCustomerDetails')}}" class="p-1 text-gray-500 transition-colors bg-gray-100 rounded-md hover:text-gray-700 hover:bg-gray-200 rtl:ml-2 ltr:mr-2 dark:text-gray-300 dark:bg-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                            </button>
+                        @endif
+                    </div>
+
+                    <div id="add-customer-section" style="display: {{ $customer ? 'none' : 'block' }};">
+                        <a href="javascript:;"
+                            onclick="showAddCustomerModal()"
+                            class="text-sm underline underline-offset-2 dark:text-gray-300">&plus; @lang('modules.order.addCustomerDetails')</a>
+                    </div>
                 </div>
             @endif
         </div>
@@ -44,59 +81,64 @@
             @if ($orderType == 'dine_in')
                 <div class="inline-flex items-center gap-1 text-xs dark:text-gray-300">
                     @lang('modules.order.noOfPax')
-                    <x-input type="number" step='1' min='1' class="w-16 text-xs" wire:model='noOfPax' />
+                    <x-input type="number" step='1' min='1' class="w-16 text-xs" id="no-of-pax" value="{{ $noOfPax }}" />
                 </div>
 
-                @if (auth()->user()->roles->pluck('display_name')->contains('Waiter') || $this->isWaiterLocked)
+                @if (auth()->user()->roles->pluck('display_name')->contains('Waiter') || $isWaiterLocked)
                     <div class="inline-flex items-center gap-1 text-xs dark:text-gray-300">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3m0 14.2a7.2 7.2 0 0 1-6-3.22c.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08a7.2 7.2 0 0 1-6 3.22" />
                         </svg>
                         <span>@lang('modules.order.waiter'):</span>
-                        <span class="font-medium">{{ $this->waiterName }}</span>
+                        <span class="font-medium">{{ $waiterName }}</span>
                     </div>
                 @elseif(user_can('Update Order'))
                     <div class="inline-flex items-center gap-2">
-                        <x-select class="text-xs w-36 xl:w-fit" wire:model.live='selectWaiter' :disabled="$this->isWaiterLocked">
+                        <x-select class="text-xs w-36 xl:w-fit" id="waiter-select" onchange="updateWaiterSelection(this.value)" :disabled="$isWaiterLocked">
                             <option value="">@lang('modules.order.selectWaiter')</option>
                             @foreach ($users as $item)
-                                <option value="{{ $item->id }}" {{ ($this->currentWaiter && $this->currentWaiter->id == $item->id) ? 'selected' : '' }}>{{ $item->name }}</option>
+                                <option value="{{ $item->id }}" {{ ($currentWaiter && $currentWaiter->id == $item->id) ? 'selected' : '' }}>{{ $item->name }}</option>
                             @endforeach
                         </x-select>
                     </div>
-                @elseif($this->currentWaiter)
+                @elseif($currentWaiter)
                     <div class="inline-flex items-center gap-1 text-xs dark:text-gray-300">
                         <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="currentColor" viewBox="0 0 24 24">
                             <path
                                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3m0 14.2a7.2 7.2 0 0 1-6-3.22c.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08a7.2 7.2 0 0 1-6 3.22" />
                         </svg>
                         <span>@lang('modules.order.waiter'):</span>
-                        <span class="font-medium">{{ $this->waiterName }}</span>
+                        <span class="font-medium text-gray-900 dark:text-gray-100">{{ $waiterName }}</span>
                     </div>
                 @endif
             @endif
 
             @if ($orderType == 'delivery' && user_can('Update Order'))
-                <div class="flex items-center justify-between gap-2 w-full">
-                    <div class="inline-flex items-center gap-2 w-full">
-                        <svg class="w-5 h-5 text-gray-700 dark:text-gray-200"
-                            fill="currentColor" version="1.0" viewBox="0 0 512 512"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <g transform="translate(0 512) scale(.1 -.1)">
-                                <path
-                                    d="m2605 4790c-66-13-155-48-213-82-71-42-178-149-220-221-145-242-112-552 79-761 59-64 61-67 38-73-13-4-60-24-104-46-151-75-295-249-381-462-20-49-38-91-39-93-2-2-19 8-40 22s-54 30-74 36c-59 16-947 12-994-4-120-43-181-143-122-201 32-33 76-33 106 0 41 44 72 55 159 55h80v-135c0-131 1-137 25-160l24-25h231 231l24 25c24 23 25 29 25 161v136l95-4c82-3 97-6 117-26l23-23v-349-349l-46-46-930-6-29 30c-17 16-30 34-30 40 0 7 34 11 95 11 88 0 98 2 120 25 16 15 25 36 25 55s-9 40-25 55c-22 23-32 25-120 25h-95v80 80h55c67 0 105 29 105 80 0 19-9 40-25 55l-24 25h-231-231l-24-25c-33-32-33-78 0-110 22-23 32-25 120-25h95v-80-80h-175c-173 0-176 0-200-25-33-32-33-78 0-110 24-25 27-25 197-25h174l12-45c23-88 85-154 171-183 22-8 112-12 253-12h220l-37-43c-103-119-197-418-211-669-7-115-7-116 19-142 26-25 29-26 164-26h138l16-69c55-226 235-407 464-466 77-20 233-20 310 0 228 59 409 240 463 464l17 71h605 606l13-62c58-281 328-498 621-498 349 0 640 291 640 640 0 237-141 465-350 569-89 43-193 71-271 71h-46l-142 331c-78 183-140 333-139 335 2 1 28-4 58-12 80-21 117-18 145 11l25 24v351 351l-26 26c-24 24-30 25-91 20-130-12-265-105-317-217l-23-49-29 30c-16 17-51 43-79 57-49 26-54 27-208 24-186-3-227 9-300 87-43 46-137 173-137 185 0 3 10 6 23 6s48 12 78 28c61 31 112 91 131 155 7 25 25 53 45 70 79 68 91 152 34 242-17 27-36 65-41 85-13 46-13 100 0 100 6 0 22 11 35 25 30 29 33 82 10 190-61 290-332 508-630 504-38-1-88-5-110-9zm230-165c87-23 168-70 230-136 55-57 108-153 121-216l6-31-153-4c-131-3-161-6-201-25-66-30-133-96-165-162-26-52-28-66-31-210l-4-153-31 6c-63 13-159 66-216 121-66 62-113 143-136 230-88 339 241 668 580 580zm293-619c7-41 28-106 48-147l36-74-24-15c-43-28-68-59-68-85 0-40-26-92-54-110-30-20-127-16-211 8l-50 14-3 175c-2 166-1 176 21 218 35 67 86 90 202 90h91l12-74zm-538-496c132-25 214-88 348-269 101-137 165-199 241-237 31-15 57-29 59-30s-6-20-17-43c-12-22-27-75-33-117-12-74-12-76-38-71-149 30-321 156-424 311-53 80-90 95-140 55-48-38-35-89 52-204l30-39-28-36c-42-54-91-145-110-208l-18-57-337-3-338-2 6 82c9 112 47 272 95 400 135 357 365 522 652 468zm1490-630c0-254 1-252-83-167-54 53-77 104-77 167s23 114 77 168c84 84 83 86 83-168zm-454 63c18-13 41-46 57-83l26-61-45-19c-75-33-165-52-244-54l-75-1-3 29c-8 72 44 166 113 201 42 22 132 16 171-12zm-2346-63v-80h-120-120v80 80h120 120v-80zm1584-184c80-52 154-84 261-111l90-23 112-483c68-295 112-506 112-540 1-68-21-134-56-171l-26-27-17 48c-29 86-99 159-177 186l-38 13-6 279c-5 297-5 297-64 414-58 113-212 233-328 254-21 4-41 14-44 21-12 32 88 201 111 186 6-4 37-24 70-46zm1099-493 185-433-348-490h-138-138l33 68c40 81 56 176 44 252-8 47-203 894-217 941-4 13 9 17 75 23 80 6 230 44 280 71 14 7 29 10 32 7 4-4 90-202 192-439zm-1323 187c118-22 229-99 275-190 37-74 45-138 45-375v-225h-160-160v115c0 179-47 289-158 369-91 67-141 76-417 76h-244l10 32c5 18 9 72 9 120v88h374c209 0 397-4 426-10zm-319-402c50-15 111-67 135-115 16-32 20-70 24-244l5-205 36-72 35-72h-759-759l7 63c17 164 95 400 165 502 47 68 129 124 215 145 52 13 853 12 896-2zm2114-323c256-67 415-329 350-580-48-184-202-326-390-358-197-34-412 76-500 257-19 39-38 86-41 104l-6 32h80 81l24-53c31-69 86-123 156-156 77-36 192-36 266-1 63 31 124 91 156 155 33 68 34 197 2 267-27 60-95 127-156 157-95 46-229 36-311-22-18-12-26-15-21-6 13 22 126 182 143 202 19 22 86 23 167 2zm-1315-243c39-21 87-99 77-125-6-15-27-17-178-17-193 0-231 7-289 58-35 29-70 78-70 97 0 3 96 5 213 5 187 0 217-2 247-18zm1288-89c51-38 67-70 67-133s-16-95-69-134c-43-33-132-29-179 7-20 15-37 32-37 38 0 5 36 9 80 9 73 0 83 3 105 25 33 32 33 78 0 110-22 22-32 25-105 25-44 0-80 4-80 8 0 12 29 37 65 57 39 21 117 15 153-12zm-397-46c-10-9-11-8-5 6 3 10 9 15 12 12s0-11-7-18zm-2460-217c45-106 169-184 289-184s244 78 289 184l22 50h81 81l-7-32c-13-65-66-159-123-219-186-195-500-195-686 0-57 60-110 154-123 219l-6 32h80 81l22-50zm419 41c0-16-51-50-91-63-30-8-48-8-78 0-40 13-91 47-91 63 0 5 57 9 130 9s130-4 130-9z" />
-                            </g>
-                        </svg>
+                <div class="flex items-center gap-2 w-full">
+                    <svg class="w-5 h-5 flex-shrink-0 text-gray-700 dark:text-gray-200"
+                        fill="currentColor" version="1.0" viewBox="0 0 512 512"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(0 512) scale(.1 -.1)">
+                            <path
+                                d="m2605 4790c-66-13-155-48-213-82-71-42-178-149-220-221-145-242-112-552 79-761 59-64 61-67 38-73-13-4-60-24-104-46-151-75-295-249-381-462-20-49-38-91-39-93-2-2-19 8-40 22s-54 30-74 36c-59 16-947 12-994-4-120-43-181-143-122-201 32-33 76-33 106 0 41 44 72 55 159 55h80v-135c0-131 1-137 25-160l24-25h231 231l24 25c24 23 25 29 25 161v136l95-4c82-3 97-6 117-26l23-23v-349-349l-46-46-930-6-29 30c-17 16-30 34-30 40 0 7 34 11 95 11 88 0 98 2 120 25 16 15 25 36 25 55s-9 40-25 55c-22 23-32 25-120 25h-95v80 80h55c67 0 105 29 105 80 0 19-9 40-25 55l-24 25h-231-231l-24-25c-33-32-33-78 0-110 22-23 32-25 120-25h95v-80-80h-175c-173 0-176 0-200-25-33-32-33-78 0-110 24-25 27-25 197-25h174l12-45c23-88 85-154 171-183 22-8 112-12 253-12h220l-37-43c-103-119-197-418-211-669-7-115-7-116 19-142 26-25 29-26 164-26h138l16-69c55-226 235-407 464-466 77-20 233-20 310 0 228 59 409 240 463 464l17 71h605 606l13-62c58-281 328-498 621-498 349 0 640 291 640 640 0 237-141 465-350 569-89 43-193 71-271 71h-46l-142 331c-78 183-140 333-139 335 2 1 28-4 58-12 80-21 117-18 145 11l25 24v351 351l-26 26c-24 24-30 25-91 20-130-12-265-105-317-217l-23-49-29 30c-16 17-51 43-79 57-49 26-54 27-208 24-186-3-227 9-300 87-43 46-137 173-137 185 0 3 10 6 23 6s48 12 78 28c61 31 112 91 131 155 7 25 25 53 45 70 79 68 91 152 34 242-17 27-36 65-41 85-13 46-13 100 0 100 6 0 22 11 35 25 30 29 33 82 10 190-61 290-332 508-630 504-38-1-88-5-110-9zm230-165c87-23 168-70 230-136 55-57 108-153 121-216l6-31-153-4c-131-3-161-6-201-25-66-30-133-96-165-162-26-52-28-66-31-210l-4-153-31 6c-63 13-159 66-216 121-66 62-113 143-136 230-88 339 241 668 580 580zm293-619c7-41 28-106 48-147l36-74-24-15c-43-28-68-59-68-85 0-40-26-92-54-110-30-20-127-16-211 8l-50 14-3 175c-2 166-1 176 21 218 35 67 86 90 202 90h91l12-74zm-538-496c132-25 214-88 348-269 101-137 165-199 241-237 31-15 57-29 59-30s-6-20-17-43c-12-22-27-75-33-117-12-74-12-76-38-71-149 30-321 156-424 311-53 80-90 95-140 55-48-38-35-89 52-204l30-39-28-36c-42-54-91-145-110-208l-18-57-337-3-338-2 6 82c9 112 47 272 95 400 135 357 365 522 652 468zm1490-630c0-254 1-252-83-167-54 53-77 104-77 167s23 114 77 168c84 84 83 86 83-168zm-454 63c18-13 41-46 57-83l26-61-45-19c-75-33-165-52-244-54l-75-1-3 29c-8 72 44 166 113 201 42 22 132 16 171-12zm-2346-63v-80h-120-120v80 80h120 120v-80zm1584-184c80-52 154-84 261-111l90-23 112-483c68-295 112-506 112-540 1-68-21-134-56-171l-26-27-17 48c-29 86-99 159-177 186l-38 13-6 279c-5 297-5 297-64 414-58 113-212 233-328 254-21 4-41 14-44 21-12 32 88 201 111 186 6-4 37-24 70-46zm1099-493 185-433-348-490h-138-138l33 68c40 81 56 176 44 252-8 47-203 894-217 941-4 13 9 17 75 23 80 6 230 44 280 71 14 7 29 10 32 7 4-4 90-202 192-439zm-1323 187c118-22 229-99 275-190 37-74 45-138 45-375v-225h-160-160v115c0 179-47 289-158 369-91 67-141 76-417 76h-244l10 32c5 18 9 72 9 120v88h374c209 0 397-4 426-10zm-319-402c50-15 111-67 135-115 16-32 20-70 24-244l5-205 36-72 35-72h-759-759l7 63c17 164 95 400 165 502 47 68 129 124 215 145 52 13 853 12 896-2zm2114-323c256-67 415-329 350-580-48-184-202-326-390-358-197-34-412 76-500 257-19 39-38 86-41 104l-6 32h80 81l24-53c31-69 86-123 156-156 77-36 192-36 266-1 63 31 124 91 156 155 33 68 34 197 2 267-27 60-95 127-156 157-95 46-229 36-311-22-18-12-26-15-21-6 13 22 126 182 143 202 19 22 86 23 167 2zm-1315-243c39-21 87-99 77-125-6-15-27-17-178-17-193 0-231 7-289 58-35 29-70 78-70 97 0 3 96 5 213 5 187 0 217-2 247-18zm1288-89c51-38 67-70 67-133s-16-95-69-134c-43-33-132-29-179 7-20 15-37 32-37 38 0 5 36 9 80 9 73 0 83 3 105 25 33 32 33 78 0 110-22 22-32 25-105 25-44 0-80 4-80 8 0 12 29 37 65 57 39 21 117 15 153-12zm-397-46c-10-9-11-8-5 6 3 10 9 15 12 12s0-11-7-18zm-2460-217c45-106 169-184 289-184s244 78 289 184l22 50h81 81l-7-32c-13-65-66-159-123-219-186-195-500-195-686 0-57 60-110 154-123 219l-6 32h80 81l22-50zm419 41c0-16-51-50-91-63-30-8-48-8-78 0-40 13-91 47-91 63 0 5 57 9 130 9s130-4 130-9z" />
+                        </g>
+                    </svg>
 
-                        <x-select class="w-full text-xs" wire:model.live='selectDeliveryExecutive'
-                            wire:change='saveDeliveryExecutive'>
-                            <option value="">@lang('modules.order.selectDeliveryExecutive')</option>
-                            @foreach ($deliveryExecutives as $item)
-                                <option value="{{ $item->id }}">{{ $item->name }}</option>
-                            @endforeach
-                        </x-select>
-                    </div>
+                    <x-select class="w-full text-xs" id="delivery-executive-select" onchange="updateSelectDeliveryExecutive(this.value)">
+                        <option value="">@lang('modules.order.selectDeliveryExecutive')</option>
+                        @foreach ($deliveryExecutives as $item)
+                            @php
+                                $isBusy = (bool)($deliveryExecutiveBusyMap[$item->id] ?? false);
+                                $isSelected = (int)$selectDeliveryExecutive === (int)$item->id;
+                            @endphp
+                            @if (!$isBusy || $isSelected)
+                                <option value="{{ $item->id }}" {{ $isSelected ? 'selected' : '' }}>
+                                    {{ $item->name }}
+                                </option>
+                            @endif
+                        @endforeach
+                    </x-select>
                 </div>
             @endif
 
@@ -153,7 +195,7 @@
                         <h3 class="text-sm font-semibold">
                             {{ __('modules.order.orderStatus') }}
                         </h3>
-                        <span class="px-3 py-1 text-xs font-medium rounded-full" @class([
+                        <span id="order-status-badge" data-status="{{ $orderStatus->value }}" class="px-3 py-1 text-xs font-medium rounded-full" @class([
                             'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' =>
                                 $orderStatus->value === 'delivered' || $orderStatus->value === 'served',
                             'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' =>
@@ -173,12 +215,12 @@
                             <div class="h-full bg-skin-base transition-all duration-500" style="width: {{ $currentIndex > 0 ? ($currentIndex / (count($statuses) - 1)) * 100 : 0 }}%;"></div>
                         </div>
 
-                        <div class="relative flex justify-between px-1 sm:px-2">
+                        <div id="order-status-steps" class="relative flex justify-between px-1 sm:px-2">
                             @foreach ($statuses as $index => $status)
-                                <div class="flex flex-col items-center group relative" x-data="{ tooltip: false }" @mouseenter="tooltip = true" @mouseleave="tooltip = false" @click="tooltip = !tooltip">
+                                <div data-status="{{ $status }}" class="order-status-step flex flex-col items-center group relative" x-data="{ tooltip: false }" @mouseenter="tooltip = true" @mouseleave="tooltip = false" @click="tooltip = !tooltip">
                                     <!-- Icon container with improved styling -->
                                     <div
-                                        class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 relative z-10 shadow-sm
+                                        class="order-status-icon w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 relative z-10 shadow-sm
                                         @if ($index <= $currentIndex)
                                             bg-skin-base text-white ring-2 ring-skin-base ring-offset-1 sm:ring-offset-2 dark:ring-offset-gray-800
                                         @elseif ($index === $currentIndex + 1)
@@ -194,6 +236,11 @@
                                         {{ App\Enums\OrderStatus::from($status)->translatedLabel() }}
                                         <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
                                     </div>
+
+                                    <!-- Hidden label used by JS to update badge text -->
+                                    <span class="order-status-label sr-only">
+                                        {{ App\Enums\OrderStatus::from($status)->translatedLabel() }}
+                                    </span>
                                 </div>
                             @endforeach
                         </div>
@@ -202,8 +249,8 @@
                     @if (user_can('Update Order'))
                         <div class="flex justify-end items-center mt-2 space-x-2 rtl:!space-x-reverse">
                             @if ($orderStatus->value === 'placed')
-                                <x-danger-button class="inline-flex items-center gap-2 text-xs dark:text-gray-200"
-                                    wire:click="$toggle('confirmDeleteModal')">
+                                <x-danger-button id="order-status-cancel-btn" class="inline-flex items-center gap-2 text-xs dark:text-gray-200"
+                                    onclick="confirmCancelOrder()">
                                     <span>{{ __('modules.order.cancelOrder') }}</span>
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -213,9 +260,9 @@
                             @endif
 
                             @if ($currentIndex < count($statuses) - 1)
-                                <x-secondary-button class="inline-flex items-center gap-2 text-xs"
-                                    wire:click="$set('orderStatus', '{{ $statuses[$nextIndex] }}')">
-                                    <span>{{ __('modules.order.moveTo') }}
+                                <x-secondary-button id="order-status-next-btn" class="inline-flex items-center gap-2 text-xs dark:text-gray-200"
+                                    onclick="updateOrderStatus('{{ $statuses[$nextIndex] }}')">
+                                    <span id="order-status-next-label">{{ __('modules.order.moveTo') }}
                                         {{ App\Enums\OrderStatus::from($statuses[$nextIndex])->translatedLabel() }}</span>
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -233,7 +280,7 @@
             @php
                 $hasItems = false;
                 foreach ($orderItemList as $key => $item) {
-                    if (strpos($key, 'kot_' . $kot->id) !== false) {
+                    if (strpos($key, 'kot_' . $kot->id . '_') === 0) {
                         $hasItems = true;
                         break;
                     }
@@ -246,356 +293,7 @@
                     <div>{{ $kot->created_at->timezone(timezone())->translatedFormat('d F, h:i A') }}</div>
                 </div>
 
-                <div class="flex flex-col gap-2">
-                    @php
-                        // Count items that belong to this KOT
-                        $kotItemCount = 0;
-                        foreach ($orderItemList as $key => $item) {
-                            $kotPrefix = 'kot_' . $kot->id;
-                            if (strpos($key, $kotPrefix) !== false) {
-                                $kotItemCount++;
-                            }
-                        }
-                    @endphp
-                    @forelse ($orderItemList as $key => $item)
-                        @php
-                            // Check if this item belongs to the current KOT
-                            // Keys are formatted as: "kot_{kot_id}_{item_id}" (with quotes)
-                            $kotPrefix = 'kot_' . $kot->id;
-                            $belongsToKot = strpos($key, $kotPrefix) !== false;
-                        @endphp
-                        @continue(!$belongsToKot)
-
-                        @php
-                            $itemName = $item->item_name;
-                            $itemVariation = (isset($orderItemVariation[$key]) ? $orderItemVariation[$key]->variation : '');
-                            $displayPrice = $this->getItemDisplayPrice($key);
-
-                            // Get amount and stamp info from kot_items table for KOT orders
-                            $totalAmount = $orderItemAmount[$key] ?? 0; // Default to component property (dynamic)
-                            $isFreeItem = false;
-                            $hasDiscount = false;
-                            $discountAmount = 0;
-                            $originalAmount = 0;
-                            $kotItem = null;
-                            $itemFoundInDatabase = false; // CRITICAL: Track if we found item in DB
-                            $hasStampRule = false;
-
-                            if (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail && $orderDetail->status === 'kot') {
-                                // Extract kot_item_id from key (format: "kot_{kot_id}_{item_id}")
-                                $keyParts = explode('_', trim($key, '"'));
-                                if (count($keyParts) >= 3 && $keyParts[0] === 'kot') {
-                                    $kotItemId = (int)($keyParts[2] ?? 0);
-                                    if ($kotItemId > 0) {
-                                        try {
-                                            // Load kot items if not already loaded (ensure all fields are loaded)
-                                            if (!$kot->relationLoaded('items')) {
-                                                $kot->load('items');
-                                            }
-
-                                            // Find the kot_item from the loaded relationship
-                                            // Try both id and direct access
-                                            $kotItem = $kot->items->firstWhere('id', $kotItemId);
-
-                                            // If not found by id, try to find by matching menu_item_id and variation
-                                            if (!$kotItem) {
-                                                $menuItemId = $item->id ?? null;
-                                                $variationId = isset($orderItemVariation[$key]) ? $orderItemVariation[$key]->id : null;
-
-                                                $kotItem = $kot->items->first(function($ki) use ($menuItemId, $variationId) {
-                                                    return $ki->menu_item_id == $menuItemId
-                                                        && ($variationId ? $ki->menu_item_variation_id == $variationId : is_null($ki->menu_item_variation_id));
-                                                });
-                                            }
-
-                                            if ($kotItem) {
-                                                $itemFoundInDatabase = true; // Found in database
-
-                                                // Prefer dynamic component amount when qty changes, but keep DB discount
-                                                $dbAmount = (float)($kotItem->amount ?? 0);
-                                                if (isset($orderItemAmount[$key]) && $orderItemAmount[$key] !== null && $orderItemAmount[$key] !== '') {
-                                                    $liveAmount = (float)$orderItemAmount[$key];
-                                                    // If live amount equals expected full price and DB has a lower discounted amount, keep DB
-                                                    $basePrice = (float)($kotItem->getAttribute('price') ?? $kotItem->price ?? ($item->price ?? 0));
-                                                    $modifierPrice = 0;
-                                                    if ($kotItem->relationLoaded('modifierOptions')) {
-                                                        $modifierPrice = (float)$kotItem->modifierOptions->sum('price');
-                                                    }
-                                                    $qty = isset($orderItemQty[$key]) ? (int)$orderItemQty[$key] : (int)($kotItem->quantity ?? 1);
-                                                    $expectedFull = ($basePrice + $modifierPrice) * $qty;
-                                                    if ($dbAmount > 0 && $dbAmount < $expectedFull - 0.01 && abs($liveAmount - $expectedFull) < 0.01) {
-                                                        $totalAmount = $dbAmount;
-                                                    } else {
-                                                        $totalAmount = $liveAmount;
-                                                    }
-                                                } else {
-                                                    $totalAmount = $dbAmount;
-                                                }
-
-                                                // STRICT CHECK: Only true if database value is exactly 1, true, or '1'
-                                                // Explicitly check for 0, false, null, '0', '' and set to false
-                                                $dbFreeValue = $kotItem->getAttribute('is_free_item_from_stamp') ?? $kotItem->is_free_item_from_stamp ?? null;
-
-                                                // Explicitly check: if value is 0, false, null, '0', or empty string, it's NOT free
-                                                if ($dbFreeValue === 0 || $dbFreeValue === false || $dbFreeValue === null || $dbFreeValue === '0' || $dbFreeValue === '') {
-                                                    $isFreeItem = false;
-                                                } else {
-                                                    // Only mark as free if value is exactly 1, true, or '1'
-                                                    $isFreeItem = ($dbFreeValue === 1 || $dbFreeValue === true || $dbFreeValue === '1');
-                                                }
-
-                                                // Only show stamp discount if a stamp rule is present
-                                                $hasStampRule = !empty($kotItem->stamp_rule_id);
-
-                                                // Check for discount from stamp - use dynamic values for display
-                                                if ($hasStampRule) {
-                                                    $discountAmount = (float)($kotItem->getAttribute('discount_amount') ?? $kotItem->discount_amount ?? 0);
-                                                    $isDiscounted = (bool)($kotItem->getAttribute('is_discounted') ?? $kotItem->is_discounted ?? false);
-                                                    $hasDiscount = $discountAmount > 0 || $isDiscounted;
-                                                }
-
-                                                // Calculate expected/original amount from DB price + modifiers
-                                                $basePrice = (float)($kotItem->getAttribute('price') ?? $kotItem->price ?? ($item->price ?? 0));
-                                                $modifierPrice = 0;
-                                                if ($kotItem->relationLoaded('modifierOptions')) {
-                                                    $modifierPrice = (float)$kotItem->modifierOptions->sum('price');
-                                                }
-                                                $qty = isset($orderItemQty[$key]) ? (int)$orderItemQty[$key] : (int)($kotItem->quantity ?? 1);
-                                                $expectedAmount = ($basePrice + $modifierPrice) * $qty;
-
-                                                if ($hasStampRule && $expectedAmount > $totalAmount + 0.01) {
-                                                    $hasDiscount = true;
-                                                    $discountAmount = max(0, round($expectedAmount - $totalAmount, 2));
-                                                    $originalAmount = $expectedAmount;
-                                                } elseif ($isFreeItem) {
-                                                    // For free items, calculate original amount from price
-                                                    $originalAmount = $expectedAmount;
-                                                }
-                                            }
-                                        } catch (\Exception $e) {
-                                            // Fallback to component property if error
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Compute dynamic discount display using current in-memory amounts
-                            if (!$isFreeItem && !$itemFoundInDatabase) {
-                                $basePrice = $orderItemVariation[$key]->price ?? $orderItemList[$key]->price ?? 0;
-                                $modifierPrice = isset($orderItemModifiersPrice[$key]) ? (float)$orderItemModifiersPrice[$key] : 0;
-                                $qty = isset($orderItemQty[$key]) ? (int)$orderItemQty[$key] : 1;
-                                $expectedAmount = ($basePrice + $modifierPrice) * $qty;
-                                $hasStampIndicator = (strpos($key, 'free_stamp_') === 0)
-                                    || (isset($itemNotes[$key]) && stripos($itemNotes[$key] ?? '', 'stamp') !== false);
-                                if ($hasStampIndicator && $totalAmount < $expectedAmount) {
-                                    $hasDiscount = true;
-                                    $discountAmount = max(0, round($expectedAmount - $totalAmount, 2));
-                                    $originalAmount = $expectedAmount;
-                                }
-                            }
-
-                            // FALLBACK: Only use key pattern or notes if item was NOT found in database
-                            // This is ONLY for draft orders or items not yet saved to database
-                            // CRITICAL: Only check fallback if we didn't find the item in database
-                            // IMPORTANT: If item was found in database, NEVER use fallback - database value is final
-                            if (!$itemFoundInDatabase) {
-                                // Only check key pattern for draft orders (when orderID might not be set or order is draft)
-                                $isDraftOrder = !isset($orderID) || !$orderID || (isset($orderDetail) && $orderDetail && $orderDetail->status === 'draft');
-                                if ($isDraftOrder) {
-                                    // Only check key pattern if not already set from database
-                                    // Reset to false first to ensure clean state
-                                    $isFreeItem = false;
-                                    $isFreeItem = strpos($key, 'free_stamp_') === 0
-                                        || (isset($itemNotes[$key]) && strpos($itemNotes[$key] ?? '', 'FREE') !== false);
-                                } else {
-                                    // For non-draft orders, if item not found in DB, it's definitely NOT free
-                                    $isFreeItem = false;
-                                }
-                            }
-                            // FINAL SAFEGUARD: If item was found in database, $isFreeItem is already set correctly above - do NOT override
-                            // If item was NOT found and it's not a draft order, ensure it's false
-                            if ($itemFoundInDatabase && !$isFreeItem) {
-                                // Explicitly ensure it stays false - database said it's not free
-                                $isFreeItem = false;
-                            }
-                        @endphp
-
-                        <div class="border border-gray-100 dark:border-gray-700 rounded-md p-3 flex flex-col gap-2 bg-white dark:bg-gray-800 shadow-sm {{ $isFreeItem ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : '' }}" wire:key='menu-item-{{ $key . microtime() }}' wire:loading.class.delay='opacity-40'>
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="text-gray-900 dark:text-white text-xs font-semibold">
-                                            {{ $itemName }}
-                                        </span>
-                                        @if ($isFreeItem)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                                                @lang('app.freeItem')
-                                            </span>
-                                        @elseif($hasDiscount && $discountAmount > 0)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                                @lang('app.stampDiscount')
-                                                <span class="ml-1 font-semibold">
-                                                    (-{{ currency_format($discountAmount, restaurant()->currency_id) }})
-                                                </span>
-                                            </span>
-                                        @endif
-                                    </div>
-
-                                    @if (!empty($itemVariation))
-                                        <span class="text-gray-500 dark:text-gray-400 text-[11px]">
-                                            &bull; {{ $itemVariation }}
-                                        </span>
-                                    @endif
-
-                                    @if (!empty($itemModifiersSelected[$key]))
-                                        <div class="inline-flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-white">
-                                            @foreach ($itemModifiersSelected[$key] as $modifierOptionId)
-                                                <div
-                                                    class="inline-flex items-center justify-between text-[11px] py-0.5 px-1 border-l-2 border-blue-500 bg-gray-200 dark:bg-gray-900 rounded-md">
-                                                    <span
-                                                        class="text-gray-900 dark:text-white">{{ $this->modifierOptions[$modifierOptionId]->name }}</span>
-                                                    <span
-                                                        class="text-gray-600 dark:text-gray-300">{{ currency_format($this->modifierOptions[$modifierOptionId]->price , restaurant()->currency_id) }}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    @if (!empty($itemNotes[$key]))
-                                        @php
-                                            $noteSegments = array_filter(array_map('trim', explode('|', $itemNotes[$key])));
-                                            $noteSegments = array_filter($noteSegments, function ($segment) {
-                                                return stripos($segment, 'stamp discount') === false;
-                                            });
-                                            $cleanNotes = trim(implode(' | ', $noteSegments));
-                                        @endphp
-                                        @if($cleanNotes !== '')
-                                        <div class="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400 font-medium mt-1">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                            </svg>
-                                            <span>{{ $cleanNotes }}</span>
-                                        </div>
-                                        @endif
-                                    @endif
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    @if ($isFreeItem)
-                                        <div class="flex flex-col items-end">
-                                            <div class="text-green-600 dark:text-green-400 text-xs font-bold">
-                                                {{ currency_format(0, restaurant()->currency_id) }}
-                                            </div>
-                                            @if($originalAmount > 0)
-                                                <div class="text-[10px] text-gray-400 line-through">
-                                                    {{ currency_format($originalAmount, restaurant()->currency_id) }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @elseif($hasDiscount && $discountAmount > 0)
-                                        <div class="flex flex-col items-end">
-                                            <div class="text-green-600 dark:text-green-400 text-xs font-bold">
-                                                {{ currency_format($totalAmount, restaurant()->currency_id) }}
-                                            </div>
-                                            @if($originalAmount > 0)
-                                                <div class="text-[10px] text-gray-400 line-through">
-                                                    {{ currency_format($originalAmount, restaurant()->currency_id) }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <div class="text-gray-500 dark:text-gray-400 text-[11px]">
-                                            {{ currency_format($displayPrice, restaurant()->currency_id) }}
-                                        </div>
-                                        <div class="text-gray-700 dark:text-gray-200 text-xs font-bold">
-                                            {{ currency_format($totalAmount, restaurant()->currency_id) }}
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-2 justify-between">
-                                <div class="relative inline-flex items-center max-w-[7rem]" wire:key='orderItemQty-{{ $key }}-counter'>
-                                    <button type="button" wire:click="subQty('{{ $key }}')"
-                                        wire:loading.attr="disabled" wire:loading.class="opacity-50"
-                                        class="bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 hover:bg-gray-200 border border-gray-300 rounded-s-md p-3 h-8 relative">
-                                        <svg class="w-2 h-2 text-gray-900 dark:text-white" aria-hidden="true"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 2">
-                                            <path stroke="currentColor" stroke-linecap="round"
-                                                stroke-linejoin="round" stroke-width="2" d="M1 1h16" />
-                                        </svg>
-                                        <div wire:loading.flex wire:target="subQty('{{ $key }}')"
-                                            class="absolute inset-0 items-center justify-center">
-                                            <svg class="animate-spin h-3 w-3 text-skin-base"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                    stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                        </div>
-                                    </button>
-
-                                    <input type="text" wire:model.lazy="orderItemQty.{{ $key }}" wire:change="updateQty('{{ $key }}')"
-                                        class="min-w-10 bg-white border-x-0 border-gray-300 h-8 text-center text-gray-900 text-xs block w-full py-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                        min="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
-
-                                    <button type="button" wire:click="addQty('{{ $key }}')"
-                                        wire:loading.attr="disabled" wire:loading.class="opacity-50"
-                                        class="bg-gray-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 hover:bg-gray-200 border border-gray-300 rounded-e-md p-3 h-8 relative">
-                                        <svg class="w-2 h-2 text-gray-900 dark:text-white" aria-hidden="true"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
-                                            <path stroke="currentColor" stroke-linecap="round"
-                                                stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16" />
-                                        </svg>
-                                        <div wire:loading.flex wire:target="addQty('{{ $key }}')"
-                                            class="absolute inset-0 items-center justify-center">
-                                            <svg class="animate-spin h-3 w-3 text-skin-base"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                    stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                        </div>
-                                    </button>
-                                </div>
-
-                                @if (user_can('Delete Order'))
-                                    <button
-                                        class="rounded text-gray-800 dark:text-gray-400 border dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-900/20 p-2 relative"
-                                        wire:click="deleteCartItems('{{ $key }}')" wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50">
-                                        <svg class="w-4 h-4 text-gray-700 dark:text-gray-200" fill="currentColor" viewBox="0 0 20 20"
-                                            xmlns="http://www.w3.org/2000/svg">
-                                            <path fill-rule="evenodd"
-                                                d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                        <div wire:loading.flex wire:target="deleteCartItems('{{ $key }}')"
-                                            class="absolute inset-0 items-center justify-center">
-                                            <svg class="animate-spin h-4 w-4 text-skin-base"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                    stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                        </div>
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
-                    @empty
-                        <div class="text-center text-gray-500 dark:text-gray-400 mt-4">
-                            @lang('messages.noItemAdded')
-                        </div>
-                    @endforelse
+                <div class="flex flex-col gap-2" data-kot-id="{{ $kot->id }}" data-js-populated="1">
                 </div>
             @endif
         @endforeach
@@ -611,17 +309,45 @@
                 }
             @endphp
             @foreach ($fallbackKotItems as $kotItem)
+                @php
+                    $isFreeItemFromStamp = (bool) ($kotItem->is_free_item_from_stamp ?? false);
+                    $expectedAmount = (float) ($kotItem->price ?? 0) * (int) ($kotItem->quantity ?? 1);
+                    $actualAmount = (float) ($kotItem->amount ?? 0);
+                    $stampDiscountAmount = !$isFreeItemFromStamp ? max(0, $expectedAmount - $actualAmount) : 0;
+                    $hasStampDiscount = $stampDiscountAmount > 0.01;
+                @endphp
                 <div class="flex justify-between items-start bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                     <div class="flex-1">
-                        <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <div class="text-sm font-medium text-gray-900 dark:text-gray-100 inline-flex items-center gap-2">
                             {{ $kotItem->menuItem->item_name ?? __('app.item') }}
+                            @if ($isFreeItemFromStamp)
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    @lang('app.freeItem')
+                                </span>
+                            @elseif($hasStampDiscount)
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                    @lang('app.stampDiscount') (-{{ currency_format($stampDiscountAmount, restaurant()->currency_id) }})
+                                </span>
+                            @endif
                         </div>
                         <div class="text-[11px] text-gray-500">
                             {{ __('modules.order.qty') }}: {{ $kotItem->quantity }}
                         </div>
                     </div>
                     <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {{ currency_format((float)($kotItem->amount ?? 0), restaurant()->currency_id) }}
+                        @if ($isFreeItemFromStamp)
+                            <div class="flex flex-col items-end">
+                                <span class="text-green-600 dark:text-green-400">{{ currency_format(0, restaurant()->currency_id) }}</span>
+                                <span class="text-[10px] text-gray-400 line-through">{{ currency_format($expectedAmount, restaurant()->currency_id) }}</span>
+                            </div>
+                        @elseif($hasStampDiscount)
+                            <div class="flex flex-col items-end">
+                                <span class="text-blue-600 dark:text-blue-400">{{ currency_format($actualAmount, restaurant()->currency_id) }}</span>
+                                <span class="text-[10px] text-gray-400 line-through">{{ currency_format($expectedAmount, restaurant()->currency_id) }}</span>
+                            </div>
+                        @else
+                            {{ currency_format($actualAmount, restaurant()->currency_id) }}
+                        @endif
                     </div>
                 </div>
             @endforeach
@@ -630,21 +356,15 @@
 
     <div class="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <div class="w-full h-auto p-4 space-y-3 text-center rounded select-none bg-gray-50 dark:bg-gray-700">
-            @if (count($orderItemList) > 0 && user_can('Update Order'))
-                <div class="flex gap-2 text-left">
-                    @if (user_can('Add Discount on POS'))
-                        <x-secondary-button wire:click="showAddDiscount">
-                            <svg class="w-5 h-5 text-current me-1" width="24" height="24" viewBox="0 0 16 16"
-                                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
-                                stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
-                                <path d="m7.25 14.25-5.5-5.5 7-7h5.5v5.5z" />
-                                <circle cx="11" cy="5" r=".5" fill="#000" />
-                            </svg>
-                            @lang('modules.order.addDiscount')
-                        </x-secondary-button>
-                    @endif
-
-                    {{-- Loyalty redemption is disabled on KOT detail page --}}
+            @if (user_can('Add Discount on POS'))
+                <div class="text-left" id="discount-button-container" style="display: {{ count($orderItemList) > 0 ? 'block' : 'none' }};">
+                    <x-secondary-button onclick="showAddDiscountModal()" class="text-xs py-1.5 px-3">
+                        <svg class="w-4 h-4 text-current me-1" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+                            <path d="m7.25 14.25-5.5-5.5 7-7h5.5v5.5z"/>
+                            <circle cx="11" cy="5" r=".5" fill="#000"/>
+                        </svg>
+                        @lang('modules.order.addDiscount')
+                    </x-secondary-button>
                 </div>
             @endif
 
@@ -652,25 +372,8 @@
                 <div>
                     @lang('modules.order.totalItem')
                 </div>
-                <div>
-                    @php
-                        // Count only items that are actually displayed (belong to visible KOTs)
-                        $displayedItemCount = 0;
-                        if (isset($kotList) && is_array($kotList)) {
-                            foreach ($kotList as $kotKey => $kot) {
-                                $kotPrefix = 'kot_' . $kot->id;
-                                foreach ($orderItemList as $key => $item) {
-                                    if (strpos($key, $kotPrefix) !== false) {
-                                        $displayedItemCount++;
-                                    }
-                                }
-                            }
-                        } else {
-                            // Fallback: count all items if kotList is not available
-                            $displayedItemCount = count($orderItemList);
-                        }
-                    @endphp
-                    {{ $displayedItemCount }}
+                <div id="total-items-display">
+                    {{ count($orderItemList) }}
                 </div>
             </div>
             <div class="flex justify-between text-xs text-gray-500 dark:text-neutral-400">
@@ -682,10 +385,29 @@
                         if (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail) {
                             $stampDiscountAmount = (float)($orderDetail->stamp_discount_amount ?? 0);
                             $hasFreeStampItems = $orderDetail->items()->where('is_free_item_from_stamp', true)->exists();
+                        } else {
+                            foreach (($orderItemList ?? []) as $itemKey => $itemValue) {
+                                $note = $itemNotes[$itemKey] ?? '';
+                                $rawFreeFlag = is_array($itemValue)
+                                    ? ($itemValue['is_free_item_from_stamp'] ?? false)
+                                    : ($itemValue->is_free_item_from_stamp ?? false);
+                                $isFlaggedFree = in_array($rawFreeFlag, [true, 1, '1', 'true'], true);
+
+                                if (
+                                    str_starts_with((string)$itemKey, 'free_stamp_')
+                                    || $isFlaggedFree
+                                    || str_contains((string)$note, __('loyalty::app.freeItemFromStamp'))
+                                    || str_starts_with(strtolower(trim((string)$note)), 'free')
+                                ) {
+                                    $hasFreeStampItems = true;
+                                    break;
+                                }
+                            }
                         }
                     @endphp
-                    @if($stampDiscountAmount > 0 || $hasFreeStampItems)
-                        <span class="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <span id="stamp-discount-badge"
+                        class="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 {{ ($stampDiscountAmount > 0 || $hasFreeStampItems) ? '' : 'hidden' }}">
+                        <span id="stamp-discount-badge-text">
                             @lang('app.stampDiscount')
                             @if($stampDiscountAmount > 0)
                                 (-{{ currency_format($stampDiscountAmount, restaurant()->currency_id) }})
@@ -693,67 +415,66 @@
                                 (@lang('app.freeItem'))
                             @endif
                         </span>
-                    @endif
+                    </span>
                 </div>
-                <div>
-                    @php
-                        // For existing orders, always use database value to avoid mismatches
-                        // For new orders, use component variable
-                        $displaySubTotal = isset($orderID) && $orderID && isset($orderDetail) && $orderDetail
-                            ? ($orderDetail->sub_total ?? $subTotal)
-                            : $subTotal;
-                    @endphp
-                    {{ currency_format($displaySubTotal, restaurant()->currency_id) }}
+                <div id="subtotal-display">
+                    {{ currency_format($subTotal, restaurant()->currency_id) }}
                 </div>
             </div>
 
-            @if ($orderDetail->loyalty_points_redeemed  > 0 && $orderDetail->loyalty_discount_amount > 0)
-                <div wire:key="loyaltyDiscount" class="flex justify-between {{ $textSize ?? 'text-xs' }} text-blue-600 dark:text-blue-400">
+            @if(function_exists('module_enabled') && module_enabled('Loyalty'))
+                <div id="loyalty-discount-row-blade">
+                    @include('loyalty::components.loyalty-discount-display', [
+                        'loyaltyPointsRedeemed' => $loyaltyPointsRedeemed ?? 0,
+                        'loyaltyDiscountAmount' => $loyaltyDiscountAmount ?? 0,
+                        'currencyId' => restaurant()->currency_id,
+                        'showEditIcon' => true,
+                        'customer' => $customer ?? null
+                    ])
+                </div>
+                <div id="loyalty-discount-row-js" class="flex justify-between text-xs text-blue-600 dark:text-blue-400 items-center" style="display: none;">
                     <div class="inline-flex items-center gap-x-1">
-                        @lang('app.loyaltyDiscount') ({{ number_format($orderDetail->loyalty_points_redeemed) }} @lang('app.points'))
-                        {{-- Edit loyalty redemption disabled on KOT detail page --}}
+                        <span id="loyalty-js-label">@lang('loyalty::app.loyaltyDiscount') (<span id="loyalty-js-points">0</span> @lang('loyalty::app.points'))</span>
+                        @if(user_can('Update Order'))
+                            <span class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer ml-1"
+                                onclick="if (typeof window.openLoyaltyRedemptionModal === 'function') { window.openLoyaltyRedemptionModal(); }"
+                                title="{{ __('Edit loyalty points') }}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </span>
+                        @endif
                     </div>
-                    <div class="text-blue-600 dark:text-blue-400 font-medium">
-                        -{{ currency_format($orderDetail->loyalty_discount_amount, restaurant()->currency_id) }}
-                    </div>
+                    <div id="loyalty-js-amount" class="text-blue-600 dark:text-blue-400 font-medium">-0</div>
                 </div>
             @endif
 
-            @php
-                $displayDiscountAmount = isset($orderDetail) && $orderDetail
-                    ? (float)($orderDetail->discount_amount ?? 0)
-                    : (float)($discountAmount ?? 0);
-                $displayDiscountType = isset($orderDetail) && $orderDetail
-                    ? ($orderDetail->discount_type ?? $discountType)
-                    : $discountType;
-                $displayDiscountValue = isset($orderDetail) && $orderDetail
-                    ? ($orderDetail->discount_value ?? $discountValue)
-                    : $discountValue;
-                $useLiveTotals = false;
-            @endphp
-
-            @if ($displayDiscountAmount > 0 && ($orderDetail->loyalty_points_redeemed ?? 0) == 0)
-                <div wire:key="discountAmount"
-                    class="flex justify-between text-xs text-green-500 dark:text-green-400">
-
-                    <div class="inline-flex items-center gap-x-1">@lang('modules.order.discount') @if ($displayDiscountType == 'percent')
-                            ({{ $displayDiscountValue }}%)
+            <div wire:key="discountAmount" id="discount-row"
+                class="flex justify-between text-green-500 text-xs dark:text-green-400"
+                style="display: {{ $discountAmount > 0 && ($loyaltyPointsRedeemed ?? 0) == 0 ? 'flex' : 'none' }};">
+                <div class="inline-flex items-center gap-x-1">
+                    @lang('modules.order.discount')
+                    <span id="discount-type-display">
+                        @if ($discountType == 'percent')
+                            ({{ $discountValue }}%)
                         @endif
-                        <span class="text-red-500 cursor-pointer hover:scale-110 active:scale-100"
-                            wire:click="removeCurrentDiscount">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
+                    </span>
+                    @if(user_can('Add Discount on POS') && user_can('Update Order'))
+                        <span type="button" class="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-transform hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                            onclick="removeCurrentDiscount()" title="@lang('app.remove')">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path fill-rule="evenodd"
-                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1z"
+                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1z"
                                     clip-rule="evenodd" />
                             </svg>
                         </span>
-                    </div>
-                    <div>
-                        -{{ currency_format($displayDiscountAmount, restaurant()->currency_id) }}
-                    </div>
+                    @endif
                 </div>
-            @endif
+                <div id="discount-display">
+                    -{{ currency_format($discountAmount, restaurant()->currency_id) }}
+                </div>
+            </div>
 
             @php
                 $applicableExtraCharges = collect($extraCharges ?? [])->filter(function ($charge) use ($orderType) {
@@ -763,37 +484,33 @@
                 });
             @endphp
 
-            @foreach ($applicableExtraCharges as $charge)
-                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
-                        @if ($charge->charge_type == 'percent')
-                            ({{ $charge->charge_value }}%)
-                        @endif
-                        @if (user_can('Update Order'))
-                            <span class="text-red-500 cursor-pointer hover:scale-110 active:scale-100"
-                                wire:click="removeExtraCharge('{{ $charge->id }}', '{{ $orderType }}')">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd"
-                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0V8zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        @endif
-                    </div>
-                    <div>
-                        @php
-                            // Calculate discounted subtotal for charges (after regular + loyalty discounts)
-                            $hasOrderDetail = isset($orderID) && $orderID && isset($orderDetail) && $orderDetail;
-                            $baseSubTotal = $useLiveTotals ? $subTotal : ($hasOrderDetail ? ($orderDetail->sub_total ?? $subTotal) : $subTotal);
-                            $regularDiscount = $useLiveTotals ? (float)($discountAmount ?? 0) : ($hasOrderDetail ? (float)($orderDetail->discount_amount ?? 0) : (float)($discountAmount ?? 0));
-                            $loyaltyDiscount = $useLiveTotals ? (float)($loyaltyDiscountAmount ?? 0) : ($hasOrderDetail ? (float)($orderDetail->loyalty_discount_amount ?? 0) : (float)($loyaltyDiscountAmount ?? 0));
-                            $chargeBase = $baseSubTotal - $regularDiscount - $loyaltyDiscount;
-                        @endphp
-                        {{ currency_format($charge->getAmount($chargeBase), restaurant()->currency_id) }}
-                    </div>
-                </div>
-            @endforeach
+            <div id="extra-charges-container" style="{{ (count($orderItemList) > 0 && $extraCharges && count($extraCharges) > 0) ? '' : 'display: none;' }}">
+                @if (count($orderItemList) > 0 && $extraCharges)
+                    @foreach ($extraCharges as $charge)
+                        <div wire:key="extraCharge-{{ $loop->index }}"
+                            class="flex justify-between text-gray-500 text-xs dark:text-neutral-400"
+                            data-charge-id="{{ $charge->id }}"
+                            data-charge-name="{{ $charge->charge_name }}"
+                            data-charge-type="{{ $charge->charge_type }}"
+                            data-charge-value="{{ $charge->charge_value }}">
+                            <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
+                                @if ($charge->charge_type == 'percent')
+                                    ({{ $charge->charge_value }}%)
+                                @endif
+                                @if (user_can('Update Order'))
+                                    <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
+                                        onclick="removeExtraCharge({{ $charge->id }}, '{{ $orderType }}')">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1" clip-rule="evenodd"/></svg>
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="charge-amount-display">
+                                {{ currency_format($charge->getAmount($discountedTotal), restaurant()->currency_id) }}
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+            </div>
 
             @if ($tipAmount > 0)
                 <div class="flex justify-between text-xs text-gray-500 dark:text-neutral-400">
@@ -810,8 +527,11 @@
                 <div class="flex justify-between text-xs text-gray-500 dark:text-neutral-400">
                     <div>
                         @lang('modules.delivery.deliveryFee')
+                        <span id="delivery-fee-note" class="{{ $deliveryFee > 0 ? 'hidden' : '' }}">
+                            @lang('modules.delivery.freeDelivery')
+                        </span>
                     </div>
-                    <div>
+                    <div id="delivery-fee-display">
                         @if ($deliveryFee > 0)
                             {{ currency_format($deliveryFee, restaurant()->currency_id) }}
                         @else
@@ -822,149 +542,20 @@
             @endif
 
             @if ($taxMode == 'order')
-                @php
-                    // For existing orders, use order's taxes; otherwise use all restaurant taxes
-                    // Prevent duplicate taxes by tracking tax IDs and tax names
-                    $taxesToDisplay = [];
-                    $seenTaxIds = [];
-                    $seenTaxNames = [];
-
-                    if (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail && $orderDetail->taxes && $orderDetail->taxes->count() > 0) {
-                        // Use order's specific taxes (avoid duplicates by both ID and name)
-                        // Use unique() to remove duplicates at collection level first
-                        $uniqueOrderTaxes = $orderDetail->taxes->unique(function ($orderTax) {
-                            $tax = $orderTax->tax ?? null;
-                            return $tax ? ($tax->id ?? $tax->tax_name ?? '') : '';
-                        });
-
-                        foreach ($uniqueOrderTaxes as $orderTax) {
-                            $tax = $orderTax->tax ?? null;
-                            if ($tax) {
-                                $taxId = $tax->id ?? null;
-                                $taxName = strtolower(trim($tax->tax_name ?? ''));
-
-                                // Check both ID and name to prevent duplicates
-                                $isDuplicate = false;
-                                if ($taxId && in_array($taxId, $seenTaxIds)) {
-                                    $isDuplicate = true;
-                                } elseif ($taxName && in_array($taxName, $seenTaxNames)) {
-                                    $isDuplicate = true;
-                                }
-
-                                if (!$isDuplicate) {
-                                    if ($taxId) $seenTaxIds[] = $taxId;
-                                    if ($taxName) $seenTaxNames[] = $taxName;
-
-                                    $taxesToDisplay[] = (object)[
-                                        'tax_name' => $tax->tax_name ?? '',
-                                        'tax_percent' => $tax->tax_percent ?? 0
-                                    ];
-                                }
-                            }
-                        }
-                    } else {
-                        // Use all restaurant taxes for new orders (avoid duplicates)
-                        foreach ($taxes ?? [] as $tax) {
-                            if ($tax) {
-                                $taxId = $tax->id ?? null;
-                                $taxName = strtolower(trim($tax->tax_name ?? ''));
-
-                                // Check both ID and name to prevent duplicates
-                                $isDuplicate = false;
-                                if ($taxId && in_array($taxId, $seenTaxIds)) {
-                                    $isDuplicate = true;
-                                } elseif ($taxName && in_array($taxName, $seenTaxNames)) {
-                                    $isDuplicate = true;
-                                }
-
-                                if (!$isDuplicate) {
-                                    if ($taxId) $seenTaxIds[] = $taxId;
-                                    if ($taxName) $seenTaxNames[] = $taxName;
-
-                                    $taxesToDisplay[] = (object)[
-                                        'tax_name' => $tax->tax_name ?? '',
-                                        'tax_percent' => $tax->tax_percent ?? 0
-                                    ];
-                                }
-                            }
-                        }
-                    }
-                    // Step 1: Calculate discounted subtotal for tax calculation (after both regular and loyalty discounts)
-                    // Loyalty points are always removed from subtotal before calculating tax
-                    // Use database values for existing orders
-                    $hasOrderDetail = isset($orderID) && $orderID && isset($orderDetail) && $orderDetail;
-                    $baseSubTotal = $useLiveTotals ? $subTotal : ($hasOrderDetail ? ($orderDetail->sub_total ?? $subTotal) : $subTotal);
-                    $regularDiscount = $useLiveTotals ? (float)($discountAmount ?? 0) : ($hasOrderDetail ? (float)($orderDetail->discount_amount ?? 0) : (float)($discountAmount ?? 0));
-                    $loyaltyDiscount = $useLiveTotals ? (float)($loyaltyDiscountAmount ?? 0) : ($hasOrderDetail ? (float)($orderDetail->loyalty_discount_amount ?? 0) : (float)($loyaltyDiscountAmount ?? 0));
-                    $discountedSubtotal = $baseSubTotal - $regularDiscount - $loyaltyDiscount;
-
-                    // Step 2: Calculate service charges on discounted subtotal
-                    $serviceTotal = 0;
-                    // Ensure applicableExtraCharges is available (it's defined earlier in the template)
-                    if (!isset($applicableExtraCharges)) {
-                        $applicableExtraCharges = collect($extraCharges ?? [])->filter(function ($charge) use ($orderType) {
-                            $allowedTypes = $charge->order_types ?? [];
-                            return empty($allowedTypes) || in_array($orderType, $allowedTypes);
-                        });
-                    }
-                    if ($applicableExtraCharges && $applicableExtraCharges->count() > 0) {
-                        foreach ($applicableExtraCharges as $charge) {
-                            if ($charge && method_exists($charge, 'getAmount')) {
-                                $chargeAmount = $charge->getAmount((float)$discountedSubtotal);
-                                $serviceTotal += (float)$chargeAmount;
-                            }
-                        }
-                    }
-
-                    // Step 3: Calculate tax_base based on Tax Calculation Base setting
-                    // Check if service charges should be included in tax base
-                    $restaurant = restaurant();
-                    $includeChargesInTaxBase = false;
-                    if ($restaurant && isset($restaurant->include_charges_in_tax_base)) {
-                        $includeChargesInTaxBase = (bool)$restaurant->include_charges_in_tax_base;
-                    }
-
-                    // Tax base = (subtotal - discounts) + service charges (if enabled)
-                    $taxBase = $includeChargesInTaxBase
-                        ? ($discountedSubtotal + $serviceTotal)
-                        : $discountedSubtotal;
-                    $taxBase = max(0, (float)$taxBase);
-                @endphp
-                @php
-                    $orderLevelTotalTax = 0;
-                @endphp
-                @foreach ($taxesToDisplay as $item)
-                    <div class="flex justify-between text-xs text-gray-500 dark:text-neutral-400">
-                        <div>
-                            {{ $item->tax_name }} ({{ $item->tax_percent }}%)
+                <div id="order-taxes-container">
+                    @foreach ($taxes as $item)
+                        <div class="flex justify-between text-xs text-gray-500 dark:text-neutral-400"
+                            data-tax-name="{{ $item->tax_name }}"
+                            data-tax-percent="{{ $item->tax_percent }}">
+                            <div>
+                                {{ $item->tax_name }} ({{ $item->tax_percent }}%)
+                            </div>
+                            <div class="tax-amount-display">
+                                {{ currency_format(($item->tax_percent / 100) * $taxBase, restaurant()->currency_id) }}
+                            </div>
                         </div>
-                        <div>
-                            @php
-                                // Step 4: Calculate tax on tax_base
-                                $taxAmount = ($item->tax_percent / 100) * $taxBase;
-                                $orderLevelTotalTax += $taxAmount;
-                            @endphp
-                            {{ currency_format($taxAmount, restaurant()->currency_id) }}
-                        </div>
-                    </div>
-                @endforeach
-                {{-- @if(count($taxesToDisplay) > 0)
-                    <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
-                        <div>
-                            @lang('modules.order.totalTax')
-                        </div>
-                        <div>
-                            @php
-                                // For existing orders, use database value (which is correct after loyalty discount)
-                                // For new orders, use calculated total from individual taxes
-                                $displayTaxAmount = isset($orderID) && $orderID && isset($orderDetail) && $orderDetail
-                                    ? ($orderDetail->total_tax_amount ?? $orderLevelTotalTax)
-                                    : $orderLevelTotalTax;
-                            @endphp
-                            {{ currency_format($displayTaxAmount, restaurant()->currency_id) }}
-                        </div>
-                    </div>
-                @endif --}}
+                    @endforeach
+                </div>
             @else
                 @php
                     $taxTotals = [];
@@ -983,83 +574,85 @@
                         }
                     }
                 @endphp
-                @foreach ($taxTotals as $taxName => $taxInfo)
-                    <div class="flex justify-between text-gray-500 text-[11px] dark:text-neutral-400">
-                        <div>
-                            {{ $taxName }} ({{ $taxInfo['percent'] }}%)
+                <div id="item-taxes-container">
+                    @foreach ($taxTotals as $taxName => $taxInfo)
+                        <div class="flex justify-between text-gray-500 text-[11px] dark:text-neutral-400"
+                            data-tax-name="{{ $taxName }}"
+                            data-tax-percent="{{ $taxInfo['percent'] }}">
+                            <div>
+                                {{ $taxName }} ({{ $taxInfo['percent'] }}%)
+                            </div>
+                            <div class="tax-amount-display">
+                                {{ currency_format($taxInfo['amount'], restaurant()->currency_id) }}
+                            </div>
                         </div>
+                    @endforeach
+                    <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
                         <div>
-                            {{ currency_format($taxInfo['amount'], restaurant()->currency_id) }}
+                            @lang('modules.order.totalTax')
                         </div>
-                    </div>
-                @endforeach
-                <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
-                    <div>
-                        @lang('modules.order.totalTax')
-                    </div>
-                    <div>
-                        @php
-                            // For existing orders, use database value (which is correct after loyalty discount)
-                            // For new orders, use component variable
-                            $displayTaxAmount = $useLiveTotals
-                                ? $totalTaxAmount
-                                : (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail
-                                    ? ($orderDetail->total_tax_amount ?? $totalTaxAmount)
-                                    : $totalTaxAmount);
-                        @endphp
-                        {{ currency_format($displayTaxAmount, restaurant()->currency_id) }}
+                        <div id="total-tax-display">
+                            {{ currency_format($totalTaxAmount, restaurant()->currency_id) }}
+                        </div>
                     </div>
                 </div>
             @endif
 
-            <div class="flex justify-between font-medium text-sm text-gray-900 dark:text-gray-100">
+            <div class="flex justify-between font-semibold text-sm text-gray-900 dark:text-gray-100">
                 <div>
                     @lang('modules.order.total')
                 </div>
-                <div>
-                    @php
-                        // For existing orders, use database value (which is correct after loyalty discount)
-                        // For new orders, use component variable
-                        $displayTotal = $useLiveTotals
-                            ? $total
-                            : (isset($orderID) && $orderID && isset($orderDetail) && $orderDetail
-                                ? ($orderDetail->total ?? $total)
-                                : $total);
-
-                        // dd($displayTotal, $total);
-                    @endphp
-                    {{ currency_format($displayTotal, restaurant()->currency_id) }}
+                <div id="total-display" class="text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {{ currency_format($total, restaurant()->currency_id) }}
                 </div>
             </div>
         </div>
 
-        <div class="w-full h-auto px-4 pb-4 select-none">
+        <div class="w-full h-auto py-4 select-none">
             @if ($orderDetail->status == 'kot' && user_can('Update Order'))
-                <div class="grid grid-cols-2 gap-4">
-                    <button class="w-full p-2 text-white rounded bg-skin-base {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill')"
-                        @if($isPastTime) disabled @endif>
-                        @lang('modules.order.bill')
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="saveBillBtn" class="pos-order-action-btn w-full p-2.5 text-sm font-medium text-white rounded-lg bg-skin-base hover:opacity-90 relative"
+                        onclick="saveOrder('bill')">
+                        <span id="saveBillBtnText">@lang('modules.order.bill')</span>
+                        <span id="saveBillBtnLoading" class="hidden">
+                            <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('modules.order.bill')
+                        </span>
                     </button>
 
-                    <button class="w-full p-2 text-white bg-green-500 rounded {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill', 'payment')"
-                        @if($isPastTime) disabled @endif>
-                        @lang('modules.order.billAndPayment')
+                    <button id="saveBillPaymentBtn" class="pos-order-action-btn w-full p-2.5 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 relative"
+                        onclick="saveOrder('bill', 'payment')">
+                        <span id="saveBillPaymentBtnText">@lang('modules.order.billAndPayment')</span>
+                        <span id="saveBillPaymentBtnLoading" class="hidden">
+                            <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('modules.order.billAndPayment')
+                        </span>
                     </button>
-                    <button class="w-full p-2 text-white bg-blue-500 rounded {{ $isPastTime ? 'opacity-50 cursor-not-allowed' : '' }}"
-                        wire:click="saveOrder('bill', 'print')"
-                        @if($isPastTime) disabled @endif>
-                        @lang('modules.order.createBillAndPrintReceipt')
+                    <button id="saveBillPrintBtn" class="pos-order-action-btn w-full p-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 relative"
+                        onclick="saveOrder('bill', 'print')">
+                        <span id="saveBillPrintBtnText">@lang('modules.order.createBillAndPrintReceipt')</span>
+                        <span id="saveBillPrintBtnLoading" class="hidden">
+                            <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('modules.order.createBillAndPrintReceipt')
+                        </span>
                     </button>
 
                     <a href="{{ route('pos.kot', ['id' => $orderDetail->id]) }}"
-                        class="w-full p-2 text-center bg-white border rounded text-skin-base border-skin-base">
+                        class="w-full p-2.5 text-sm font-medium text-center bg-white border rounded-lg hover:bg-gray-50 text-skin-base border-skin-base">
                         @lang('modules.order.newKot')
                     </a>
 
                     @if (user()->hasRole('Admin_'. user()->restaurant_id))
-                        <button class="w-full p-2 text-white bg-red-500 rounded" wire:click="$set('deleteOrderModal', true)">
+                        <button class="w-full p-2 text-white bg-red-500 rounded" onclick="confirmDeleteOrder()">
                             @lang('modules.order.deleteOrder')
                         </button>
                     @endif
@@ -1068,8 +661,15 @@
 
             @if ($orderDetail->status == 'billed' && user_can('Update Order'))
                 <div class="flex gap-2">
-                    <button class="w-full p-2 text-white rounded bg-skin-base" wire:click="saveOrder('bill')">
-                        @lang('modules.order.addPayment')
+                    <button id="saveBillBtn" class="pos-order-action-btn w-full p-2.5 text-sm font-medium text-white rounded-lg bg-skin-base hover:opacity-90 relative" onclick="saveOrder('bill')">
+                        <span id="saveBillBtnText">@lang('modules.order.addPayment')</span>
+                        <span id="saveBillBtnLoading" class="hidden">
+                            <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('modules.order.addPayment')
+                        </span>
                     </button>
                 </div>
             @endif
@@ -1082,7 +682,7 @@
                                 fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16">
                                 <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
                             </svg>
-                            <span class="text-gray-800 dark:text-gray-200">
+                            <span class="text-gray-900 dark:text-gray-100">
                                 {{ $orderDetail->customer->name }}
                             </span>
                         </div>
@@ -1121,13 +721,12 @@
         </div>
     </div>
 
-    <x-confirmation-modal wire:model.defer="confirmDeleteModal">
+   {{-- <x-confirmation-modal wire:model="confirmDeleteModal">
         <x-slot name="title">
             <div class="flex items-center gap-4">
-
                 <div>
                     <h3 class="text-xl font-bold text-gray-900 dark:text-white">@lang('modules.order.cancelOrder')</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">This action cannot be undone</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">@lang('modules.order.cancelOrderMessageUndone')</p>
                 </div>
             </div>
         </x-slot>
@@ -1158,23 +757,22 @@
                 </div>
 
                 <textarea
-                            wire:model.defer="cancelReasonText"
-                            id="cancelReasonText"
-                            rows="4"
-                            class="block w-full px-4 py-3 transition-all duration-200 border-2 border-gray-300 shadow-sm resize-none dark:border-gray-600 rounded-xl focus:ring-2 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="@lang('modules.settings.enterCancelReason')"
-                        ></textarea>
+                    wire:model.defer="cancelReasonText"
+                    id="cancelReasonText"
+                    rows="4"
+                    class="block w-full px-4 py-3 transition-all duration-200 border-2 border-gray-300 shadow-sm resize-none dark:border-gray-600 rounded-xl focus:ring-2 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="@lang('modules.settings.enterCancelReason')"></textarea>
             </div>
         </x-slot>
 
         <x-slot name="footer">
-        <x-secondary-button wire:click="$set('confirmDeleteModal', false)" wire:loading.attr="disabled">
-            {{ __('app.cancel') }}
-        </x-secondary-button>
+            <x-secondary-button wire:click="$set('confirmDeleteModal', false)" wire:loading.attr="disabled">
+                {{ __('app.cancel') }}
+            </x-secondary-button>
 
-        <x-danger-button class="ml-3" wire:click="cancelOrder" wire:loading.attr="disabled">
-            @lang('modules.order.cancelOrder')
-        </x-danger-button>
+            <x-danger-button class="ml-3" wire:click="cancelOrder" wire:loading.attr="disabled">
+                @lang('modules.order.cancelOrder')
+            </x-danger-button>
         </x-slot>
     </x-confirmation-modal>
 
@@ -1245,6 +843,6 @@
                 </x-button>
             </div>
         </x-slot>
-    </x-dialog-modal>
+    </x-dialog-modal> --}}
 
 </div>

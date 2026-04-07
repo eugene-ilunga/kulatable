@@ -7,8 +7,8 @@
         <div class="max-w-4xl mx-auto px-4">
             <!-- Header -->
             <div class="text-center mb-6">
-                <h2 class="text-xl font-bold text-zinc-900 dark:text-white mb-2">@lang('superadmin.supportTicket.chooseOption')</h2>
-                <p class="text-sm text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.chooseOptionDescription')</p>
+                <h2 class="text-xl font-bold text-zinc-900 dark:text-white mb-2">Choose Your Support Option</h2>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400">Select the support service that best fits your needs</p>
             </div>
             
             <!-- Support Options -->
@@ -16,10 +16,10 @@
                 <!-- Envato Support Card -->
                 <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border border-zinc-200 dark:border-zinc-700">
                     <div class="flex items-center mb-4">
-                        <img src="https://cdn.worldvectorlogo.com/logos/envato.svg" alt="{{ __('superadmin.supportTicket.envatoAlt') }}" class="h-8 w-8 object-contain mr-3">
+                        <img src="https://cdn.worldvectorlogo.com/logos/envato.svg" alt="Envato" class="h-8 w-8 object-contain mr-3">
                         <div>
-                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">@lang('superadmin.supportTicket.envatoTitle')</h3>
-                            <p class="text-sm text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.envatoSubtitle')</p>
+                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">Envato Regular Support</h3>
+                            <p class="text-sm text-zinc-600 dark:text-zinc-400">Included with your purchase</p>
                         </div>
                     </div>
                     
@@ -29,13 +29,13 @@
                                 <svg class="h-4 w-4 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.envatoFeature1')</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">Response time: 24-48 working hours</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.envatoFeature2')</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">Email & forum support</span>
                             </div>
                        
                         </div>
@@ -44,13 +44,13 @@
                                 <svg class="h-4 w-4 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.envatoFeature3')</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">General documentation and guides</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.envatoFeature4')</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">Community forum access</span>
                             </div>
                            
                         </div>
@@ -62,7 +62,7 @@
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                             </svg>
-                            @lang('superadmin.supportTicket.raiseTicket')
+                            Raise Ticket
                         </a>
                     </div>
                 </div>
@@ -71,15 +71,15 @@
                 <div class="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-700 relative">
                     <div class="absolute top-4 right-4">
                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
-                            @lang('superadmin.supportTicket.recommended')
+                            Recommended
                         </span>
                     </div>
                     
                     <div class="flex items-center mb-4">
-                        <img src="https://envato.froid.works/logo-froiden.png" alt="{{ __('superadmin.supportTicket.froidenAlt') }}" class="h-8 w-8 object-contain mr-3">
+                        <img src="https://envato.froid.works/logo-froiden.png" alt="Froiden" class="h-8 w-8 object-contain mr-3">
                         <div>
-                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">@lang('superadmin.supportTicket.priorityTitle')</h3>
-                            <p class="text-sm text-zinc-600 dark:text-zinc-400">@lang('superadmin.supportTicket.prioritySubtitle')</p>
+                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">Priority Support</h3>
+                            <p class="text-sm text-zinc-600 dark:text-zinc-400">Premium enhancement service</p>
                         </div>
                     </div>
                     
@@ -89,19 +89,19 @@
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature1')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">Response time: 4 working hours</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature2')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">WhatsApp support</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature3')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">One-on-one Zoom consultations</span>
                             </div>
                         </div>
                         <div class="space-y-2">
@@ -109,19 +109,19 @@
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature4')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">Code discussion with developer</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature5')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">Dedicated support team</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <svg class="h-4 w-4 text-indigo-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">@lang('superadmin.supportTicket.priorityFeature6')</span>
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">Priority queue access</span>
                             </div>
                         </div>
                     </div>
@@ -132,7 +132,7 @@
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
-                            @lang('superadmin.supportTicket.knowMore')
+                            Know More
                         </a>
                     </div>
                 </div>

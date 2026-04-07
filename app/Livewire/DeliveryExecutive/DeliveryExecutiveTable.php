@@ -19,7 +19,6 @@ class DeliveryExecutiveTable extends Component
     public $customer;
     public $showEditCustomerModal = false;
     public $confirmDeleteCustomerModal = false;
-    public $showCustomerOrderModal = false;
 
     protected $listeners = ['refreshCustomers' => '$refresh'];
 
@@ -64,12 +63,6 @@ class DeliveryExecutiveTable extends Component
     public function hideEditCustomer()
     {
         $this->showEditCustomerModal = false;
-    }
-
-    public function showCustomerOrders($id)
-    {
-        $this->customer = DeliveryExecutive::findOrFail($id);
-        $this->showCustomerOrderModal = true;
     }
 
     public function render()

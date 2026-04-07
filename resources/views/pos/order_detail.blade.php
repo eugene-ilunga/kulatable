@@ -1,4 +1,4 @@
-<div class="flex flex-col h-auto min-h-screen px-2 py-4 pr-4 bg-white border-l lg:w-5/12 dark:border-gray-700 dark:bg-gray-800">
+<div class="flex flex-col h-full max-h-screen overflow-y-auto p-4 bg-white w-full lg:border-l lg:border-gray-200 dark:lg:border-gray-700 dark:bg-gray-800">
     <div>
 
         <div class="flex justify-between items-center dark:text-neutral-200">
@@ -36,53 +36,51 @@
         </div>
 
         <div class="flex justify-between gap-3 my-4 space-y-1">
-            <div class="inline-flex gap-4">
+            <div class="inline-flex gap-4 table-display-container">
                 @if ($orderDetail->order_type == 'dine_in')
-                    @if (!is_null($orderDetail->table))
-                        <div class="inline-flex items-center gap-2">
-                            <div @class(['p-3 rounded-lg tracking-wide bg-skin-base/[0.2] text-skin-base'])>
-                                <h3 wire:loading.class.delay='opacity-50'
-                                    @class(['font-semibold'])>
-                                    {{ $orderDetail->table->table_code ?? '--' }}
-                                </h3>
-                            </div>
-                            @if(user_can('Update Order'))
-                                <x-secondary-button wire:click="openTableChangeConfirmation">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        class="bi bi-gear" viewBox="0 0 16 16">
-                                        <path
-                                            d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0" />
-                                        <path
-                                            d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z" />
-                                    </svg>
-                                </x-secondary-button>
-                            @endif
+                    <div id="table-info-section" style="display: {{ $orderDetail->table ? 'flex' : 'none' }};" class="inline-flex items-center gap-2">
+                        <div @class(['p-3 rounded-lg tracking-wide bg-skin-base/[0.2] text-skin-base'])>
+                            <h3 @class(['font-semibold']) id="table-code">
+                                {{ $orderDetail->table->table_code ?? '--' }}
+                            </h3>
                         </div>
-                    @elseif(user_can('Update Order'))
-                        <x-secondary-button wire:click="openTableChangeConfirmation">@lang('modules.order.setTable')</x-secondary-button>
-                    @endif
+                        @if(user_can('Update Order'))
+                            <x-secondary-button onclick="showTableChangeConfirmationModal()">
+                                <svg width="20" height="20"  viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.74 14H22v-4h-2.26v-.14a8.2 8.2 0 0 0-.82-1.92l1.6-1.6-2.86-2.83-1.6 1.6A8 8 0 0 0 14 4.25V2h-4v2.25a8 8 0 0 0-2.06.86l-1.6-1.6-2.83 2.83 1.6 1.6a8.2 8.2 0 0 0-.82 1.92V10H2v4h2.26v.14a8.2 8.2 0 0 0 .82 1.92l-1.6 1.6 2.83 2.83 1.6-1.6a8 8 0 0 0 2.06.86V22h4v-2.25a8 8 0 0 0 2.06-.86l1.6 1.6 2.83-2.83-1.6-1.6a8.2 8.2 0 0 0 .82-1.92Z"/></svg>
+                            </x-secondary-button>
+                        @endif
+                    </div>
+                    <div id="set-table-section" style="display: {{ $orderDetail->table ? 'none' : 'block' }};">
+                        @if(user_can('Update Order'))
+                            <x-secondary-button onclick="showTableChangeConfirmationModal()">@lang('modules.order.setTable')</x-secondary-button>
+                        @endif
+                    </div>
                 @else
                     <div @class(['p-3 rounded-lg tracking-wide bg-skin-base/[0.2] text-skin-base'])>
-                        <h3 wire:loading.class.delay='opacity-50'
-                            @class(['font-semibold'])>
+                        <h3 @class(['font-semibold'])>
                             {{ $orderDetail->table->table_code ?? '--' }}
                         </h3>
                     </div>
                 @endif
-                <div>
-                    @if ($orderDetail->customer_id)
-                        <div class="flex items-center gap-2">
-                            <div class="font-semibold text-gray-700 dark:text-gray-300">{{ $orderDetail->customer->name }}</div>
-                            @if(user_can('Update Order'))
-                                <button  wire:click="$dispatch('showAddCustomerModal', { id: {{ $orderDetail->id }}, customerId: {{ $orderDetail->customer_id }}, fromPos: true })" title="{{__('modules.order.updateCustomerDetails')}}" class="p-1 text-gray-500 transition-colors bg-gray-100 rounded-md hover:text-gray-700 hover:bg-gray-200 rtl:ml-2 ltr:mr-2 dark:text-gray-300 dark:bg-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
-                                </button>
-                            @endif
-                        </div>
-                    @elseif(user_can('Update Order'))
-                        <a href="javascript:;" wire:click="$dispatch('showAddCustomerModal', { id: {{ $orderDetail->id }}, customerId: null, fromPos: true })"
-                        class="text-sm underline dark:text-gray-300 underline-offset-2">&plus; @lang('modules.order.addCustomerDetails')</a>
-                    @endif
+
+                <div class="mt-2 customer-display-container">
+                    <div id="customer-info-section" class="flex items-center gap-2" style="display: {{ $orderDetail->customer ? 'flex' : 'none' }};">
+                        <div id="customer-name" class="font-semibold text-gray-700 dark:text-gray-300">{{ $orderDetail->customer->name ?? '' }}</div>
+                        @if(user_can('Update Order'))
+                            <button id="edit-customer-btn" onclick="showAddCustomerModal({{ $orderDetail->customer_id ?? 'null' }})" title="{{__('modules.order.updateCustomerDetails')}}" class="p-1 text-gray-500 transition-colors bg-gray-100 rounded-md hover:text-gray-700 hover:bg-gray-200 rtl:ml-2 ltr:mr-2 dark:text-gray-300 dark:bg-gray-600 dark:hover:text-gray-200 dark:hover:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+
+                    <div id="add-customer-section" style="display: {{ $orderDetail->customer ? 'none' : 'block' }};">
+                        <a href="javascript:;"
+                            onclick="showAddCustomerModal(null)"
+                            class="text-sm underline underline-offset-2 dark:text-gray-300">&plus; @lang('modules.order.addCustomerDetails')</a>
+                    </div>
                     <div class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ $orderDetail->date_time->timezone(timezone())->format(dateFormat() . ' ' . timeFormat()) }}</div>
                 </div>
 
@@ -93,6 +91,7 @@
                 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-400 border border-yellow-400' => ($orderDetail->status == 'kot'),
                 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-400 border border-blue-400' => ($orderDetail->status == 'billed'),
                 'bg-green-100 text-green-800 dark:bg-gray-700 dark:text-green-400 border border-green-400' => ($orderDetail->status == 'paid'),
+                'bg-amber-100 text-amber-800 dark:bg-amber-700 dark:text-amber-400 border border-amber-400' => ($orderDetail->status == 'payment_due'),
                 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-400 border border-red-400' => ($orderDetail->status == 'canceled'),
                 ])>
                     @lang('modules.order.' . $orderDetail->status)
@@ -132,7 +131,7 @@
                         <h3 class="text-lg font-semibold">
                             {{ __('modules.order.orderStatus') }}
                         </h3>
-                        <span class="px-3 py-1 text-sm font-medium rounded-full"
+                        <span id="order-status-badge" data-status="{{ $orderDetail->order_status->value }}" class="px-3 py-1 text-sm font-medium rounded-full"
                             @class([
                                 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' => $orderDetail->order_status->value === 'delivered' || $orderDetail->order_status->value === 'served' || $orderDetail->order_status->value === 'food_ready',
                                 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' => $orderDetail->order_status->value === 'placed',
@@ -150,12 +149,12 @@
                             <div class="h-full bg-skin-base transition-all duration-500" style="width: {{ $currentIndex > 0 ? ($currentIndex / (count($statuses) - 1)) * 100 : 0 }}%;"></div>
                         </div>
 
-                        <div class="relative flex justify-between px-1 sm:px-2">
+                        <div id="order-status-steps" class="relative flex justify-between px-1 sm:px-2">
                             @foreach($statuses as $index => $status)
-                                <div class="flex flex-col items-center group relative" x-data="{ tooltip: false }" @mouseenter="tooltip = true" @mouseleave="tooltip = false" @click="tooltip = !tooltip">
+                                <div class="order-status-step flex flex-col items-center group relative" x-data="{ tooltip: false }" @mouseenter="tooltip = true" @mouseleave="tooltip = false" @click="tooltip = !tooltip">
                                     <!-- Icon container with improved styling -->
                                     <div
-                                        class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 relative z-10 shadow-sm
+                                        class="order-status-icon w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 transform group-hover:scale-110 relative z-10 shadow-sm
                                         @if($index <= $currentIndex)
                                             bg-skin-base text-white ring-2 ring-skin-base ring-offset-1 sm:ring-offset-2 dark:ring-offset-gray-800
                                         @elseif($index === $currentIndex + 1)
@@ -171,6 +170,11 @@
                                         {{ App\Enums\OrderStatus::from($status)->translatedLabel() }}
                                         <div class="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
                                     </div>
+
+                                    <!-- Hidden label used by JS to update badge text -->
+                                    <span class="order-status-label sr-only">
+                                        {{ App\Enums\OrderStatus::from($status)->translatedLabel() }}
+                                    </span>
                                 </div>
                             @endforeach
                         </div>
@@ -179,20 +183,16 @@
                     @if(user_can('Update Order'))
                         <div class="flex justify-end items-center mt-4 space-x-2 rtl:!space-x-reverse">
                             @if($orderDetail->order_status->value === 'placed')
-                                <x-danger-button class="inline-flex items-center gap-2 dark:text-gray-200" wire:click="$toggle('confirmDeleteModal')">
+                                <button id="order-status-cancel-btn" type="button" onclick="showCancelOrderModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150 dark:text-gray-200">
                                     <span>{{ __('modules.order.cancelOrder') }}</span>
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </x-danger-button>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/></svg>
+                                </button>
                             @endif
 
                             @if($currentIndex < count($statuses) - 1)
-                                <x-secondary-button class="inline-flex items-center gap-2" wire:click="$set('orderStatus', '{{ $statuses[$nextIndex] }}')">
-                                    <span>{{ __('modules.order.moveTo') }} {{ App\Enums\OrderStatus::from($statuses[$nextIndex])->translatedLabel() }}</span>
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                    </svg>
+                                <x-secondary-button id="order-status-next-btn" class="inline-flex items-center gap-2" onclick="updateOrderStatus('{{ $statuses[$nextIndex] }}')">
+                                    <span id="order-status-next-label">{{ __('modules.order.moveTo') }} {{ App\Enums\OrderStatus::from($statuses[$nextIndex])->translatedLabel() }}</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m13 7 5 5m0 0-5 5m5-5H6"/></svg>
                                 </x-secondary-button>
                             @endif
                         </div>
@@ -251,11 +251,26 @@
                             : $item->menuItem->price;
                         $modifierTotal = $item->modifierOptions->sum('pivot.modifier_option_price');
                         $displayPrice = $baseItemPrice + $modifierTotal;
+                        $expectedAmount = (float) $displayPrice * (int) ($item->quantity ?? 1);
+                        $actualAmount = (float) ($item->amount ?? 0);
+                        // Treat item as free from stamp ONLY when flag is set AND amount is actually zero (or nearly zero)
+                        $isFreeItemFromStamp = (bool) ($item->is_free_item_from_stamp ?? false) && $actualAmount <= 0.0001;
+                        $stampDiscountAmount = !$isFreeItemFromStamp ? max(0, $expectedAmount - $actualAmount) : 0;
+                        $hasStampDiscount = $stampDiscountAmount > 0.01;
                     @endphp
-                    <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='menu-item-{{ $key . microtime() }}' wire:loading.class.delay='opacity-10'>
+                    <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='menu-item-{{ $key . microtime() }}' wire:loading.class.delay='opacity-10' data-order-item-id="{{ $item->id }}">
                         <td class="flex flex-col p-2 mr-12 lg:min-w-28">
-                            <div class="inline-flex items-center text-xs text-gray-900 dark:text-white">
+                            <div class="inline-flex items-center gap-2 text-xs text-gray-900 dark:text-white">
                                 {{ $item->menuItem->item_name }}
+                                @if ($isFreeItemFromStamp)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                        @lang('app.freeItem')
+                                    </span>
+                                @elseif($hasStampDiscount)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                        @lang('app.stampDiscount') (-{{ currency_format($stampDiscountAmount, restaurant()->currency_id) }})
+                                    </span>
+                                @endif
                             </div>
                             @if (isset($item->menuItemVariation))
                             <div class="inline-flex items-center text-xs text-gray-600 dark:text-white">
@@ -273,18 +288,38 @@
                                 </div>
                             @endif
                         </td>
-                        <td class="p-2 text-base text-center text-gray-900 dark:text-gray-200 whitespace-nowrap">
+                        <td class="p-2 text-xs text-center text-gray-900 dark:text-gray-200 whitespace-nowrap">
                             {{ $item->quantity }}
                         </td>
                         <td class="p-2 text-xs font-medium text-right text-gray-700 whitespace-nowrap dark:text-white">
                             {{ currency_format($displayPrice, restaurant()->currency_id) }}
                         </td>
                         <td class="p-2 text-xs font-medium text-right text-gray-900 whitespace-nowrap dark:text-white">
-                            {{ currency_format($item->amount, restaurant()->currency_id) }}
+                            @if ($isFreeItemFromStamp)
+                                <div class="flex flex-col items-end">
+                                    <span class="text-green-600 dark:text-green-400 font-semibold">
+                                        {{ currency_format(0, restaurant()->currency_id) }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-400 line-through">
+                                        {{ currency_format($expectedAmount, restaurant()->currency_id) }}
+                                    </span>
+                                </div>
+                            @elseif($hasStampDiscount)
+                                <div class="flex flex-col items-end">
+                                    <span class="text-blue-600 dark:text-blue-400 font-semibold">
+                                        {{ currency_format($item->amount, restaurant()->currency_id) }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-400 line-through">
+                                        {{ currency_format($expectedAmount, restaurant()->currency_id) }}
+                                    </span>
+                                </div>
+                            @else
+                                {{ currency_format($item->amount, restaurant()->currency_id) }}
+                            @endif
                         </td>
                         @if (user_can('Delete Order') && $orderDetail->status !== 'paid')
                         <td class="p-2 text-right whitespace-nowrap">
-                            <button class="p-2 text-gray-800 border rounded dark:text-gray-400 dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-900/20" wire:click="deleteOrderItems('{{ $item->id }}')">
+                            <button type="button" onclick="deleteOrderItem('{{ $item->id }}')" class="p-2 text-gray-800 border rounded dark:text-gray-400 dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-900/20">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1" clip-rule="evenodd"/></svg>
                             </button>
                         </td>
@@ -304,11 +339,21 @@
 
         <div>
             <div class="w-full h-auto p-4 mt-3 space-y-4 text-center rounded select-none bg-gray-50 dark:bg-gray-700">
+                @if (count($orderDetail->items) > 0 && $orderDetail->status !== 'paid' && user_can('Update Order'))
+                <div class="flex text-left">
+                    @if (user_can('Add Discount on POS'))
+                        <x-secondary-button onclick="showAddDiscountModal()">
+                            <svg class="w-5 h-5 text-current me-1" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="m7.25 14.25-5.5-5.5 7-7h5.5v5.5z"/><circle cx="11" cy="5" r=".5" fill="#000"/></svg>
+                            @lang('modules.order.addDiscount')
+                        </x-secondary-button>
+                    @endif
+                </div>
+            @endif
                 <div class="flex justify-between text-sm text-gray-500 dark:text-neutral-400">
                     <div>
                         @lang('modules.order.totalItem')
                     </div>
-                    <div>
+                    <div id="order-detail-items-count">
                         {{ count($orderDetail->items) }}
                     </div>
                 </div>
@@ -330,7 +375,7 @@
                             </span>
                         @endif
                     </div>
-                    <div>
+                    <div id="order-detail-subtotal">
                         {{ currency_format($orderDetail->sub_total, restaurant()->currency_id) }}
                     </div>
                 </div>
@@ -346,26 +391,36 @@
                     </div>
                 @endif
 
-                @if (!is_null($orderDetail->discount_amount) && $orderDetail->loyalty_points_redeemed == 0)
-                <div wire:key="discountAmount" class="flex justify-between text-sm text-green-500 dark:text-green-400">
-                    <div>
-                        @lang('modules.order.discount') @if ($orderDetail->discount_type == 'percent') ({{ rtrim(rtrim($orderDetail->discount_value), '.') }}%) @endif
+                <div id="discount-row" class="flex justify-between text-sm text-green-500 dark:text-green-400" style="display: {{ ($orderDetail->discount_amount ?? 0) > 0 && $orderDetail->loyalty_points_redeemed == 0 ? 'flex' : 'none' }};">
+                    <div class="inline-flex items-center gap-x-1">
+                        @lang('modules.order.discount')
+                        <span id="discount-type-display">
+                            @if ($orderDetail->discount_type == 'percent')
+                                ({{ rtrim(rtrim($orderDetail->discount_value), '.') }}%)
+                            @endif
+                        </span>
+                        @if(user_can('Add Discount on POS') && user_can('Update Order'))
+                            <span class="text-red-500 cursor-pointer hover:scale-110 active:scale-100" onclick="removeCurrentDiscount()" title="@lang('app.remove')">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 0 0-.894.553L7.382 4H4a1 1 0 0 0 0 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a1 1 0 1 0 0-2h-3.382l-.724-1.447A1 1 0 0 0 11 2zM7 8a1 1 0 0 1 2 0v6a1 1 0 1 1-2 0zm5-1a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1" clip-rule="evenodd"/>
+                                </svg>
+                            </span>
+                        @endif
                     </div>
-                    <div>
-                        -{{ currency_format($orderDetail->discount_amount, restaurant()->currency_id) }}
+                    <div id="discount-display">
+                        @if(($orderDetail->discount_amount ?? 0) > 0)-{{ currency_format($orderDetail->discount_amount, restaurant()->currency_id) }}@endif
                     </div>
                 </div>
-                @endif
 
                 @foreach ($extraCharges as $charge)
-                <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                <div class="flex justify-between text-sm text-gray-500 dark:text-gray-400" data-charge-id="{{ $charge->id }}">
                     <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
                         @if ($charge->charge_type == 'percent')
                             ({{ $charge->charge_value }}%)
                         @endif
-                        @if($orderDetail->status !== 'paid' && user_can('Update Order'))
+                        @if(user_can('Update Order'))
                         <span class="text-red-500 cursor-pointer hover:scale-110 active:scale-100"
-                            wire:click="removeExtraCharge('{{ $charge->id }}', '{{ $orderType }}')">
+                            onclick="removeExtraCharge({{ $charge->id }}, '{{ $orderType }}')" title="@lang('app.remove')">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path fill-rule="evenodd"
@@ -415,26 +470,31 @@
 
                 @if ($taxMode == 'order')
                     @php
-                        $net = $orderDetail->sub_total - ($orderDetail->discount_amount ?? 0);
-                        $taxBase = $orderDetail->tax_base ?? $net;
+                        $discountedSubtotal = $orderDetail->sub_total
+                            - ($orderDetail->discount_amount ?? 0)
+                            - ($orderDetail->loyalty_discount_amount ?? 0);
+                        $taxBaseForDisplay = $orderDetail->tax_base ?? $discountedSubtotal;
                     @endphp
                     @foreach ($orderDetail->taxes as $item)
+                        @if (!$item->tax)
+                            @continue
+                        @endif
                         <div class="flex justify-between text-sm text-gray-500 dark:text-neutral-400">
                             <div>
                                 {{ $item->tax->tax_name }} ({{ $item->tax->tax_percent }}%)
                             </div>
                             <div>
                                 @php
-                                    // Calculate tax on discounted subtotal (after both regular and loyalty discounts)
-                                    $discountedSubtotal = $orderDetail->sub_total
-                                        - ($orderDetail->discount_amount ?? 0)
-                                        - ($orderDetail->loyalty_discount_amount ?? 0);
-                                    $taxAmount = ($item->tax->tax_percent / 100) * $discountedSubtotal;
+                                    $taxAmount = ($item->tax->tax_percent / 100) * $taxBaseForDisplay;
                                 @endphp
                                 {{ currency_format($taxAmount, restaurant()->currency_id) }}
                             </div>
                         </div>
                     @endforeach
+                    <div class="flex justify-between text-sm text-gray-500 dark:text-neutral-400">
+                        <div>@lang('modules.order.totalTax')</div>
+                        <div id="order-detail-total-tax">{{ currency_format($orderDetail->total_tax_amount ?? 0, restaurant()->currency_id) }}</div>
+                    </div>
                 @else
                     @php
                     // Show item-wise tax breakdown using actual order items data
@@ -464,7 +524,7 @@
                         </div>
                     </div>
                 @endforeach
-                <div class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
+                <div class="flex justify-between text-gray-500 text-xs dark:text-neutral-400">
                     <div>
                         @lang('modules.order.totalTax')
                         @if($taxMode === 'item')
@@ -474,7 +534,7 @@
                             </span>
                         @endif
                     </div>
-                    <div>
+                    <div id="order-detail-total-tax">
                         {{ currency_format($totalTaxAmount, restaurant()->currency_id) }}
                     </div>
                 </div>
@@ -484,7 +544,7 @@
                     <div>
                         @lang('modules.order.total')
                     </div>
-                    <div>
+                    <div id="order-detail-total">
                         {{ currency_format($orderDetail->total, restaurant()->currency_id) }}
                     </div>
                 </div>
@@ -493,19 +553,38 @@
             <div class="w-full h-auto pt-3 pb-4 text-center select-none">
                 <div class="flex gap-2">
 
-                    @if ($orderDetail->status == 'billed' && user_can('Update Order'))
-                    <button class="w-full p-2 text-white bg-green-600 rounded" wire:click='showPayment({{ $orderDetail->id }})'>
-                        @lang('modules.order.addPayment')
+                    @if (in_array($orderDetail->status, ['billed', 'payment_due']) && user_can('Update Order'))
+                    <button type="button" onclick="showPaymentModalForOrder({{ $orderDetail->id }}, this)" class="pos-order-action-btn w-full p-2 text-white bg-green-600 rounded">
+                        <span data-btn-text>@lang('modules.order.addPayment')</span>
+                        <span data-btn-loading class="hidden">
+                            <svg class="animate-spin inline-flex -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('modules.order.addPayment')
+                        </span>
                     </button>
                     @endif
 
                     @if($orderDetail->status == 'paid')
-                    <button class="inline-flex items-center justify-center w-full p-2 mt-2 text-gray-800 border border-gray-300 rounded dark:border-gray-600 dark:text-gray-200 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 gap-x-1"
-                        wire:click="printOrder({{ $orderDetail->id }})" type="button">
+                    <button type="button" onclick="printOrder({{ $orderDetail->id }}, this)" class="pos-order-action-btn inline-flex items-center justify-center w-full p-2 mt-2 text-gray-800 border border-gray-300 rounded dark:border-gray-600 dark:text-gray-200 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 gap-x-1">
+                        <span data-btn-text class="inline-flex items-center gap-x-1">
                         <svg class="w-6 h-6 text-current" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M16.444 18H19a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2.556M17 11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v6h10ZM7 15h10v4a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-4Z"/>
                         </svg>
-                        @lang('app.print')
+                        @if($orderDetail->split_type && $orderDetail->splitOrders()->where('status', 'paid')->count() > 0)
+                            @lang('modules.order.printSplits')
+                        @else
+                            @lang('app.print')
+                        @endif
+                        </span>
+                        <span data-btn-loading class="hidden">
+                            <svg class="animate-spin inline-block -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            @lang('app.print')
+                        </span>
                     </button>
                     @endif
                 </div>
@@ -514,18 +593,20 @@
         @endif
 
     </div>
-    <x-confirmation-modal wire:model.defer="confirmDeleteModal">
-        <x-slot name="title">
-            <div class="flex items-center gap-4">
-
-                <div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">@lang('modules.order.cancelOrder')</h3>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">This action cannot be undone</p>
+    <div id="confirmDeleteModal" style="display: none;" class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50">
+        <div class="fixed inset-0 transform transition-all" onclick="closeCancelOrderModal()">
+            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+        </div>
+        <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:max-w-2xl sm:mx-auto">
+            <div class="px-6 py-4">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">@lang('modules.order.cancelOrder')</h3>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">@lang('modules.order.cancelOrderMessageUndone')</p>
+                    </div>
                 </div>
             </div>
-        </x-slot>
-
-        <x-slot name="content">
+            <div class="px-6 py-4">
             <div class="space-y-6">
                 <!-- Warning Message -->
                 <div class="p-4 border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 rounded-xl">
@@ -542,50 +623,50 @@
 
                 <!-- Reason Selection -->
                  <div>
-                <x-label for="cancelReason" value="{{ __('modules.settings.selectCancelReason') }}" class="text-sm font-medium text-gray-700 dark:text-gray-200" />
-                <x-select id="cancelReason" class="block w-full mt-2" wire:model.defer="cancelReason">
+                <label for="cancelReason" class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('modules.settings.selectCancelReason') }}</label>
+                <select id="cancelReason" class="block w-full mt-2 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
                     <option value="">{{ __('modules.settings.selectCancelReason') }}</option>
                     @foreach ($cancelReasons as $reason)
                         <option value="{{ $reason->id }}">{{ $reason->reason }}</option>
                     @endforeach
-                </x-select>
-                <x-input-error for="cancelReason" class="mt-2" />
+                </select>
+                <div id="cancelReasonError" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></div>
             </div>
 
                 <!-- Custom Reason Textarea -->
                 <textarea
-                    wire:model.defer="cancelReasonText"
                     id="cancelReasonText"
                     rows="4"
                     class="block w-full px-4 py-3 transition-all duration-200 border-2 border-gray-300 shadow-sm resize-none dark:border-gray-600 rounded-xl focus:ring-2 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                     placeholder="@lang('modules.settings.enterCancelReason')"
                 ></textarea>
             </div>
-        </x-slot>
-
-        <x-slot name="footer">
-            <x-secondary-button wire:click="$set('confirmDeleteModal', false)" wire:loading.attr="disabled">
-                {{ __('app.cancel') }}
-            </x-secondary-button>
-
-            <x-danger-button class="ml-3" wire:click="cancelOrder" wire:loading.attr="disabled">
-                @lang('modules.order.cancelOrder')
-            </x-danger-button>
-        </x-slot>
-    </x-confirmation-modal>
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800 text-right">
+                <button type="button" onclick="closeCancelOrderModal()" class="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-25 transition ease-in-out duration-150">
+                    {{ __('app.cancel') }}
+                </button>
+                <button type="button" onclick="cancelOrder()" class="ml-3 inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition ease-in-out duration-150">
+                    @lang('modules.order.cancelOrder')
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Table Change Confirmation Modal -->
-    <x-dialog-modal wire:model.live="showTableChangeConfirmationModal" maxWidth="md">
-        <x-slot name="title">
-            <div class="flex items-center gap-2">
-                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                @lang('modules.order.changeTable')
+    <div id="showTableChangeConfirmationModal" style="display: none;" class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50">
+        <div class="fixed inset-0 transform transition-all" onclick="cancelTableChange()">
+            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+        </div>
+        <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:max-w-md sm:mx-auto">
+            <div class="px-6 py-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">@lang('modules.order.changeTable')</h3>
+                </div>
             </div>
-        </x-slot>
-
-        <x-slot name="content">
+            <div class="px-6 py-4">
             <div class="space-y-4">
                 <div class="text-center">
                     <svg class="mx-auto h-12 w-12 text-amber-100" fill="currentColor" viewBox="0 0 20 20">
@@ -609,19 +690,16 @@
                     </p>
                 </div>
             </div>
-        </x-slot>
-
-        <x-slot name="footer">
-            <div class="flex justify-end gap-2 w-full">
-                <x-button-cancel wire:click="cancelTableChange" wire:loading.attr="disabled">
-                    @lang('app.cancel')
-                </x-button-cancel>
-                <x-button wire:click="confirmTableChange" wire:loading.attr="disabled" class="bg-amber-600 hover:bg-amber-700">
-                    @lang('modules.order.changeTable')
-                </x-button>
+            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-800">
+                <div class="flex justify-end gap-2 w-full">
+                    <x-button-cancel type="button" onclick="cancelTableChange()" >
+                        @lang('app.cancel')
+                    </x-button-cancel>
+                    <x-button type="button" onclick="confirmTableChange()">
+                        @lang('modules.order.changeTable')
+                    </x-button>
+                </div>
             </div>
-        </x-slot>
-    </x-dialog-modal>
+        </div>
+    </div>
 
-</div>
-{{-- href="{{ route('orders.print', $orderDetail->id) }}" --}}

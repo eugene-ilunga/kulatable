@@ -66,7 +66,7 @@
     $initialValue = $value ?: $currentDate;
     @endphp
 
-<input x-data x-cloak x-init="
+<input x-data x-init="
     // Function to parse date based on PHP format
     function parseDate(value, phpFormat) {
         if (!value) return null;
@@ -130,6 +130,9 @@
             // Don't block if user is selecting (only block if Livewire is updating)
             if (isUpdatingFromLivewire || !inputElement) return;
 
+            // Pikaday calls onSelect with `this` = picker instance (see pikaday.js setDate).
+            const pickerInstance = this;
+
             try {
                 isUpdatingFromUser = true;
                 const formattedDate = formatDateToString(selectedDate, '{{ $phpFormat }}');
@@ -139,13 +142,21 @@
                 inputElement.setAttribute('value', formattedDate);
 
                 // Dispatch input event for Livewire wire:model
-                // Use a small timeout to ensure DOM is updated
+                // and change event for inline onchange handlers.
+                // Mark change with firedBy so Pikaday's _onInputChange ignores it; otherwise
+                // a late change after hide() runs `if (!self._v) self.show()` and reopens the calendar.
                 setTimeout(() => {
                     try {
                         if (inputElement) {
-                            // Dispatch input event - this is what Livewire listens to
                             const inputEvent = new Event('input', { bubbles: true, cancelable: true });
                             inputElement.dispatchEvent(inputEvent);
+                            const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+                            changeEvent.firedBy = pickerInstance;
+                            inputElement.dispatchEvent(changeEvent);
+                        }
+                        // Close after notifying listeners so Livewire/async cannot reopen via _onInputChange.
+                        if (typeof pickerInstance.hide === 'function') {
+                            pickerInstance.hide();
                         }
                     } catch (e) {
                         console.error('Error dispatching input event:', e);
@@ -222,4 +233,4 @@
     " x-ref="input" type="text" {!! $attributes->merge(['class' =>
     'inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 rounded-lg text-lg text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none
     focus:ring-2 focus:ring-gray-500
-    disabled:opacity-25 transition ease-in-out duration-150 w-full']) !!}>
+    disabled:opacity-25 transition ease-in-out duration-150 w-full text-xs']) !!}>

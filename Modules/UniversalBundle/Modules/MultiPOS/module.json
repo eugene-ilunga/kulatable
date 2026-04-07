@@ -1,0 +1,11 @@
+{
+    "name": "MultiPOS",
+    "alias": "multi-pos",
+    "description": "MultiPOS Management Module for managing multiple POS terminals",
+    "keywords": ["pos", "multi", "terminal", "management"],
+    "priority": 0,
+    "providers": [
+        "Modules\\MultiPOS\\Providers\\MultiPOSServiceProvider"
+    ],
+    "files": []
+}

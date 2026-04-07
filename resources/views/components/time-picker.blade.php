@@ -86,12 +86,15 @@
     },
     updateDisplay() {
         // Livewire listens to input/change events on the actual input element.
-        // Dispatch a bubbled input event on the input so wire:model updates.
+        // Dispatch bubbled input + change events so wire:model and inline
+        // onchange handlers (used by POS) both receive updates.
         if (this.$refs.input) {
             this.$refs.input.value = this.internalValue;
             this.$refs.input.dispatchEvent(new Event('input', { bubbles: true }));
+            this.$refs.input.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
             this.$dispatch('input', this.internalValue);
+            this.$dispatch('change', this.internalValue);
         }
     },
     adjustHour(delta) {

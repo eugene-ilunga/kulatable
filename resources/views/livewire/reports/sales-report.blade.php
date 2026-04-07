@@ -246,7 +246,7 @@
                 <form  action="#" method="GET">
 
                     <div class="lg:flex gap-2 items-center">
-                        <x-select id="dateRangeType" class="block w-full sm:w-fit mb-2 lg:mb-0" wire:model.defer="dateRangeType" wire:change="setDateRange">
+                        <select id="dateRangeType" class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600" wire:model.defer="dateRangeType" wire:change="setDateRange">
                             <option value="today">@lang('app.today')</option>
                             <option value="currentWeek">@lang('app.currentWeek')</option>
                             <option value="lastWeek">@lang('app.lastWeek')</option>
@@ -255,155 +255,189 @@
                             <option value="lastMonth">@lang('app.lastMonth')</option>
                             <option value="currentYear">@lang('app.currentYear')</option>
                             <option value="lastYear">@lang('app.lastYear')</option>
-                        </x-select>
+                        </select>
 
-                        <div class="flex items-center w-full gap-2">
-                            <x-datepicker wire:model.change='startDate' placeholder="@lang('app.selectStartDate')" />
-                            <span class="mx-2 text-gray-500 dark:text-gray-100 whitespace-nowrap">@lang('app.to')</span>
-                            <x-datepicker wire:model.live='endDate' placeholder="@lang('app.selectEndDate')" />
+                        <select
+                            wire:model.live="selectedHandler"
+                            wire:change="filterHandler"
+                            class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600">
+                            <option value="">@lang('modules.report.allHandlers')</option>
+                            @foreach($handlers ?? [] as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <select
+                            wire:model.live="selectedWaiter"
+                            wire:change="filterWaiter"
+                            class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600">
+                            <option value="">@lang('modules.report.allWaiters')</option>
+                            @foreach($waiters ?? [] as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <select
+                            wire:model.live="selectedPaymentMethod"
+                            wire:change="filterPaymentMethod"
+                            class=" px-4 py-2 text-lg font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600">
+                            <option value="">@lang('app.showAll') @lang('modules.report.paymentMethods')</option>
+                            <option value="cash">@lang('modules.order.cash')</option>
+                            <option value="upi">@lang('modules.order.upi')</option>
+                            <option value="card">@lang('modules.order.card')</option>
+                            <option value="razorpay">@lang('modules.order.razorpay')</option>
+                            <option value="stripe">@lang('modules.order.stripe')</option>
+                            <option value="flutterwave">@lang('modules.order.flutterwave')</option>
+                        </select>
+
+                        <div class="lg:flex items-center gap-1">
+                            <div class="w-full max-w-[15rem]" wire:key="start-date-{{ $startDate }}">
+                                <x-datepicker wire:model.change='startDate' placeholder="@lang('app.selectStartDate')" />
+                            </div>
+                            <span class="mx-1 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
+                            <div class="w-full max-w-[15rem]" wire:key="end-date-{{ $endDate }}">
+                                <x-datepicker wire:model.live='endDate' placeholder="@lang('app.selectEndDate')" />
+                            </div>
                         </div>
 
-                        <div class="lg:flex items-center gap-2 ms-2">
-                            <div class="w-full max-w-[15rem]">
+                        <div class="lg:flex items-center gap-1">
+                            <div class="w-full max-w-[15rem]" wire:key="start-time-{{ $startTime }}">
                                 <label for="start-time" class="sr-only">@lang('modules.reservation.timeStart'):</label>
                                 <x-time-picker wire:model.live.debounce.500ms="startTime" value="{{ $startTime }}" />
                             </div>
-                            <span class="mx-2 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
-                            <div class="w-full max-w-[15rem]">
+                            <span class="mx-1 text-gray-500 dark:text-gray-100 w-10 text-center">@lang('app.to')</span>
+                            <div class="w-full max-w-[15rem]" wire:key="end-time-{{ $endTime }}">
                                 <label for="end-time" class="sr-only">@lang('modules.reservation.timeEnd'):</label>
                                 <x-time-picker wire:model.live.debounce.500ms="endTime" value="{{ $endTime }}" />
                             </div>
                         </div>
                     </div>
                 </form>
+
             </div>
 
             <div class="inline-flex items-center gap-2 w-1/2 sm:w-auto ms-2 flex-wrap">
                 @if($isToday && $filteredShifts && $filteredShifts->count() > 0)
-                <x-select class="text-sm" wire:model.live.debounce.250ms='filterShift'>
-                    <option value="">@lang('app.showAll') @lang('modules.settings.operationalShifts')</option>
-                    @foreach ($filteredShifts as $shift)
-                        <option value="{{ $shift->id }}">
-                            {{ $shift->shift_name ?: __('modules.settings.shift') . ' #' . $shift->id }}
-                            ({{ \Carbon\Carbon::parse($shift->start_time)->format(restaurant()->time_format ?? 'h:i A') }} -
-                            {{ \Carbon\Carbon::parse($shift->end_time)->format(restaurant()->time_format ?? 'h:i A') }})
-                        </option>
-                    @endforeach
-                </x-select>
+                    <x-select class="text-sm" wire:model.live.debounce.250ms='filterShift'>
+                        <option value="">@lang('app.showAll') @lang('modules.settings.operationalShifts')</option>
+                        @foreach ($filteredShifts as $shift)
+                            <option value="{{ $shift->id }}">
+                                {{ $shift->shift_name ?: __('modules.settings.shift') . ' #' . $shift->id }}
+                                ({{ \Carbon\Carbon::parse($shift->start_time)->format(restaurant()->time_format ?? 'h:i A') }} -
+                                {{ \Carbon\Carbon::parse($shift->end_time)->format(restaurant()->time_format ?? 'h:i A') }})
+                            </option>
+                        @endforeach
+                    </x-select>
                 @endif
 
                 <!-- Business Day Information Alert (Inline) - Only show if today is selected -->
                 @if($isToday && $businessDayInfo)
-                <div class="relative inline-block" x-data="{ showTooltip: false }">
-                    @if($businessDayInfo['extends_to_next_day'])
-                    <div
-                        class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-help whitespace-nowrap"
-                        @mouseenter="showTooltip = true"
-                        @mouseleave="showTooltip = false"
-                    >
-                        <div class="flex items-center px-5">
-                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
-                                @lang('modules.settings.businessDayInfo')
-                            </span>
-                        </div>
-                        <!-- Hover Tooltip -->
+                    <div class="relative inline-block" x-data="{ showTooltip: false }" @click.outside="showTooltip = false" @keydown.escape.window="showTooltip = false">
+                        @if($businessDayInfo['extends_to_next_day'])
                         <div
-                            x-show="showTooltip"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
-                            class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                            style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                            x-cloak
+                            class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-pointer sm:cursor-help whitespace-nowrap"
+                            @mouseenter="if (window.innerWidth >= 640) showTooltip = true"
+                            @mouseleave="if (window.innerWidth >= 640) showTooltip = false"
+                            @click="if (window.innerWidth < 640) showTooltip = !showTooltip"
+                            @keydown.enter.prevent="showTooltip = !showTooltip"
+                            @keydown.space.prevent="showTooltip = !showTooltip"
+                            tabindex="0"
                         >
-                            <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                    @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
-                                    @lang('app.to') {{ $businessDayInfo['end'] }}
-                                    (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
-                                </p>
-                                <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                    @lang('modules.settings.businessDayExtendsInfo')
-                                </p>
+                        @else
+                        <div
+                            class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/20 dark:border-gray-800 cursor-pointer sm:cursor-help whitespace-nowrap"
+                            @mouseenter="if (window.innerWidth >= 640) showTooltip = true"
+                            @mouseleave="if (window.innerWidth >= 640) showTooltip = false"
+                            @click="if (window.innerWidth < 640) showTooltip = !showTooltip"
+                            @keydown.enter.prevent="showTooltip = !showTooltip"
+                            @keydown.space.prevent="showTooltip = !showTooltip"
+                            tabindex="0"
+                        >
+                        @endif
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
+                                    @lang('modules.settings.businessDayInfo')
+                                </span>
                             </div>
-                            <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
-                        </div>
-                    </div>
-                    @else
-                    <div
-                        class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 cursor-help whitespace-nowrap"
-                        @mouseenter="showTooltip = true"
-                        @mouseleave="showTooltip = false"
-                    >
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-xs font-medium text-gray-900 dark:text-gray-200">
-                                @lang('modules.settings.businessDayInfo')
-                            </span>
-                        </div>
-                        <!-- Hover Tooltip -->
-                        <div
-                            x-show="showTooltip"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
-                            class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                            style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                        >
-                            <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                <p class="leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                    @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
-                                    @if($businessDayInfo['start'] != $businessDayInfo['end'])
+                            <!-- Hover Tooltip -->
+                            <div
+                                x-show="showTooltip"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:enter-end="opacity-100"
+                                x-transition:leave="transition ease-in duration-150"
+                                x-transition:leave-start="opacity-100"
+                                x-transition:leave-end="opacity-0"
+                                class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
+                                style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
+                                x-cloak
+                            >
+                                <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
+                                    <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
+                                    <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                        @if($businessDayInfo['extends_to_next_day'])
+                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
                                         @lang('app.to') {{ $businessDayInfo['end'] }}
-                                    @endif
-                                </p>
+                                        (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
+                                        @else
+                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                                        @if($businessDayInfo['start'] != $businessDayInfo['end'])
+                                            @lang('app.to') {{ $businessDayInfo['end'] }}
+                                        @endif
+                                        @endif
+                                    </p>
+                                    <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                        @lang('modules.settings.businessDayExtendsInfo')
+                                    </p>
+                                </div>
+                                @if($businessDayInfo['extends_to_next_day'])
+                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                @else
+                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                @endif
                             </div>
-                            <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
                         </div>
                     </div>
-                    @endif
-                </div>
                 @endif
 
-                <select wire:model.live="selectedWaiter" wire:change="filterWaiter" class="px-3 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-4 focus:ring-primary-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
-                    <option value="">@lang('modules.report.allUsers')</option>
-                    @foreach($waiters ?? [] as $user)
-                        <option value="{{ $user->id }}">{{ $user->name }}</option>
-                    @endforeach
-                </select>
+            </div>
+
+            <div>
                 <a href="javascript:;" wire:click='exportReport'
-                class="inline-flex items-center  w-1/2 px-3 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:ring-primary-300 sm:w-auto dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
+                    class="inline-flex items-center  w-1/2 px-3 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:ring-primary-300 sm:w-auto dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-700">
                     <svg class="w-5 h-5 mr-2 -ml-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M6 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.414A2 2 0 0 0 15.414 6L12 2.586A2 2 0 0 0 10.586 2zm5 6a1 1 0 1 0-2 0v3.586l-1.293-1.293a1 1 0 1 0-1.414 1.414l3 3a1 1 0 0 0 1.414 0l3-3a1 1 0 0 0-1.414-1.414L11 11.586z" clip-rule="evenodd"/></svg>
                     @lang('app.export')
                 </a>
-
-
             </div>
+
         </div>
     </div>
 
     <!-- Sales Table -->
     <div class="overflow-x-auto bg-white dark:bg-gray-800 p-4">
+        @php
+            $enabledGatewayCount = collect(['stripe', 'razorpay', 'flutterwave'])
+                ->filter(fn ($method) => isset($paymentGateway) && ($paymentGateway?->{"{$method}_status"}))
+                ->count();
+
+            $totalColumns =
+                2 + // date + total orders
+                count($charges) +
+                (count($taxes) > 0 ? (count($taxes) + 1) : 0) + // taxes + total tax amount
+                (4 + $enabledGatewayCount) + // cash+upi+card+bank + enabled gateways
+                2 + // due + outstanding received
+                5; // delivery fee + discount + tip + total + total excluding tip
+        @endphp
         <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <thead class="bg-gray-100 dark:bg-gray-700">
             <tr>
-                <th class="p-4 text-xs font-medium tracking-wider text-left text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-medium tracking-wider text-left text-gray-600 uppercase dark:text-gray-300">
                 @lang('app.date')
                 </th>
-                <th class="p-4 text-xs font-medium tracking-wider text-center text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-medium tracking-wider text-center text-gray-600 uppercase dark:text-gray-300">
                 @lang('modules.report.totalOrders')
                 </th>
 
@@ -422,7 +456,7 @@
                 @endif
 
                 <!-- Payment Methods Column Group -->
-                <th colspan="{{ 4 + collect(['stripe', 'razorpay', 'flutterwave'])->filter(fn($method) => isset($paymentGateway) && $paymentGateway->{"{$method}_status"})->count() }}" class="p-4 text-xs font-medium tracking-wider text-center text-gray-600 uppercase dark:text-gray-300 bg-green-50 dark:bg-green-900/20">
+                <th colspan="{{ 4 + $enabledGatewayCount }}" class="p-4 text-xs font-medium tracking-wider text-center text-gray-600 uppercase dark:text-gray-300 bg-green-50 dark:bg-green-900/20">
                     @lang('modules.report.paymentMethods')
                 </th>
 
@@ -431,26 +465,23 @@
                     @lang('modules.order.due')
                 </th>
 
-                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
                 @lang('modules.order.deliveryFee')
                 </th>
-                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
                 @lang('modules.order.discount')
                 </th>
-                <th   class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
                 @lang('modules.order.tip')
                 </th>
-                <th class="p-4 text-xs font-bold tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
+                <th rowspan="2" class="p-4 text-xs font-bold tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
                 @lang('modules.order.total')
                 </th>
-                <th class="p-4 text-xs font-bold tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
-                @lang('modules.order.total')
+                <th rowspan="2" class="p-4 text-xs font-bold tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
+                    @lang('modules.order.totalExcludingTip')
                 </th>
             </tr>
             <tr>
-                <th></th>
-                <th></th>
-
                 <!-- Charges Subheaders -->
                 @foreach ($charges as $charge)
                 <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20">
@@ -485,12 +516,6 @@
                 <th class=" py-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-green-50 dark:bg-green-900/20">
                 @lang('modules.order.bank_transfer')
                 </th>
-                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20">
-                    @lang('modules.order.due')
-                </th>
-                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20">
-                    @lang('modules.report.outstandingReceived')
-                </th>
                 @if($paymentGateway->razorpay_status)
                 <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-green-50 dark:bg-green-900/20">
                     @lang('modules.order.razorpay')
@@ -506,15 +531,13 @@
                     @lang('modules.order.flutterwave')
                 </th>
                 @endif
+
+                <!-- Due Subheaders -->
                 <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20">
                     @lang('modules.order.due')
                 </th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300">
-                    @lang('modules.order.totalExcludingTip')
+                <th class="p-4 text-xs font-medium tracking-wider text-right text-gray-600 uppercase dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20">
+                    @lang('modules.report.outstandingReceived')
                 </th>
             </tr>
             </thead>
@@ -558,12 +581,6 @@
                 <td class="px-5 text-sm text-right text-gray-900 dark:text-white bg-green-50/50 dark:bg-green-900/10">
                 {{ currency_format($item['bank_transfer_amount'], $currencyId) }}
                 </td>
-                <td class="p-4 text-sm text-right text-gray-900 dark:text-white bg-orange-50/50 dark:bg-orange-900/10">
-                    {{ currency_format($item['outstanding_amount'], $currencyId) }}
-                </td>
-                <td class="p-4 text-sm text-right text-gray-900 dark:text-white bg-orange-50/50 dark:bg-orange-900/10">
-                    {{ currency_format($item['due_received_amount'], $currencyId) }}
-                </td>
                 @if($paymentGateway->razorpay_status)
                 <td class="p-4 text-sm text-right text-gray-900 dark:text-white bg-green-50/50 dark:bg-green-900/10">
                     {{ currency_format($item['razorpay_amount'], $currencyId) }}
@@ -579,8 +596,13 @@
                     {{ currency_format($item['flutterwave_amount'], $currencyId) }}
                 </td>
                 @endif
+
+                <!-- Due columns (must be after payment gateway columns to match header order) -->
                 <td class="p-4 text-sm text-right text-gray-900 dark:text-white bg-orange-50/50 dark:bg-orange-900/10">
                     {{ currency_format($item['outstanding_amount'], $currencyId) }}
+                </td>
+                <td class="p-4 text-sm text-right text-gray-900 dark:text-white bg-orange-50/50 dark:bg-orange-900/10">
+                    {{ currency_format($item['due_received_amount'], $currencyId) }}
                 </td>
                 <td class="p-4 text-sm text-right text-gray-900 dark:text-white ">
                     {{ currency_format($item['delivery_fee'], $currencyId) }}
@@ -600,7 +622,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="14" class="p-4 text-sm text-center text-gray-500 dark:text-gray-400">
+                <td colspan="{{ $totalColumns }}" class="p-4 text-sm text-center text-gray-500 dark:text-gray-400">
                 @lang('messages.noItemAdded')
                 </td>
             </tr>

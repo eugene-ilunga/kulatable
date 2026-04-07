@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Helper\Files;
+use App\Models\Branch;
 use Livewire\Component;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Features\SupportFileUploads\WithFileUploads;
@@ -21,9 +22,14 @@ class ReceiptSetting extends Component
     public bool $waiter;
     public bool $totalGuest;
     public bool $restaurantLogo;
+    public bool $showRestaurantName;
+    public bool $showBranchName;
+    public bool $showBranchAddress;
     public $receiptSetting;
     public bool $restaurantTax;
     public bool $showTax;
+    public bool $showCrNumber;
+    public bool $showVatNumber;
     public bool $showPaymentQrCode;
     public bool $showPaymentDetails;
     public bool $showPaymentStatus;
@@ -31,7 +37,7 @@ class ReceiptSetting extends Component
 
     public function mount()
     {
-        $this->receiptSetting = restaurant()->receiptSetting;
+        $this->receiptSetting = branch()->receiptSetting()->first();
         $this->customerName = (bool)$this->receiptSetting->show_customer_name;
         $this->customerAddress = (bool)$this->receiptSetting->show_customer_address;
         $this->customerPhone = (bool)$this->receiptSetting->show_customer_phone;
@@ -40,7 +46,12 @@ class ReceiptSetting extends Component
         $this->waiter = (bool)$this->receiptSetting->show_waiter;
         $this->totalGuest = (bool)$this->receiptSetting->show_total_guest;
         $this->restaurantLogo = (bool)$this->receiptSetting->show_restaurant_logo;
+        $this->showRestaurantName = (bool)$this->receiptSetting->show_restaurant_name;
+        $this->showBranchName = (bool)$this->receiptSetting->show_branch_name;
+        $this->showBranchAddress = (bool)$this->receiptSetting->show_branch_address;
         $this->restaurantTax = (bool)$this->receiptSetting->show_tax;
+        $this->showCrNumber = (bool)$this->receiptSetting->show_cr_number;
+        $this->showVatNumber = (bool)$this->receiptSetting->show_vat_number;
         $this->showPaymentDetails = (bool)$this->receiptSetting->show_payment_details;
         $this->showPaymentStatus = (bool)$this->receiptSetting->show_payment_status;
         $this->paymentQrCode = $this->receiptSetting->payment_qr_code_url;
@@ -90,7 +101,12 @@ class ReceiptSetting extends Component
             'show_waiter' => $this->waiter,
             'show_total_guest' => $this->totalGuest,
             'show_restaurant_logo' => $this->restaurantLogo,
+            'show_restaurant_name' => $this->showRestaurantName,
+            'show_branch_name' => $this->showBranchName,
+            'show_branch_address' => $this->showBranchAddress,
             'show_tax' => $this->restaurantTax,
+            'show_cr_number' => $this->showCrNumber,
+            'show_vat_number' => $this->showVatNumber,
             'show_payment_details' => $this->showPaymentDetails,
             'show_payment_status' => $this->showPaymentStatus,
             'show_order_type' => $this->showOrderType,
@@ -123,7 +139,13 @@ class ReceiptSetting extends Component
 
         $this->receiptSetting->update($data);
 
+        // Refresh the session branch with a fresh DB instance so its cached relationships
+        // (receiptSetting, etc.) are cleared everywhere, not just in this component.
+        session(['branch' => Branch::find(branch()->id)]);
+
+        $this->receiptSetting = $this->receiptSetting->fresh();
         $this->paymentQrCode = $this->receiptSetting->payment_qr_code_url;
+
 
         $this->dispatch('settingsUpdated');
 

@@ -6,7 +6,7 @@
             <div class="flex gap-8 items-center">
                 <a href="{{ route('shop_restaurant', [$restaurant->hash]) . '?branch=' . $shopBranch->id }}"
                     class="inline-flex items-center app-logo">
-                    <img src="{{ $restaurant->logoUrl }}" class="ltr:mr-3 rtl:ml-3 h-12 sm:h-9" alt="App Logo" />
+                    <img src="{{ $restaurant->logoUrl }}" class="ltr:mr-3 rtl:ml-3 h-6 sm:h-9" alt="App Logo" />
                     @if ($restaurant->show_logo_text)
                         <span
                             class="self-center text-xl font-semibold whitespace-nowrap dark:text-white">{{ $restaurant->name }}</span>
@@ -111,18 +111,19 @@
                 @endif
 
                 @if (!is_null(customer()))
-                    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbar"
-                        class="z-50 flex items-center justify-between w-full py-2 px-3 text-gray-900 hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-skin-base md:p-0 md:w-auto dark:text-white md:dark:hover:text-skin-base dark:focus:text-white dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
-                        @lang('menu.myAccount')
-                        <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                            fill="none" viewBox="0 0 10 6">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="m1 1 4 4 4-4" />
-                        </svg>
-                    </button>
-                    <!-- Dropdown menu -->
-                    <div id="dropdownNavbar"
-                        class="z-10 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600">
+                    <div class="relative" x-data="{ accountOpen: false }" @click.outside="accountOpen = false">
+                        <button type="button" @click="accountOpen = !accountOpen"
+                            class="z-50 flex items-center justify-between w-full py-2 px-3 text-gray-900 hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-skin-base md:p-0 md:w-auto dark:text-white md:dark:hover:text-skin-base dark:focus:text-white dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
+                            @lang('menu.myAccount')
+                            <svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" viewBox="0 0 10 6">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="m1 1 4 4 4-4" />
+                            </svg>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div x-show="accountOpen" x-cloak x-transition
+                            class="absolute right-0 mt-1 z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 dark:divide-gray-600">
                         <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownLargeButton">
                             <li>
                                 <a href="{{ route('profile', [$restaurant->hash]) }}" wire:navigate
@@ -166,7 +167,7 @@
                                     class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">@lang('app.logout')</a>
                             </li>
                         </ul>
-
+                        </div>
                     </div>
                 @endif
 

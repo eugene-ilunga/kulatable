@@ -20,9 +20,9 @@
                 </div>
                 <div class="sm:col-span-2">
                     <label for="telephone" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">@lang('modules.customer.phone')</label>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col gap-2 sm:flex-row">
                         <!-- Phone Code Dropdown -->
-                        <div x-data="{ isOpen: @entangle('phoneCodeIsOpen').live }" @click.away="isOpen = false" class="relative w-32">
+                        <div x-data="{ isOpen: @entangle('phoneCodeIsOpen').live }" @click.away="isOpen = false" class="relative w-full sm:w-32">
                             <div @click="isOpen = !isOpen"
                                 class="p-2.5 bg-gray-50 border border-gray-300 rounded-lg cursor-pointer dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                                 <div class="flex items-center justify-between">

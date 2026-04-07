@@ -101,7 +101,7 @@ class RestaurantSignup extends Component
             return false;
         }
 
-        return $smsSettings->phone_verification_status && ($smsSettings->vonage_status || $smsSettings->msg91_status);
+        return $smsSettings->phone_verification_status && ($smsSettings->vonage_status || $smsSettings->msg91_status || $smsSettings->android_sms_gateway_status);
     }
 
     /**

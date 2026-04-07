@@ -39,7 +39,7 @@
 
                             @forelse ($restaurants as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='member-restaurants-{{ $item->id }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->id ?? '--' }}
                                 </td>
 
@@ -99,7 +99,7 @@
                                     @endif
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                 @if ($item->is_active == true)
                                     <span class="bg-green-100 uppercase text-green-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">@lang('app.active')</span>
                                 @else

@@ -119,12 +119,13 @@ class Tables extends Component
             return;
         }
 
-        return $this->redirect(route('pos.show', $id), navigate: true);
+        // Full navigation so POS @push('scripts') runs and window.posState / AJAX handlers exist.
+        return $this->redirect(route('pos.show', $id));
     }
 
     public function showTableOrderDetail($id)
     {
-        return $this->redirect(route('pos.order', [$id]), navigate: true);
+        return $this->redirect(route('pos.order', [$id]));
     }
 
     public function forceUnlockTable($tableId)
@@ -267,6 +268,11 @@ class Tables extends Component
                 })
                 ->pluck('table_id')
                 ->toArray();
+
+            // If waiter has no assigned tables, show all tables
+            if (empty($assignedTableIds)) {
+                $assignedTableIds = null;
+            }
         }
 
         $query = Area::with(['tables' => function ($query) use ($assignedTableIds) {

@@ -312,6 +312,13 @@
                             <x-input-error for="yelp" class="mt-2" />
                         </div>
 
+                        <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <x-label for="googleBusiness" :value="__('modules.settings.google_business_link')" class="!mb-1" />
+                            <x-input id="googleBusiness" class="block w-full mt-1" type="url"
+                                placeholder="{{ __('placeholders.googleBusinessPlaceHolder') }}" wire:model='googleBusinessLink' />
+                            <x-input-error for="googleBusinessLink" class="mt-2" />
+                        </div>
+
                     </div>
                 </div>
 

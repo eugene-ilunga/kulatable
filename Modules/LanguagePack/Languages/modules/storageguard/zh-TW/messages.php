@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => '存儲衛士',
+  'status_title' => 'Storage Guard 系統路徑',
+  'permissions_badge' => '模式：0775（目錄）/0664（文件）',
+  'success_message' => '嘗試修復 :count 項（文件和目錄）。',
+  'error_alert' => '需要注意一個或多個存儲路徑。單擊“遞歸修復”修復權限。',
+  'recursive_repair' => '遞歸修復',
+  'secure_repair' => '保護和修復權限',
+  'refresh_status' => '刷新狀態',
+  'path' => '小路',
+  'status' => '地位',
+  'perms' => '燙髮',
+  'readable' => '可讀',
+  'writable' => '可寫',
+  'yes' => '是的',
+  'no' => '不',
+  'ok' => '好的',
+  'issue' => '問題',
+];

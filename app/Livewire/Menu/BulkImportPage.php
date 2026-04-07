@@ -673,6 +673,10 @@ class BulkImportPage extends Component
             // Clear menu item stats cache
             cache()->forget('restaurant_' . $restaurantId . '_menu_item_stats');
 
+            // Clear cache so newly imported menu items are immediately reflected
+            // in POS and any other cached menu listings, same as single create/update.
+            cache()->flush();
+
             // Clean up temporary file (Livewire handles this automatically)
             // No need to manually delete as Livewire manages temporary files
 

@@ -48,7 +48,11 @@
                         </div>
 
                         <!-- Payment Methods -->
-                        <div class="grid grid-cols-2 gap-3 {{ $canAddTip ? ($isFreshpayEnabled ? 'sm:grid-cols-6' : 'sm:grid-cols-5') : ($isFreshpayEnabled ? 'sm:grid-cols-5' : 'sm:grid-cols-4') }}">
+                        <div @class([
+                            'grid gap-3',
+                            'grid-cols-2 sm:grid-cols-4' => !$canAddTip,
+                            'grid-cols-2 sm:grid-cols-5' => $canAddTip
+                        ])>
                             <button wire:click="setPaymentMethod('cash')"
                                 class="p-3 text-center border rounded-lg {{ $paymentMethod === 'cash' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
                                 <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2m2 4h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2m7-5a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/></svg>
@@ -60,14 +64,6 @@
                                 <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3"/></svg>
                                 <span class="text-sm">@lang('modules.order.card')</span>
                             </button>
-
-                            @if($isFreshpayEnabled)
-                                <button wire:click="setPaymentMethod('freshpay')"
-                                    class="p-3 text-center border rounded-lg {{ $paymentMethod === 'freshpay' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
-                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-6 h-6 mx-auto mb-1" />
-                                    <span class="text-sm">FreshPay</span>
-                                </button>
-                            @endif
 
                             <button wire:click="setPaymentMethod('upi')"
                                 class="p-3 text-center border rounded-lg {{ $paymentMethod === 'upi' ? 'bg-skin-base/5 border-skin-base' : 'hover:bg-gray-50' }}">
@@ -120,24 +116,9 @@
                             </button>
                             @endif
                         </div>
-                        @if($isFreshpayEnabled)
-                            <p class="mt-2 text-xs text-gray-500">
-                                Carte = enregistrement manuel, FreshPay = paiement mobile.
-                            </p>
-                        @endif
 
                         <!-- Amount Input and Summary -->
                         <div class="mt-4 space-y-4">
-                            @if($paymentMethod === 'freshpay')
-                                <div>
-                                    <label class="block text-sm mb-1">Numéro client (FreshPay)</label>
-                                    <input type="text"
-                                        wire:model.live="freshpayCustomerNumber"
-                                        placeholder="Ex: 0972148867"
-                                        class="w-full p-3 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
-                                </div>
-                            @endif
-
                             <div>
                                 <label class="block text-sm mb-1">{{ __('modules.order.amount') }}</label>
                                 <input type="text" wire:model.live="paymentAmount"
@@ -334,27 +315,37 @@
                                     + {{ __('modules.order.newSplit') }}
                                 </button>
                             </div>
-                            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start mt-2">
+                            <div class="flex-1 overflow-y-auto max-h-96 mt-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 @for($i = 1; $i <= $numberOfSplits; $i++)
-                                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-600 rounded-lg">
-                                        <div class="flex-1 flex justify-between items-center gap-3">
-                                            <span>Split {{ $i }}</span>
-                                            <input type="number"  readonly
-                                                wire:model.live="splits.{{ $i }}.amount"
-                                                class="w-32 rounded-lg border-gray-300 text-right"
-                                                placeholder="{{ number_format($order->total / $numberOfSplits, 2) }}">
+                                    <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-shadow hover:border-blue-400 dark:hover:border-blue-500" wire:key="equal-split-{{ $i }}">
+                                        <div class="flex items-center gap-2 mb-2.5">
+                                            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                                {{ $i }}
+                                            </div>
+                                            <input type="text"
+                                                wire:model.blur="payerNames.{{ $i }}"
+                                                wire:key="equal-payer-{{ $i }}"
+                                                class="flex-1 px-2.5 py-1.5 text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                                placeholder="@lang('modules.order.guest') {{ $i }}">
                                         </div>
-
-                                        <select class="rounded-lg border-gray-300 w-28"
-                                            wire:model.live="splits.{{ $i }}.paymentMethod">
-                                            <option value="cash">{{ __('modules.order.cash') }}</option>
-                                            <option value="card">{{ __('modules.order.card') }}</option>
-                                            <option value="upi">{{ __('modules.order.upi') }}</option>
-                                            <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
-                                            <option value="due">{{ __('modules.order.due') }}</option>
-                                        </select>
+                                        <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-md p-2">
+                                            <input type="number" readonly
+                                                wire:model.live="splits.{{ $i }}.amount"
+                                                class="flex-1 px-2 py-1 text-sm text-right rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 font-semibold"
+                                                placeholder="{{ number_format($order->total / $numberOfSplits, 2) }}">
+                                            <select class="flex-1 px-2 py-1 text-sm rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                wire:model.live="splits.{{ $i }}.paymentMethod">
+                                                <option value="cash">{{ __('modules.order.cash') }}</option>
+                                                <option value="card">{{ __('modules.order.card') }}</option>
+                                                <option value="upi">{{ __('modules.order.upi') }}</option>
+                                                <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
+                                                <option value="due">{{ __('modules.order.due') }}</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 @endfor
+                                </div>
                             </div>
                         </div>
 
@@ -383,27 +374,38 @@
                                     + {{ __('modules.order.newSplit') }}
                                 </button>
                             </div>
-                            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start mt-2">
+                            <div class="flex-1 overflow-y-auto max-h-96 mt-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 @foreach($customSplits as $splitNumber)
-                                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-600 rounded-lg">
-                                        <div class="flex-1 flex justify-between items-center gap-3">
-                                            <span>{{ __('modules.order.split') }} {{ $splitNumber }}</span>
+                                    <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm hover:shadow-md transition-shadow hover:border-purple-400 dark:hover:border-purple-500" wire:key="custom-split-{{ $splitNumber }}">
+                                        <div class="flex items-center gap-2 mb-2.5">
+                                            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 shadow-sm flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                                {{ $splitNumber }}
+                                            </div>
+                                            <input type="text"
+                                                wire:model.blur="payerNames.{{ $splitNumber }}"
+                                                wire:key="custom-payer-{{ $splitNumber }}"
+                                                class="flex-1 px-2.5 py-1.5 text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+                                                placeholder="@lang('modules.order.guest') {{ $splitNumber }}">
+                                        </div>
+                                        <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-md p-2">
                                             <input type="number" min="0" step="0.001"
                                                 wire:model.live="splits.{{ $splitNumber }}.amount" wire:keyup="updateBalanceAmount"
-                                                class="w-32 rounded-lg border-gray-300 text-right"
+                                                class="flex-1 px-2 py-1 text-sm text-right rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 font-semibold focus:ring-2 focus:ring-purple-500"
                                                 placeholder="0.00"
                                                 oninput="if(this.value < 0) this.value = 0;">
+                                            <select class="flex-1 px-2 py-1 text-sm rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                                                wire:model.live="splits.{{ $splitNumber }}.paymentMethod">
+                                                <option value="cash">{{ __('modules.order.cash') }}</option>
+                                                <option value="card">{{ __('modules.order.card') }}</option>
+                                                <option value="upi">{{ __('modules.order.upi') }}</option>
+                                                <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
+                                                <option value="due">{{ __('modules.order.due') }}</option>
+                                            </select>
                                         </div>
-                                        <select class="rounded-lg border-gray-300 w-28"
-                                            wire:model.live="splits.{{ $splitNumber }}.paymentMethod">
-                                            <option value="cash">{{ __('modules.order.cash') }}</option>
-                                            <option value="card">{{ __('modules.order.card') }}</option>
-                                            <option value="upi">{{ __('modules.order.upi') }}</option>
-                                            <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
-                                            <option value="due">{{ __('modules.order.due') }}</option>
-                                        </select>
                                     </div>
                                 @endforeach
+                                </div>
                             </div>
                         </div>
 
@@ -437,11 +439,14 @@
                             </div>
 
                             <!-- Split Content - Side by Side Layout -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <!-- Left Side - Available Items -->
                                 <div class="space-y-3">
-                                    <div class="flex justify-between items-center">
-                                        <h4 class="font-medium text-sm text-gray-500 dark:text-gray-300">{{ __('modules.order.availableItems') }}</h4>
+                                    <div class="flex justify-between items-center gap-2 pb-2 border-b-2 border-gray-200 dark:border-gray-600">
+                                        <div>
+                                        <svg class="w-4 h-4 text-gray-600 dark:text-gray-400 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-300 inline uppercase tracking-wide">{{ __('modules.order.availableItems') }}</h4>
+                                        </div>
                                         <span class="text-sm text-gray-500 dark:text-gray-300">{{ __('modules.order.clickToAdd') }}</span>
                                     </div>
                                     <div class="space-y-2 max-h-[300px] sm:max-h-[400px] overflow-y-auto">
@@ -492,29 +497,55 @@
 
                                 <!-- Right Side - Selected Items -->
                                 <div class="space-y-3">
-                                    <div class="flex items-center gap-4">
-                                        <div class="flex-1 flex justify-between items-center text-gray-500 dark:text-gray-300">
-                                            <h4 class="font-medium text-sm">{{ __('modules.order.itemsInSplit', ['split' => $activeSplitId]) }}</h4>
-                                            <div class="text-sm">
-                                                <span class="font-semibold">
-                                                    {{ __('modules.order.total') }}: {{ currency_format(($splits[$activeSplitId]['total'] ?? 0), restaurant()->currency_id) }}
-                                                </span>
-                                                @if(restaurant()->tax_mode === 'item' && isset($splits[$activeSplitId]['tax_total']) && $splits[$activeSplitId]['tax_total'] > 0)
-                                                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                                                        ({{ __('modules.order.tax') }}: {{ currency_format($splits[$activeSplitId]['tax_total'], restaurant()->currency_id) }})
-                                                    </span>
-                                                @endif
+                                    <div class="flex items-center gap-2 pb-2 border-b-2 border-skin-base dark:border-skin-base">
+                                        <svg class="w-4 h-4 text-skin-base" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                        <h4 class="text-xs font-semibold text-skin-base uppercase tracking-wide">{{ __('modules.order.guestInfo') }} - {{ __('modules.order.split') }} {{ $activeSplitId }}</h4>
+                                    </div>
+                                    <!-- Guest Information Form - Compact Version -->
+                                    <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-blue-200 dark:border-gray-600 shadow-sm" wire:key="items-split-info-{{ $activeSplitId }}">
+                                        <div class="flex items-center justify-between mb-2.5">
+                                            <div class="flex items-center gap-2">
+                                                <input type="text"
+                                                    wire:model.blur="payerNames.{{ $activeSplitId }}"
+                                                    wire:key="items-payer-{{ $activeSplitId }}"
+                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 text-sm"
+                                                    placeholder="@lang('modules.order.enterGuestName')">
                                             </div>
+                                            <select class="px-2.5 py-1.5 text-xs rounded-md border-blue-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 font-medium"
+                                                wire:change="updateSplitPaymentMethod({{ $activeSplitId }}, $event.target.value)"
+                                                x-model="$wire.splits[{{ $activeSplitId }}].paymentMethod">
+                                                <option value="cash">{{ __('modules.order.cash') }}</option>
+                                                <option value="card">{{ __('modules.order.card') }}</option>
+                                                <option value="upi">{{ __('modules.order.upi') }}</option>
+                                                <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
+                                                <option value="due">{{ __('modules.order.due') }}</option>
+                                            </select>
                                         </div>
-                                        <select class="rounded-lg border-gray-300 dark:border-gray-600 w-28 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-300"
-                                            wire:change="updateSplitPaymentMethod({{ $activeSplitId }}, $event.target.value)"
-                                            x-model="$wire.splits[{{ $activeSplitId }}].paymentMethod">
-                                            <option value="cash">{{ __('modules.order.cash') }}</option>
-                                            <option value="card">{{ __('modules.order.card') }}</option>
-                                            <option value="upi">{{ __('modules.order.upi') }}</option>
-                                            <option value="bank_transfer">{{ __('modules.order.bank_transfer') }}</option>
-                                            <option value="due">{{ __('modules.order.due') }}</option>
-                                        </select>
+                                        <div>
+                                            <div class="flex justify-between items-center">
+                                                <div class="flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-skin-base" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                                    </svg>
+                                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                                        {{ __('modules.order.total') }}:
+                                                    </span>
+                                                </div>
+                                                <span class="text-base font-bold text-skin-base">
+                                                    {{ currency_format(($splits[$activeSplitId]['total'] ?? 0), restaurant()->currency_id) }}
+                                                </span>
+                                            </div>
+                                            @if(restaurant()->tax_mode === 'item' && isset($splits[$activeSplitId]['tax_total']) && $splits[$activeSplitId]['tax_total'] > 0)
+                                                <div class="flex justify-end items-center gap-1 mt-1">
+                                                    <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                    <span class="text-xs text-gray-600 dark:text-gray-300">
+                                                        {{ __('modules.order.tax') }}: {{ currency_format($splits[$activeSplitId]['tax_total'], restaurant()->currency_id) }}
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
                                     <div class="space-y-2 max-h-[300px] sm:max-h-[400px] overflow-y-auto">
                                         @if(empty($splits[$activeSplitId]['items']))
@@ -689,10 +720,10 @@
         <x-slot name="footer">
             @if($order)
             <div class="flex flex-row w-full gap-3">
-                <x-button-cancel class="flex-1 px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-lg" wire:click="$toggle('showAddPaymentModal')">
+                <x-button-cancel class="flex-1 px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-lg" wire:click="$toggle('showAddPaymentModal')" wire:loading.attr="disabled" wire:target="submitForm">
                     {{ __('app.cancel') }}
                 </x-button-cancel>
-                <x-button wire:click="submitForm" class="flex-1 px-6 py-3 text-base font-medium bg-skin-base text-white rounded-lg hover:bg-skin-base-600">
+                <x-button wire:click="submitForm" wire:loading.attr="disabled" wire:target="submitForm" class="flex-1 px-6 py-3 text-base font-medium bg-skin-base text-white rounded-lg hover:bg-skin-base-600">
                     {{ __('modules.order.completePayment') }}
                 </x-button>
                 </div>

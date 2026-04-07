@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ restaurant()->name }} - {{ $order->show_formatted_order_number }}</title>
+    <title>{{ $orderBranch->name ?? restaurant()->name }} - {{ $order->show_formatted_order_number }}</title>
     <style>
         * {
             margin: 0;
@@ -219,15 +219,23 @@
     <div class="receipt">
         <div class="header">
             @if ($receiptSettings->show_restaurant_logo)
-                <img src="{{ restaurant()->logo_url }}" alt="{{ restaurant()->name }}" class="restaurant-logo">
+                <img src="{{ restaurant()->logo_url }}" alt="{{ $orderBranch->name ?? restaurant()->name }}" class="restaurant-logo">
             @endif
-            <div class="restaurant-name">{{ restaurant()->name }}</div>
-            <div class="restaurant-info">{{ branch()->address }}</div>
-            <div class="restaurant-info">@lang('modules.customer.phone'): {{ restaurant()->phone_number }}</div>
+            <div class="restaurant-name">{{ $orderBranch->name ?? restaurant()->name }}</div>
+            <div class="restaurant-info">{{ $orderBranch->address ?? '' }}</div>
+            <div class="restaurant-info">@lang('modules.customer.phone'): {{ $orderBranch->phone ?: restaurant()->phone_number }}</div>
             @if ($receiptSettings->show_tax)
-                @foreach ($taxDetails as $taxDetail)
-                    <div class="restaurant-info">{{ $taxDetail->tax_name }}: {{ $taxDetail->tax_id }}</div>
-                @endforeach
+                @if (empty($orderBranch->cr_number) && empty($orderBranch->vat_number))
+                    @foreach ($taxDetails as $taxDetail)
+                        <div class="restaurant-info">{{ $taxDetail->tax_name }}: {{ $taxDetail->tax_id }}</div>
+                    @endforeach
+                @endif
+            @endif
+            @if ($receiptSettings->show_cr_number && !empty($orderBranch->cr_number))
+                <div class="restaurant-info">@lang('modules.settings.branchCrNumber'): {{ $orderBranch->cr_number }}</div>
+            @endif
+            @if ($receiptSettings->show_vat_number && !empty($orderBranch->vat_number))
+                <div class="restaurant-info">@lang('modules.settings.branchVatNumber'): {{ $orderBranch->vat_number }}</div>
             @endif
         </div>
 

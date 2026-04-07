@@ -28,14 +28,14 @@
 
                             @forelse ($users as $item)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='user-{{ $item->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->name }}
                                 </td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     {{ $item->email ?? '--' }}
                                 </td>
 
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                     @if ($item->id == auth()->id())
                                         <span class="text-xs">@lang('messages.cannotEditOwnRole')</span>
                                     @elseif(user_can('Update SuperAdmin'))

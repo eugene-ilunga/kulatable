@@ -10,10 +10,21 @@ window.ApexCharts = ApexCharts;
 
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
-//import "flatpickr/dist/themes/dark.css";
+import "flatpickr/dist/themes/dark.css";
 
 
 window.flatpickr = flatpickr;
+
+// Skin theme helper (runtime swappable via `themes.css` + `tt-theme` class)
+function getSkinColor(opacity = 1) {
+    const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-base')
+        .trim();
+
+    if (!raw) return `rgba(0,0,0,${opacity})`;
+    return `rgba(${raw}, ${opacity})`;
+}
+window.getSkinColor = getSkinColor;
 
 
 // import './dark-mode';
@@ -37,14 +48,15 @@ document.addEventListener('livewire:load', () => {
     initializeThemeToggle();
 });
 
-
+// Initialize theme toggle safely and idempotently
 function initializeThemeToggle() {
     const themeToggleBtn = document.getElementById("theme-toggle");
     const themeToggleDarkIcon = document.getElementById("theme-toggle-dark-icon");
     const themeToggleLightIcon = document.getElementById("theme-toggle-light-icon");
 
-    // Keep light as default unless user explicitly chose dark previously.
-    if (localStorage.getItem('color-theme') === 'dark') {
+    // Ensure html has correct theme class before manipulating icons
+    if (localStorage.getItem('color-theme') === 'dark' ||
+        (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
@@ -137,11 +149,11 @@ document.addEventListener("livewire:navigated", () => {
         if (localStorage.getItem("menu-collapsed") === "true") {
             sidebar.classList.add('hidden');
             sidebar.classList.remove('flex', 'lg:flex', 'translate-x-0');
-            mainContent.classList.remove('ltr:lg:ml-64', 'rtl:lg:mr-64');
+            mainContent.classList.remove('ltr:lg:ml-56', 'rtl:lg:mr-56');
         } else {
             sidebar.classList.remove('hidden', '-translate-x-full');
             sidebar.classList.add('flex', 'lg:flex', 'translate-x-0');
-            mainContent.classList.add('ltr:lg:ml-64', 'rtl:lg:mr-64');
+            mainContent.classList.add('ltr:lg:ml-56', 'rtl:lg:mr-56');
         }
     }
 
@@ -174,12 +186,12 @@ document.addEventListener("livewire:navigated", () => {
             localStorage.setItem("menu-collapsed", "false");
             sidebar.classList.remove('hidden');
             sidebar.classList.add('flex', 'lg:flex', 'translate-x-0');
-            mainContent.classList.add('ltr:lg:ml-64', 'rtl:lg:mr-64');
+            mainContent.classList.add('ltr:lg:ml-56', 'rtl:lg:mr-56');
         } else {
             localStorage.setItem("menu-collapsed", "true");
             sidebar.classList.add('-translate-x-full');
             sidebar.classList.remove('translate-x-0');
-            mainContent.classList.remove('ltr:lg:ml-64', 'rtl:lg:mr-64');
+            mainContent.classList.remove('ltr:lg:ml-56', 'rtl:lg:mr-56');
 
             sidebar.addEventListener('transitionend', function handler() {
                 if (localStorage.getItem("menu-collapsed") === "true") {

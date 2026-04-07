@@ -3,7 +3,7 @@
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.report.duePaymentsReceivedReport')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.report.duePaymentsReceivedReport')</h1>
             </div>
             <div class="items-center justify-between block sm:flex ">
                 <div class="lg:flex items-center mb-4 sm:mb-0">
@@ -103,16 +103,16 @@
 
                             @forelse ($payments as $payment)
                                 <tr class="hover:bg-gray-100 dark:hover:bg-gray-700" wire:key='payment-{{ $payment->id . rand(1111, 9999) . microtime() }}' wire:loading.class.delay='opacity-10'>
-                                    <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                    <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                         {{ $payment->order->customer->name ?? '--' }}
                                     </td>
-                                    <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                    <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                         {{ currency_format($payment->due_amount_received, restaurant()->currency_id) }}
                                     </td>
-                                    <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                    <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                         @lang('modules.order.' . $payment->payment_method)
                                     </td>
-                                    <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">
+                                    <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">
                                         <a href="javascript:;" class="underline underline-offset-2 decoration-dotted" wire:click="$dispatch('showOrderDetail', { id: {{ $payment->order->id }} })">
                                             {{ $payment->order->show_formatted_order_number ?? $payment->order->order_number ?? '--' }}
                                         </a>

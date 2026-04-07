@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Garda de depozitare',
+  'status_title' => 'Căile sistemului de gardă de stocare',
+  'permissions_badge' => 'Mod: 0775 (Dirs) / 0664 (Fișiere)',
+  'success_message' => 'Încercarea de reparații la articole :count (fișiere și directoare).',
+  'error_alert' => 'Una sau mai multe căi de stocare necesită atenție. Faceți clic pe „Reparații recursive” pentru a remedia permisiunile.',
+  'recursive_repair' => 'Reparatie recursiva',
+  'secure_repair' => 'Permisiuni de securitate și reparații',
+  'refresh_status' => 'Stare de reîmprospătare',
+  'path' => 'Cale',
+  'status' => 'Stare',
+  'perms' => 'Perms',
+  'readable' => 'Citibil',
+  'writable' => 'Inscriptibil',
+  'yes' => 'Da',
+  'no' => 'Nu',
+  'ok' => 'Bine',
+  'issue' => 'Emisiune',
+];

@@ -251,7 +251,12 @@ class User extends Authenticatable
 
         return null;
 
-    }        
+    }
+
+    public function routeNotificationForAndroidSmsGateway($notification)
+    {
+        return $this->routeNotificationForVonage($notification);
+    }
     /**
      * Send the password reset notification.
      *

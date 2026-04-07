@@ -2,23 +2,16 @@
 
 namespace App\Models;
 
-use App\Traits\HasRestaurant;
+use App\Traits\HasBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use App\Models\Restaurant;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use App\Models\BaseModel;
 
 class ReceiptSetting extends BaseModel
 {
-    use HasRestaurant;
+    use HasBranch;
     use HasFactory;
     protected $guarded = ['id'];
-
-    public function restaurant()
-    {
-        return $this->belongsTo(Restaurant::class);
-    }
 
     protected $appends = [
         'payment_qr_code_url',

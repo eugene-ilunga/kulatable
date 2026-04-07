@@ -43,7 +43,7 @@ class Signup extends Component
         $this->filteredPhoneCodes = $this->allPhoneCodes;
 
         // Set default phone code from restaurant
-        $this->phoneCode = restaurant()->phone_code ?? $this->allPhoneCodes->first();
+        $this->phoneCode = $this->restaurant->country?->phonecode ?? $this->allPhoneCodes->first();
     }
 
     public function updatedPhoneCodeIsOpen($value)
@@ -87,7 +87,7 @@ class Signup extends Component
             ->where('send_sms', 'yes')
             ->first();
 
-        return $notificationSetting && (sms_setting()->vonage_status || sms_setting()->msg91_status);
+        return $notificationSetting && (sms_setting()->vonage_status || sms_setting()->msg91_status || sms_setting()->android_sms_gateway_status);
     }
 
     #[On('showSignup')]
@@ -232,7 +232,7 @@ class Signup extends Component
 
             // Send notification synchronously (immediately, not queued)
             $this->customer->notifyNow(new CustomerEmailVerify($otp));
-            
+
             Log::info('CustomerEmailVerify notification sent synchronously');
         } catch (\Exception $e) {
             Log::error('Error sending email verification notification', [

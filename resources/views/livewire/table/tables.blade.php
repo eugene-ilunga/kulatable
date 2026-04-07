@@ -2,7 +2,7 @@
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('modules.table.tableView')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('modules.table.tableView')</h1>
             </div>
             <div class="items-center justify-between block sm:flex dark:divide-gray-700">
                 <div class="flex items-center gap-4">
@@ -45,7 +45,7 @@
                                     @if (is_null($filterAvailable))
                                         @lang('modules.table.filterAvailable')
                                     @else
-                                        <span class="font-bold text-gray-800">@lang('app.showing') @lang('modules.table.' . $filterAvailable)</span>
+                                        <span class="font-bold text-gray-800 dark:text-neutral-200">@lang('app.showing') @lang('modules.table.' . $filterAvailable)</span>
                                     @endif
 
                                     <svg class="-mr-1 ml-1.5 w-5 h-5" fill="currentColor" viewbox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -56,22 +56,22 @@
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable',  null)">
+                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 dark:text-neutral-400 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable',  null)">
                                 @lang('app.showAll')
                             </x-dropdown-link>
-                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'available')">
+                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 dark:text-neutral-400 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'available')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill text-green-500" viewBox="0 0 16 16">
                                     <circle cx="8" cy="8" r="8"/>
                                 </svg>
                                 @lang('modules.table.available')
                             </x-dropdown-link>
-                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'running')">
+                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 dark:text-neutral-400 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'running')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill text-blue-500" viewBox="0 0 16 16">
                                     <circle cx="8" cy="8" r="8"/>
                                 </svg>
                                 @lang('modules.table.running')
                             </x-dropdown-link>
-                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'reserved')">
+                            <x-dropdown-link class="inline-flex items-center text-sm text-gray-600 dark:text-neutral-400 gap-1 font-medium cursor-pointer" wire:click="$set('filterAvailable', 'reserved')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill text-red-500" viewBox="0 0 16 16">
                                     <circle cx="8" cy="8" r="8"/>
                                 </svg>
@@ -305,43 +305,48 @@
                         <div class="grid sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                             @foreach ($area->tables as $item)
                                 @php
-                                $isReservationActive = false;
-
-                                $startTime = $item->activeReservation ? $item->activeReservation->reservation_date_time : null;
-                                $slotTime = $item->activeReservation ? $item->activeReservation->slot_time_difference : null;
-                                $endTime = $item->activeReservation ? $item->activeReservation->reservation_date_time->addMinutes($slotTime) : null;
-
-                                if ($item->currentReservationOrders) {
-                                    // If there's a current reservation order, check if it's unpaid
-                                    $isReservationActive = $item->currentReservationOrders->status !== 'paid';
-                                } elseif ($startTime && $endTime) {
-                                    // If no current reservation order, check time slot
-                                    $now = now()->timezone(timezone());
-                                    $nowValue = $now->format('His');
-                                    $startValue = $startTime->format('His');
-                                    $endValue = $endTime->format('His');
-                                    if ($nowValue >= $startValue && $nowValue <= $endValue) {
-                                        $isReservationActive = true;
-                                    }
-                                } else {
                                     $isReservationActive = false;
-                                }
 
-                                // Lock status variables for layout view
-                                $isLocked = $item->tableSession?->isLocked() ?? false;
-                                $isLockedByCurrentUser = $isLocked && $item->tableSession?->locked_by_user_id === auth()->id();
-                                $isLockedByOtherUser = $isLocked && $item->tableSession?->locked_by_user_id !== auth()->id();
+                                    $startTime = $item->activeReservation ? $item->activeReservation->reservation_date_time : null;
+                                    $slotTime = $item->activeReservation ? $item->activeReservation->slot_time_difference : null;
+                                    $endTime = $item->activeReservation ? $item->activeReservation->reservation_date_time->addMinutes($slotTime) : null;
+
+                                    if ($item->currentReservationOrders) {
+                                        // If there's a current reservation order, check if it's unpaid
+                                        $isReservationActive = $item->currentReservationOrders->status !== 'paid';
+                                    } elseif ($startTime && $endTime) {
+                                        // If no current reservation order, check time slot
+                                        $now = now()->timezone(timezone());
+                                        $nowValue = $now->format('His');
+                                        $startValue = $startTime->format('His');
+                                        $endValue = $endTime->format('His');
+                                        if ($nowValue >= $startValue && $nowValue <= $endValue) {
+                                            $isReservationActive = true;
+                                        }
+                                    } else {
+                                        $isReservationActive = false;
+                                    }
+
+                                    // Lock status variables for layout view
+                                    $isLocked = $item->tableSession?->isLocked() ?? false;
+                                    $isLockedByCurrentUser = $isLocked && $item->tableSession?->locked_by_user_id === auth()->id();
+                                    $isLockedByOtherUser = $isLocked && $item->tableSession?->locked_by_user_id !== auth()->id();
                                 @endphp
 
-                            <a
-                            @class(['flex flex-col gap-2 border shadow-sm rounded-lg hover:shadow-md dark:bg-gray-700 dark:border-gray-600 p-3 relative overflow-hidden',
-                            'bg-red-50' => ($item->status == 'inactive'),
-                            'bg-white hover:bg-gray-50' => ($item->status == 'active'),
-                            ])
-                            {{-- wire:click='showEditTable({{ $item->id }})' --}}
-                            wire:key='table-{{ $item->id . '-' . $loop->index . microtime() }}'
-                                href="javascript:;">
-                                <div class="flex items-center gap-4 justify-between w-full cursor-pointer" @if($item->activeOrder) wire:click='showTableOrderDetail({{ $item->id }})' @else wire:click='showTableOrder({{ $item->id }})' @endif>
+                             <a
+                                @class(['flex flex-col gap-2 border shadow-sm rounded-lg hover:shadow-md dark:bg-gray-700 dark:border-gray-600 p-3 relative overflow-hidden cursor-pointer',
+                                'bg-red-50' => ($item->status == 'inactive'),
+                                'bg-white hover:bg-gray-50' => ($item->status == 'active'),
+                                ])
+                                    wire:key='table-{{ $item->id . '-' . $loop->index . microtime() }}'
+                                    href="javascript:;"
+                                    @if($item->activeOrder)
+                                        wire:click='showTableOrderDetail({{ $item->id }})'
+                                    @else
+                                        wire:click='showTableOrder({{ $item->id }})'
+                                    @endif
+                                >
+                                <div class="flex items-center gap-4 justify-between w-full">
                                     <div class="flex items-center gap-x-2">
                                     <div @class(['p-3 rounded-lg tracking-wide ',
                                     'bg-green-100 text-green-600' => ($item->available_status == 'available'),
@@ -422,11 +427,11 @@
                                     <div class="flex items-center gap-4 justify-between w-full">
                                         @if ($item->activeOrder)
                                             @if(user_can('Show Order'))
-                                            <x-secondary-button wire:click='showTableOrderDetail({{ $item->id }})' class="text-xs">@lang('modules.order.showOrder')</x-secondary-button>
+                                            <x-secondary-button wire:click.stop='showTableOrderDetail({{ $item->id }})' class="text-xs">@lang('modules.order.showOrder')</x-secondary-button>
                                             @endif
 
                                             @if ($item->activeOrder->status == 'kot' && user_can('Create Order'))
-                                                <x-secondary-button class="text-xs" wire:click='showTableOrder({{ $item->id }})'>@lang('modules.order.newKot')</x-secondary-button>
+                                                <x-secondary-button class="text-xs" wire:click.stop='showTableOrder({{ $item->id }})'>@lang('modules.order.newKot')</x-secondary-button>
                                             @endif
                                         @endif
 
@@ -437,7 +442,7 @@
                                         @endif
 
                                         @if(user_can('Update Table'))
-                                        <x-secondary-button wire:click='showEditTable({{ $item->id }})' class="text-xs">
+                                        <x-secondary-button wire:click.stop='showEditTable({{ $item->id }})' class="text-xs">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                                                 <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                                                 <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
@@ -468,7 +473,7 @@
         x-show="addTableOpen"
         x-on:keydown.escape.window="closeAddTable()"
         @close-add-table-modal.window="closeAddTable()"
-    >
+        >
         <div
             x-show="addTableOpen"
             class="fixed inset-0 transform transition-all"

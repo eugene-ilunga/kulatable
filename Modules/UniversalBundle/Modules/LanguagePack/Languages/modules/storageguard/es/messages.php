@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Guardia de almacenamiento',
+  'status_title' => 'Rutas del sistema de protección de almacenamiento',
+  'permissions_badge' => 'Modo: 0775 (Dirs) / 0664 (Archivos)',
+  'success_message' => 'Intentos de reparación en elementos :count (archivos y directorios).',
+  'error_alert' => 'Una o más rutas de almacenamiento necesitan atención. Haga clic en "Reparación recursiva" para corregir los permisos.',
+  'recursive_repair' => 'Reparación recursiva',
+  'secure_repair' => 'Permisos seguros y de reparación',
+  'refresh_status' => 'Actualizar estado',
+  'path' => 'Camino',
+  'status' => 'Estado',
+  'perms' => 'permanentes',
+  'readable' => 'Legible',
+  'writable' => 'grabable',
+  'yes' => 'Sí',
+  'no' => 'No',
+  'ok' => 'DE ACUERDO',
+  'issue' => 'Asunto',
+];

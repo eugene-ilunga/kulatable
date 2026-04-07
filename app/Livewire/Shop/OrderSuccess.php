@@ -3,9 +3,7 @@
 namespace App\Livewire\Shop;
 
 use App\Models\Branch;
-use App\Models\FreshpayPayment;
 use App\Models\Order;
-use App\Models\Payment;
 use Livewire\Component;
 
 class OrderSuccess extends Component
@@ -17,11 +15,10 @@ class OrderSuccess extends Component
     public $shopBranch;
     public $dateFormat;
     public $timeFormat;
-    public $freshpayConfirmed = false;
 
     public function mount()
     {
-        $this->order = Order::with('taxes.tax', 'items.menuItem')->where('id', $this->id)->firstOrFail();
+        $this->order = Order::with('taxes.tax', 'items.menuItem', 'orderCashCollection')->where('id', $this->id)->firstOrFail();
 
         if (is_null(customer()) && $this->restaurant->customer_login_required) {
             return $this->redirect(route('home'));
@@ -46,46 +43,5 @@ class OrderSuccess extends Component
     public function refreshOrderSuccess()
     {
         $this->dispatch('$refresh');
-    }
-
-    public function pollOrderStatus()
-    {
-        $previousStatus = $this->order->status;
-        $this->order = Order::with('taxes.tax', 'items.menuItem')->where('id', $this->id)->firstOrFail();
-
-        if ($previousStatus === 'pending_verification' && $this->order->status === 'paid') {
-            $this->freshpayConfirmed = true;
-        }
-    }
-
-    public function cancelPendingFreshpay()
-    {
-        if ($this->order->status !== 'pending_verification') {
-            return;
-        }
-
-        $pendingFreshpay = FreshpayPayment::where('order_id', $this->order->id)
-            ->where('payment_status', 'pending')
-            ->latest()
-            ->first();
-
-        if ($pendingFreshpay) {
-            $pendingFreshpay->payment_status = 'failed';
-            $pendingFreshpay->trans_status = 'cancelled';
-            $pendingFreshpay->trans_status_description = 'Cancelled by customer before confirmation.';
-            $pendingFreshpay->save();
-        }
-
-        Payment::where('order_id', $this->order->id)
-            ->where('payment_method', 'freshpay')
-            ->delete();
-
-        $this->order->update([
-            'status' => 'payment_due',
-            'amount_paid' => 0,
-        ]);
-
-        $this->order = Order::with('taxes.tax', 'items.menuItem')->where('id', $this->id)->firstOrFail();
-        $this->freshpayConfirmed = false;
     }
 }

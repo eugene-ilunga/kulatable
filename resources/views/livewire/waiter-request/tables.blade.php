@@ -1,7 +1,7 @@
 <div @if(!pusherSettings()->is_enabled_pusher_broadcast && $pollingEnabled) wire:poll.{{ $pollingInterval }}s @endif>
     <div class="p-4 bg-white block  dark:bg-gray-800 dark:border-gray-700">
         <div class="flex mb-4">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.waiterRequest') ({{ $tables->sum(function($area) { return $area->tables->count(); }) }})</h1>
+            <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.waiterRequest') ({{ $tables->sum(function($area) { return $area->tables->count(); }) }})</h1>
             <div class="ml-auto flex items-center gap-4">
                 <div class="flex items-center gap-2">
                     @if(pusherSettings()->is_enabled_pusher_broadcast)
@@ -12,7 +12,7 @@
                     @else
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" class="sr-only peer" wire:model.live="pollingEnabled">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-skin-base rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-skin-base"></div>
                             <span class="text-sm font-medium text-gray-900 ms-3 dark:text-gray-300">@lang('app.autoRefresh')</span>
                         </label>
                         <x-select class="w-32 text-sm" wire:model.live="pollingInterval" :disabled="!$pollingEnabled">
@@ -129,13 +129,15 @@
         // Handle polling
         let pollingInterval = null;
         let pusherChannel = null;
+        let wire = null;
+        let watchersInitialized = false;
 
         function startPolling() {
             console.log('🔄 Starting polling for waiter requests...');
 
-            // Check if $wire is available
-            if (typeof $wire === 'undefined') {
-                console.log('⚠️ $wire not available, cannot start polling');
+            // Check if Livewire component is available
+            if (!wire) {
+                console.log('⚠️ Livewire component not available, cannot start polling');
                 return;
             }
 
@@ -145,18 +147,18 @@
             }
 
             try {
-                const interval = $wire.get('pollingInterval') * 1000;
+                const interval = wire.get('pollingInterval') * 1000;
                 console.log('📊 Waiter requests polling settings:', {
                     interval: interval,
-                    intervalSeconds: $wire.get('pollingInterval'),
-                    pollingEnabled: $wire.get('pollingEnabled')
+                    intervalSeconds: wire.get('pollingInterval'),
+                    pollingEnabled: wire.get('pollingEnabled')
                 });
 
                 pollingInterval = setInterval(() => {
                     try {
-                        if ($wire.get('pollingEnabled')) {
+                        if (wire.get('pollingEnabled')) {
                             console.log('🔄 Waiter requests polling: Refreshing data...');
-                            $wire.$refresh();
+                            wire.$refresh();
                         } else {
                             console.log('⏸️ Waiter requests polling: Disabled, stopping...');
                             stopPolling();
@@ -276,7 +278,7 @@
                             if (connectionRetryCount >= 2) {
                                 console.error('🔄 Falling back to polling due to quota exceeded');
                                 stopPusher();
-                                if ($wire.get('pollingEnabled')) {
+                                if (wire?.get('pollingEnabled')) {
                                     startPolling();
                                 }
                             }
@@ -287,7 +289,7 @@
                         console.error('❌ Pusher orders: Max retry attempts reached, falling back to polling');
                         // Fall back to polling
                         stopPusher();
-                        if ($wire.get('pollingEnabled')) {
+                        if (wire?.get('pollingEnabled')) {
                             startPolling();
                         }
                     }
@@ -350,7 +352,7 @@
                         timestamp: new Date().toISOString(),
                         event_type: 'active-waiter-requests.created'
                     });
-                    $wire.$refresh();
+                    wire?.$refresh();
                 });
 
                 pusherChannel.bind('active-waiter-requests.updated', function(data) {
@@ -360,7 +362,7 @@
                         timestamp: new Date().toISOString(),
                         event_type: 'active-waiter-requests.updated'
                     });
-                    $wire.$refresh();
+                    wire?.$refresh();
                 });
 
                 // Debug: show all event bindings on the channel
@@ -485,7 +487,7 @@
             }).then(() => {
                 console.log('✅ Pusher disabled, switching to polling...');
                 stopPusher();
-                if ($wire.get('pollingEnabled')) {
+                if (wire?.get('pollingEnabled')) {
                     startPolling();
                 }
             }).catch(err => {
@@ -517,9 +519,17 @@
             console.log('💡 Reload the page to reconnect with fresh connections');
         }
 
-                        // Initialize real-time updates
-        document.addEventListener('livewire:initialized', () => {
-            console.log('🚀 Livewire waiter requests component initialized');
+        function bootWaiterRequestsRealtime() {
+            wire = @this;
+
+            // Ensure latest data immediately after SPA navigation
+            try {
+                setTimeout(() => Livewire.dispatch('refreshWaiterRequests'), 0);
+            } catch (e) {
+                // ignore
+            }
+
+            console.log('🚀 Booting waiter requests realtime');
             console.log('📊 Pusher settings check:', {
                 pusherSettingsDefined: typeof window.PUSHER_SETTINGS !== 'undefined',
                 pusherBroadcastEnabled: typeof window.PUSHER_SETTINGS !== 'undefined' ? window.PUSHER_SETTINGS.is_enabled_pusher_broadcast : 'undefined'
@@ -536,6 +546,10 @@
             console.log('🛠️ Debug: Use disablePusherTemporarily() in console to disable Pusher due to quota issues');
             console.log('🛠️ Debug: Use forceDisconnectAllConnections() in console to force disconnect all connections');
 
+            // Avoid duplicate subscriptions/intervals when navigating
+            stopPolling();
+            stopPusher();
+
             // Wait for the component to be fully ready
             setTimeout(() => {
                 if (typeof window.PUSHER_SETTINGS !== 'undefined' && window.PUSHER_SETTINGS.is_enabled_pusher_broadcast) {
@@ -545,10 +559,10 @@
                     console.log('📡 Pusher waiter requests: Using polling for real-time updates');
                     try {
                         console.log('📊 Pusher waiter requests polling settings:', {
-                            pollingEnabled: $wire.get('pollingEnabled'),
-                            pollingInterval: $wire.get('pollingInterval')
+                            pollingEnabled: wire?.get('pollingEnabled'),
+                            pollingInterval: wire?.get('pollingInterval')
                         });
-                        if ($wire.get('pollingEnabled')) {
+                        if (wire?.get('pollingEnabled')) {
                             startPolling();
                         }
                     } catch (error) {
@@ -556,7 +570,7 @@
                         // Retry after a short delay
                         setTimeout(() => {
                             try {
-                                if ($wire.get('pollingEnabled')) {
+                                if (wire?.get('pollingEnabled')) {
                                     startPolling();
                                 }
                             } catch (retryError) {
@@ -566,13 +580,15 @@
                     }
                 }
             }, 100);
-        });
+        }
 
-        // Watch for changes - only set up after component is ready
-        document.addEventListener('livewire:initialized', () => {
+        function initWatchersOnce() {
+            if (watchersInitialized || !wire) return;
+            watchersInitialized = true;
+
             setTimeout(() => {
                 try {
-                    $wire.watch('pollingEnabled', (value) => {
+                    wire?.watch('pollingEnabled', (value) => {
                         console.log('👀 Waiter requests pollingEnabled changed:', value);
                         if (typeof window.PUSHER_SETTINGS !== 'undefined' && !window.PUSHER_SETTINGS.is_enabled_pusher_broadcast) {
                             if (value) {
@@ -587,9 +603,9 @@
                         }
                     });
 
-                    $wire.watch('pollingInterval', (value) => {
+                    wire?.watch('pollingInterval', (value) => {
                         console.log('👀 Waiter requests pollingInterval changed:', value);
-                        if (typeof window.PUSHER_SETTINGS !== 'undefined' && !window.PUSHER_SETTINGS.is_enabled_pusher_broadcast && $wire.get('pollingEnabled')) {
+                        if (typeof window.PUSHER_SETTINGS !== 'undefined' && !window.PUSHER_SETTINGS.is_enabled_pusher_broadcast && wire?.get('pollingEnabled')) {
                             console.log('🔄 Waiter requests: Restarting polling due to interval change');
                             startPolling();
                         } else {
@@ -598,16 +614,20 @@
                     });
                 } catch (error) {
                     console.log('⚠️ Component not ready for watchers yet:', error);
+                    watchersInitialized = false;
                 }
             }, 200);
+        }
+
+        document.addEventListener('livewire:init', () => {
+            bootWaiterRequestsRealtime();
+            initWatchersOnce();
         });
 
-        // Cleanup on component destroy
-        document.addEventListener('livewire:initialized', () => {
-            return () => {
-                stopPolling();
-                stopPusher();
-            };
+        // Re-run after Livewire SPA navigation
+        document.addEventListener('livewire:navigated', () => {
+            bootWaiterRequestsRealtime();
+            initWatchersOnce();
         });
     </script>
 

@@ -13,6 +13,7 @@ use Livewire\Component;
 use App\Events\TodayReservationCreatedEvent;
 use App\Events\ReservationConfirmationSent;
 use App\Events\ReservationReceived;
+use App\Services\RestaurantAvailabilityService;
 
 class NewReservation extends Component
 {
@@ -53,7 +54,7 @@ class NewReservation extends Component
         // Initialize phone codes
         $this->allPhoneCodes = collect(Country::pluck('phonecode')->unique()->filter()->values());
         $this->filteredPhoneCodes = $this->allPhoneCodes;
-        $this->phoneCode = restaurant()->phone_code ?? $this->allPhoneCodes->first();
+        $this->phoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
     }
 
     // Customer search methods
@@ -231,6 +232,14 @@ class NewReservation extends Component
 
     public function submitReservation()
     {
+        $availability = RestaurantAvailabilityService::getAvailability(restaurant(), branch(), null, 'reservation');
+        if (!($availability['is_open'] ?? true)) {
+            $this->alert('error', RestaurantAvailabilityService::getMessage($availability, restaurant()), [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+            return;
+        }
 
         // Get minimum party size from restaurant settings
         $minimumPartySize = restaurant()->minimum_party_size ?? 1;

@@ -270,9 +270,9 @@ class CartSessionService
             // Order-level taxation
             $subTotal = $cartSession->cartItems->sum('amount');
 
-            // Get restaurant taxes
+            // Get branch taxes
             $taxes = Tax::withoutGlobalScopes()
-                ->where('restaurant_id', $cartSession->branch->restaurant->id)
+                ->where('branch_id', $cartSession->branch_id)
                 ->get();
 
             // For cart session, tax_base is just subtotal (no discount or charges yet)
@@ -383,7 +383,7 @@ class CartSessionService
         if ($cartSession->tax_mode === 'order') {
             // Order-level taxation
             $taxes = Tax::withoutGlobalScopes()
-                ->where('restaurant_id', $cartSession->branch->restaurant->id)
+                ->where('branch_id', $cartSession->branch_id)
                 ->get();
 
             foreach ($taxes as $tax) {

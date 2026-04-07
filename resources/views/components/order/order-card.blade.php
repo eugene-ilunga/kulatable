@@ -1,22 +1,33 @@
+@props([
+    'order',
+    'showTrackButton' => false,
+    'showDeliveredButton' => false,
+    'trackEndpoint' => null,
+    'trackOrderLabel' => null,
+    'showLiveBlink' => false,
+])
+
 <div @class([
-    'flex-col gap-3 items-center border bg-white shadow-sm rounded-lg hover:shadow-md transition dark:bg-gray-700 dark:border-gray-600 p-3 overflow-hidden',
+    'flex-col gap-3 items-center bg-white/90 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 dark:bg-gray-800/90',
+    'border border-gray-100/80 dark:border-gray-700/80',
+    'p-3.5 sm:p-4 overflow-hidden',
 ])>
-    <a @class(['group flex flex-col gap-3 items-center '])
+    <a @class(['group flex flex-col gap-2.5 items-stretch w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-skin-base/60 rounded-xl'])
         @if ($order->status == 'kot')
-            href="{{ route('pos.kot', $order->id).'?show-order-detail=true' }}" wire:navigate
+            href="{{ route('pos.kot', $order->id).'?show-order-detail=true' }}"
         @elseif ($order->status == 'draft')
-            href="{{ route('pos.draft', $order->id) }}" wire:navigate
+            href="{{ route('pos.draft', $order->id) }}"
         @else
             wire:click="$dispatch('showOrderDetail', { id: {{ $order->id }} })"
         @endif
         wire:key='order-item-{{ $order->id . microtime() }}' href="javascript:;">
-        <div class="flex flex-col sm:flex-row gap-4 sm:justify-between w-full min-w-0">
-            <div class="flex gap-3 space-y-1 min-w-0 flex-1">
+        <div class="flex flex-col sm:flex-row gap-3.5 sm:gap-4 sm:justify-between w-full min-w-0">
+            <div class="flex gap-3 min-w-0 flex-1">
 
                 <div @class([
-                    'p-3 rounded-lg tracking-wide bg-skin-base/[0.2] text-skin-base inline-flex items-center',
+                    'w-9 h-9 rounded-lg bg-skin-base/10 text-skin-base inline-flex items-center justify-center',
                 ])>
-                    <h3 wire:loading.class.delay='opacity-50' @class(['font-semibold'])>
+                    <h3 wire:loading.class.delay='opacity-50' @class(['font-semibold text-sm leading-none'])>
                         @if ($order->order_type == 'pickup')
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                 class="bi bi-bag-fill" viewBox="0 0 16 16">
@@ -38,31 +49,33 @@
                     </h3>
                 </div>
 
-                <div class="min-w-0 flex-1">
-                    <div class="font-semibold text-gray-700 truncate text-sm dark:text-gray-300">
+                <div class="min-w-0 flex-1 space-y-0.5">
+                    <div class="font-medium text-gray-900 truncate text-sm dark:text-gray-100">
                         {{ $order->customer ? ($order->customer->name ? $order->customer->name : __('modules.customer.walkin')) : '--' }}
                     </div>
-                    @if($order->status != 'draft')
-                        <div class="font-medium text-gray-600 text-sm dark:text-gray-400 truncate">
-                            {{ $order->show_formatted_order_number }}
-                        </div>
-                    @endif
-                    @if($order->custom_order_type_name)
-                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                            {{ $order->custom_order_type_name }}
-                        </div>
-                    @elseif($order->orderType)
-                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                            {{ $order->orderType->order_type_name }}
-                        </div>
-                    @endif
+                    <div class="flex items-center gap-1">
+                        @if($order->status != 'draft')
+                            <div class="font-medium text-gray-600 text-xs  dark:text-gray-400 truncate">
+                                {{ $order->show_formatted_order_number }}
+                            </div>
+                        @endif
+                        @if($order->custom_order_type_name)
+                            <div class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                · {{ $order->custom_order_type_name }}
+                            </div>
+                        @elseif($order->orderType)
+                            <div class="text-[11px] text-gray-500 dark:text-gray-400  truncate">
+                                · {{ $order->orderType->order_type_name }}
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
             <div class="ltr:text-right rtl:text-left flex-shrink-0">
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col items-end gap-1.5">
                     <span @class([
-                        'text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap',
-                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400 border border-gray-400' =>
+                        'text-[10px] font-semibold px-2 py-0.5 rounded-md uppercase tracking-wide whitespace-nowrap shadow-sm/50',
+                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border border-gray-300/80' =>
                             $order->status == 'draft',
                         'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-400 border border-yellow-400' =>
                             $order->status == 'kot',
@@ -78,9 +91,9 @@
                         @lang('modules.order.' . $order->status)
                     </span>
 
-                    @if($order->placed_via)
-                        <span @class([
-                            'text-xs font-medium px-2 py-1 rounded uppercase tracking-wide inline-flex items-center flex-wrap gap-1',
+                @if($order->placed_via)
+                    <span @class([
+                            'text-[10px] font-medium px-2 py-0.5 rounded-md uppercase tracking-wide inline-flex items-center flex-wrap gap-1 shadow-sm/40',
                             'bg-indigo-100 text-indigo-800 dark:bg-indigo-700 dark:text-indigo-400 border border-indigo-400' => $order->placed_via === 'pos',
                             'bg-emerald-100 text-emerald-800 dark:bg-emerald-700 dark:text-emerald-400 border border-emerald-400' => $order->placed_via === 'shop',
                             'bg-amber-100 text-amber-800 dark:bg-amber-700 dark:text-amber-400 border border-amber-400' => $order->placed_via === 'kiosk',
@@ -110,9 +123,9 @@
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row w-full sm:justify-between sm:items-center gap-2 sm:gap-0">
+        <div class="flex flex-col sm:flex-row w-full sm:justify-between sm:items-center gap-2.5 sm:gap-3 mt-1.5">
             @if ($order->order_type == 'pickup')
-                <div class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400 min-w-0">
+                <div class="flex flex-col gap-1 text-[11px]  text-gray-600 dark:text-gray-400 min-w-0">
                     <div class="flex items-center gap-1 flex-wrap">
                         <span class="font-semibold whitespace-nowrap">@lang('modules.order.pickupDate')</span>
                         <span class="truncate">
@@ -140,18 +153,17 @@
                             @endphp
                         </span>
                     </div>
-                    <div class="flex items-center gap-1 flex-wrap">
+                    <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="font-semibold whitespace-nowrap">@lang('modules.order.orderDate')</span>
                         <span class="truncate">{{ $order->date_time->timezone(timezone())->format(dateFormat() . ' ' . timeFormat()) }}</span>
                     </div>
                 </div>
             @else
-                <div class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 min-w-0 flex-wrap">
-                    <span class="font-semibold whitespace-nowrap">@lang('modules.order.orderDate')</span>
+                <div class="flex items-center gap-1.5 text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 min-w-0 flex-wrap">
                     <span class="truncate">{{ $order->date_time->timezone(timezone())->format(dateFormat() . ' ' . timeFormat()) }}</span>
                 </div>
             @endif
-            <div class="text-sm font-medium text-gray-800 dark:text-gray-400 flex-shrink-0">
+            <div class="text-sm font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">
                 @if ($order->status == 'kot')
                     {{ $order->kot->count() }} @lang('modules.order.kot')
                 @else
@@ -160,16 +172,17 @@
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row w-full sm:justify-between sm:items-center gap-2 sm:gap-0 border-t dark:border-gray-500 pt-3">
-            <div class="inline-flex gap-1 items-center flex-shrink-0">
-                <div class="text-lg font-medium text-gray-800 dark:text-gray-300">
+        <div class="flex flex-col sm:flex-row w-full sm:justify-between sm:items-center gap-2.5 sm:gap-3 border-t border-dashed border-gray-200 dark:border-gray-600/80 pt-2 ">
+            <div class="inline-flex gap-2 items-center flex-shrink-0">
+               
+                <div class="text-base font-semibold text-gray-900 dark:text-gray-100">
                     {{ currency_format($order->display_total ?? $order->total ?? 0, restaurant()->currency_id) }}
                 </div>
 
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                <div class="text-xs text-gray-500 dark:text-gray-400 inline-flex gap-1 items-center flex-shrink-0">
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 inline-flex gap-1 items-center flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor"
                         @class([
                             'text-yellow-300' => $order->order_status->value == 'placed',
@@ -187,51 +200,140 @@
                     <span class="whitespace-nowrap">@lang('modules.order.info_' . $order->order_status->value)</span>
                 </div>
 
-                @if ($order->status == 'kot' && user_can('Create Order'))
-                    <div class="flex-shrink-0">
-                        <x-secondary-link href="{{ route('pos.kot', ['id' => $order->id]) }}"
-                            class="text-xs">@lang('modules.order.newKot')</x-secondary-link>
-                    </div>
-                @endif
-
-                @if ($order->waiter)
-                    <div class="inline-flex items-center text-gray-600 text-sm gap-1 ltr:pl-1 rtl:pr-1 dark:text-gray-400 flex-shrink-0">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 -2.89 122.88 122.88"
-                        version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
-                        xmlns:xlink="http://www.w3.org/1999/xlink" style="enable-background:new 0 0 122.88 117.09"
-                        xml:space="preserve">
-                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                        <g id="SVGRepo_iconCarrier">
-                            <style type="text/css">
-                                .st0 {
-                                    fill-rule: evenodd;
-                                    clip-rule: evenodd;
-                                }
-                            </style>
-                            <g>
-                                <path class="st0"
-                                    d="M36.82,107.86L35.65,78.4l13.25-0.53c5.66,0.78,11.39,3.61,17.15,6.92l10.29-0.41c4.67,0.1,7.3,4.72,2.89,8 c-3.5,2.79-8.27,2.83-13.17,2.58c-3.37-0.03-3.34,4.5,0.17,4.37c1.22,0.05,2.54-0.29,3.69-0.34c6.09-0.25,11.06-1.61,13.94-6.55 l1.4-3.66l15.01-8.2c7.56-2.83,12.65,4.3,7.23,10.1c-10.77,8.51-21.2,16.27-32.62,22.09c-8.24,5.47-16.7,5.64-25.34,1.01 L36.82,107.86L36.82,107.86z M29.74,62.97h91.9c0.68,0,1.24,0.57,1.24,1.24v5.41c0,0.67-0.56,1.24-1.24,1.24h-91.9 c-0.68,0-1.24-0.56-1.24-1.24v-5.41C28.5,63.53,29.06,62.97,29.74,62.97L29.74,62.97z M79.26,11.23 c25.16,2.01,46.35,23.16,43.22,48.06l-93.57,0C25.82,34.23,47.09,13.05,72.43,11.2V7.14l-4,0c-0.7,0-1.28-0.58-1.28-1.28V1.28 c0-0.7,0.57-1.28,1.28-1.28h14.72c0.7,0,1.28,0.58,1.28,1.28v4.58c0,0.7-0.58,1.28-1.28,1.28h-3.89L79.26,11.23L79.26,11.23 L79.26,11.23z M0,77.39l31.55-1.66l1.4,35.25L1.4,112.63L0,77.39L0,77.39z">
-                                </path>
-                            </g>
-                        </g>
-                    </svg>
-
-                        {{ $order->waiter->name ?? '--' }}
-                    </div>
-                @endif
             </div>
         </div>
 
         @if($order->order_note)
-            <div class="w-full dark:border-gray-500 ">
-                <div class="font-semibold text-gray-700 text-sm dark:text-gray-300 mb-2">
-                    @lang('modules.order.note'):
-                   <span class="text-gray-600 text-sm dark:text-gray-400"> {{ $order->order_note }}</span>
+            <div class="w-full">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-dashed border-gray-200 dark:border-gray-600 px-2 py-1.5 flex gap-2">
+                    <div class="mt-0.5 text-gray-400 dark:text-gray-500 flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 012-2h5.586A2 2 0 0113 1.586L16.414 5A2 2 0 0117 6.414V17a2 2 0 01-2 2H6a2 2 0 01-2-2V3zm4 3a1 1 0 000 2h4a1 1 0 100-2H8zm-1 4a1 1 0 011-1h5a1 1 0 110 2H8a1 1 0 01-1-1zm1 3a1 1 0 000 2h3a1 1 0 100-2H8z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0 flex items-center gap-1">
+                        <div class="font-semibold text-gray-700 text-xs  dark:text-gray-200 ">
+                            @lang('modules.order.note'):
+                        </div>
+                        <p class="text-[11px]  text-gray-600 dark:text-gray-300 leading-relaxed truncate">
+                            {{ $order->order_note }}
+                        </p>
+                    </div>
                 </div>
-
-
             </div>
         @endif
+
+
     </a>
+
+
+
+    <div class="flex justify-between gap-1 mt-2">
+        @if ($order->waiter)
+            <div class="inline-flex items-center text-gray-600 text-xs sm:text-sm gap-1.5 ltr:pl-1 rtl:pr-1 dark:text-gray-400 flex-shrink-0">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 -2.89 122.88 122.88"
+                    version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                    xmlns:xlink="http://www.w3.org/1999/xlink" style="enable-background:new 0 0 122.88 117.09"
+                    xml:space="preserve">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                    <g id="SVGRepo_iconCarrier">
+                        <style type="text/css">
+                            .st0 {
+                                fill-rule: evenodd;
+                                clip-rule: evenodd;
+                            }
+                        </style>
+                        <g>
+                            <path class="st0"
+                                d="M36.82,107.86L35.65,78.4l13.25-0.53c5.66,0.78,11.39,3.61,17.15,6.92l10.29-0.41c4.67,0.1,7.3,4.72,2.89,8 c-3.5,2.79-8.27,2.83-13.17,2.58c-3.37-0.03-3.34,4.5,0.17,4.37c1.22,0.05,2.54-0.29,3.69-0.34c6.09-0.25,11.06-1.61,13.94-6.55 l1.4-3.66l15.01-8.2c7.56-2.83,12.65,4.3,7.23,10.1c-10.77,8.51-21.2,16.27-32.62,22.09c-8.24,5.47-16.7,5.64-25.34,1.01 L36.82,107.86L36.82,107.86z M29.74,62.97h91.9c0.68,0,1.24,0.57,1.24,1.24v5.41c0,0.67-0.56,1.24-1.24,1.24h-91.9 c-0.68,0-1.24-0.56-1.24-1.24v-5.41C28.5,63.53,29.06,62.97,29.74,62.97L29.74,62.97z M79.26,11.23 c25.16,2.01,46.35,23.16,43.22,48.06l-93.57,0C25.82,34.23,47.09,13.05,72.43,11.2V7.14l-4,0c-0.7,0-1.28-0.58-1.28-1.28V1.28 c0-0.7,0.57-1.28,1.28-1.28h14.72c0.7,0,1.28,0.58,1.28,1.28v4.58c0,0.7-0.58,1.28-1.28,1.28h-3.89L79.26,11.23L79.26,11.23 L79.26,11.23z M0,77.39l31.55-1.66l1.4,35.25L1.4,112.63L0,77.39L0,77.39z">
+                            </path>
+                        </g>
+                    </g>
+                </svg>
+
+                {{ $order->waiter->name ?? '--' }}
+            </div>
+        @endif
+
+        @if ($order->status == 'kot' && user_can('Create Order'))
+            <div class="flex-shrink-0">
+                <x-secondary-link href="{{ route('pos.kot', ['id' => $order->id]) }}"
+                    class="text-xs">@lang('modules.order.newKot')</x-secondary-link>
+            </div>
+        @endif
+    </div>
+
+    @if (isset($order->waiter_response) && $order->waiter_id)
+        @if (user_can('Update Order'))
+            <div onclick="event.stopPropagation();" class="flex-shrink-0 mt-2">
+                <form method="POST" action="{{ route('orders.waiter.status', $order->uuid) }}">
+                    @csrf
+                    <div class="relative inline-flex items-center">
+                        <select
+                            name="waiter_response"
+                            onchange="this.form.submit();"
+                            style="-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:none;"
+                            @class([
+                                'text-xs font-medium px-2 py-1.5 rounded uppercase tracking-wide whitespace-nowrap flex-shrink-0 border appearance-none bg-none pr-7 cursor-pointer',
+                                'transition focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-gray-900',
+                                'bg-amber-100 text-amber-800 dark:bg-amber-700 dark:text-amber-300 border-amber-400' => $order->waiter_response === 'pending',
+                                'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-300 border-green-400' => $order->waiter_response === 'accepted',
+                                'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-300 border-red-400' => $order->waiter_response === 'declined',
+                            ])
+                        >
+                            <option value="pending" @selected($order->waiter_response === 'pending')>
+                                @lang('app.waiterResponse_pending')
+                            </option>
+                            <option value="accepted" @selected($order->waiter_response === 'accepted')>
+                                @lang('app.waiterResponse_accepted')
+                            </option>
+                            <option value="declined" @selected($order->waiter_response === 'declined')>
+                                @lang('app.waiterResponse_declined')
+                            </option>
+                        </select>
+
+                        <span class="pointer-events-none absolute inset-y-0 right-1.5 inline-flex items-center opacity-70">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5">
+                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                    </div>
+                </form>
+            </div>
+        @else
+            <span @class([
+                'text-xs font-medium px-2 py-0.5 rounded uppercase tracking-wide whitespace-nowrap flex-shrink-0',
+                'bg-amber-100 text-amber-800 dark:bg-amber-700 dark:text-amber-300 border border-amber-400' => $order->waiter_response === 'pending',
+                'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-300 border border-green-400' => $order->waiter_response === 'accepted',
+                'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-300 border border-red-400' => $order->waiter_response === 'declined',
+            ])>
+                @lang('app.waiterResponse_' . $order->waiter_response)
+            </span>
+        @endif
+    @endif
+
+    @if($showTrackButton && $trackEndpoint)
+        <div class="w-full mt-2">
+            <button type="button"
+                x-on:click.prevent.stop="openTrackModal(@js($trackEndpoint), @js($trackOrderLabel ?? ('#' . $order->show_formatted_order_number)))"
+                class="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-medium text-white bg-skin-base rounded-lg hover:opacity-90">
+                @if($showLiveBlink)
+                    <span class="relative inline-flex h-2.5 w-2.5 flex-shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-300 opacity-90"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
+                    </span>
+                    <span class="text-[10px] font-semibold uppercase tracking-wide">@lang('app.liveStatus')</span>
+                @endif
+                @lang('app.track')
+            </button>
+        </div>
+    @elseif($showDeliveredButton)
+        <div class="w-full mt-2">
+            <button type="button"
+                class="inline-flex items-center justify-center w-full px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg cursor-default dark:bg-gray-700 dark:text-gray-200 dark:border-gray-500">
+                @lang('app.delivered')
+            </button>
+        </div>
+    @endif
 </div>

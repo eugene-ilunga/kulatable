@@ -11,13 +11,12 @@
                 <x-label for="language" :value="__('modules.menu.selectLanguage')" />
                 <div class="relative mt-1">
                     @php
-                        $languageSettings = collect(languages())
+                        $languageSettings = collect(App\Models\LanguageSetting::LANGUAGES)
                             ->keyBy('language_code')
                             ->map(function ($lang) {
                                 return [
-                                    'flag_url' => $lang->flagUrl,
-                                    'flag_code' => $lang->flag_code,
-                                    'name' => locale_label($lang->language_code),
+                                    'flag_url' => asset('flags/1x1/' . strtolower($lang['flag_code']) . '.svg'),
+                                    'name' => App\Models\LanguageSetting::LANGUAGES_TRANS[$lang['language_code']] ?? $lang['language_name']
                                 ];
                             });
                     @endphp
@@ -33,7 +32,9 @@
 
                     {{-- Current Selected Flag --}}
                     @php
-                        $currentFlagCode = $languageSettings->get($currentLanguage)['flag_code'] ?? $currentLanguage;
+                        $currentFlagCode = collect(App\Models\LanguageSetting::LANGUAGES)
+                            ->where('language_code', $currentLanguage)
+                            ->first()['flag_code'] ?? $currentLanguage;
                     @endphp
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <img src="{{ asset('flags/1x1/' . strtolower($currentFlagCode) . '.svg') }}"

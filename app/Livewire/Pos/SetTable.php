@@ -14,6 +14,7 @@ class SetTable extends Component
 
     public $tables;
     public $reservations;
+    public $targetEvent = 'setTable';
 
     protected $listeners = [
         'posOrderSuccess' => 'refreshData',
@@ -50,19 +51,50 @@ class SetTable extends Component
         return $assignedTableIds;
     }
 
+    /**
+     * Get table IDs that are assigned to any waiter (active, current period).
+     * Used to show only unassigned tables to waiters who have no tables assigned.
+     */
+    private function getTableIdsAssignedToAnyWaiter(): array
+    {
+        $today = now()->format('Y-m-d');
+
+        return DB::table('assign_waiter_to_tables')
+            ->where('is_active', true)
+            ->where('effective_from', '<=', $today)
+            ->where(function ($query) use ($today) {
+                $query->whereNull('effective_to')
+                    ->orWhere('effective_to', '>=', $today);
+            })
+            ->pluck('table_id')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
     private function loadTables()
     {
         $assignedTableIds = $this->getAssignedTableIds();
+        $assignedToAnyWaiterTableIds = ($assignedTableIds !== null && empty($assignedTableIds))
+            ? $this->getTableIdsAssignedToAnyWaiter()
+            : [];
 
-        return Area::with(['tables' => function ($query) use ($assignedTableIds) {
+        return Area::with(['tables' => function ($query) use ($assignedTableIds, $assignedToAnyWaiterTableIds) {
             $query->where('available_status', '<>', 'running')
                 ->where('status', 'active');
 
-            // If user is a waiter, filter by assigned tables
-            // If $assignedTableIds is null, user is not a waiter - show all tables
-            // If $assignedTableIds is an array (even if empty), user is a waiter - filter by assigned tables
-            if ($assignedTableIds !== null) {
+            // Not a waiter: show all tables
+            if ($assignedTableIds === null) {
+                return;
+            }
+            // Waiter with assigned tables: show only their tables
+            if (!empty($assignedTableIds)) {
                 $query->whereIn('id', $assignedTableIds);
+                return;
+            }
+            // Waiter with no tables assigned: show only tables not assigned to any waiter
+            if (!empty($assignedToAnyWaiterTableIds)) {
+                $query->whereNotIn('id', $assignedToAnyWaiterTableIds);
             }
         }, 'tables.tableSession.lockedByUser'])->get();
     }
@@ -126,7 +158,7 @@ class SetTable extends Component
             return;
         }
 
-        $this->dispatch('setTable', table: $table);
+        $this->dispatch($this->targetEvent, table: $table);
     }
 
     /**

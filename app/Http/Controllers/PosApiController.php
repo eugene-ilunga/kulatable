@@ -26,10 +26,12 @@ use App\Models\MenuItemVariation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Tax;
 
 use App\ApiResource\OrderResource;
 use App\Enums\OrderStatus;
+use App\Services\RestaurantAvailabilityService;
 
 class PosApiController extends Controller
 {
@@ -487,13 +489,21 @@ class PosApiController extends Controller
             $deliveryAppId = $data['delivery_app_id'] ?? null;
             $pickupDate = $data['pickup_date'] ?? null;
             $ordersToDeleteAfterMerge = $data['orders_to_delete_after_merge'] ?? [];
-            
+            $taxMode = $data['tax_mode'] ?? 'order';
+            $normalizedActions = collect(is_array($actions) ? $actions : [$actions])
+                ->filter()
+                ->map(fn($action) => strtolower((string) $action))
+                ->values()
+                ->toArray();
+            $isCancelAction = in_array('cancel', $normalizedActions, true);
+
+
             // Use calculated values from frontend (already calculated by calculateTotal())
             $subTotal = $data['sub_total'] ?? 0;
             $total = $data['total'] ?? 0;
             $discountedTotal = $data['discounted_total'] ?? 0;
             $totalTaxAmount = $data['total_tax_amount'] ?? 0;
-            
+
             // Calculate tax_base following billing rules
             $net = $subTotal - $discountAmount;
             $serviceTotal = 0;
@@ -521,6 +531,17 @@ class PosApiController extends Controller
             $normalizedOrderType = strtolower(str_replace(' ', '_', $orderTypeDisplay));
             if ($normalizedOrderType === 'dine in') {
                 $normalizedOrderType = 'dine_in';
+            }
+
+            if (!$isCancelAction) {
+                $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->branch);
+
+                if (!($availability['is_open'] ?? true)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => RestaurantAvailabilityService::getMessage($availability, $this->restaurant),
+                    ], 422);
+                }
             }
 
 
@@ -612,7 +633,7 @@ class PosApiController extends Controller
                 }
             }
 
-            
+
             // Build extra charges array for creating OrderCharge records
             $extraCharges = [];
             if (!empty($extraChargesData) && is_array($extraChargesData)) {
@@ -708,7 +729,6 @@ class PosApiController extends Controller
                     'sub_total' => $subTotal,
                     'total' => $total,
                     'total_tax_amount' => $totalTaxAmount,
-                    'tax_base' => $taxBase,
                     'delivery_fee' => ($orderTypeSlug === 'delivery') ? $deliveryFee : 0,
                     'delivery_app_id' => ($orderTypeSlug === 'delivery') ? $normalizedDeliveryAppId : null,
                     'tip_amount' => $tipAmount,
@@ -754,7 +774,6 @@ class PosApiController extends Controller
                     $order->taxes()->delete();
                     $order->charges()->delete();
                 }
-
             } else {
                 // Create order (similar to Pos.php orderData structure)
                 $order = Order::create([
@@ -771,7 +790,6 @@ class PosApiController extends Controller
                     'sub_total' => $subTotal,
                     'total' => $total,
                     'total_tax_amount' => $totalTaxAmount,
-                    'tax_base' => $taxBase,
                     'order_type' => $orderTypeSlug ?? $normalizedOrderType,
                     'order_type_id' => $orderTypeId,
                     'custom_order_type_name' => $orderTypeNameFinal,
@@ -783,7 +801,7 @@ class PosApiController extends Controller
                     'status' => $status,
                     'order_status' => $orderStatus,
                     'placed_via' => 'pos',
-                    'tax_mode' => 'order',
+                    'tax_mode' => $taxMode,
                     'customer_id' => $customerId,
                     'pos_machine_id' => $posMachineId,
                 ]);
@@ -869,19 +887,6 @@ class PosApiController extends Controller
                     }
                 }
 
-                // Create order taxes if not already created (for order-level tax mode)
-                if (!empty($taxes) && is_array($taxes)) {
-                    $existingOrderTaxes = OrderTax::where('order_id', $order->id)->pluck('tax_id')->toArray();
-                    foreach ($taxes as $tax) {
-                        if (isset($tax['id']) && !in_array($tax['id'], $existingOrderTaxes)) {
-                            OrderTax::create([
-                                'order_id' => $order->id,
-                                'tax_id' => $tax['id'],
-                            ]);
-                        }
-                    }
-                }
-
                 // Recalculate totals after KOT creation ONLY if editing an existing order
                 // This matches the Livewire component logic: if ($this->orderID) { ... }
                 if ($orderId) {
@@ -913,12 +918,36 @@ class PosApiController extends Controller
                     }
                     $recalculatedDiscountedTotal = $recalculatedTotal - $recalculatedDiscountAmount;
 
-                    // Extra charges
+                    // Step 2: Calculate service charges on discountedTotal
+                    $serviceTotal = 0;
                     foreach ($order->extraCharges ?? [] as $charge) {
-                        $recalculatedTotal += $charge->getAmount($recalculatedDiscountedTotal);
+                        $chargeAmount = $charge->getAmount($recalculatedDiscountedTotal);
+                        $serviceTotal += $chargeAmount;
+                        $recalculatedTotal += $chargeAmount;
                     }
 
-                    // Tip and delivery
+                    // Step 3: Calculate tax_base based on setting
+                    $includeChargesInTaxBase = $this->restaurant->include_charges_in_tax_base ?? true;
+                    if ($includeChargesInTaxBase) {
+                        $recalculatedTaxBase = $recalculatedDiscountedTotal + $serviceTotal;
+                    } else {
+                        $recalculatedTaxBase = $recalculatedDiscountedTotal;
+                    }
+
+                    // Step 4: Calculate taxes on tax_base
+                    $recalculatedTaxAmount = 0;
+                    if (!empty($taxes) && is_array($taxes)) {
+                        foreach ($taxes as $tax) {
+                            if (isset($tax['tax_percent'])) {
+                                $taxPercent = $tax['tax_percent'] ?? 0;
+                                $taxAmount = ($recalculatedTaxBase * $taxPercent) / 100;
+                                $recalculatedTotal += $taxAmount;
+                                $recalculatedTaxAmount += $taxAmount;
+                            }
+                        }
+                    }
+
+                    // Add tip and delivery
                     if ($tipAmount > 0) {
                         $recalculatedTotal += $tipAmount;
                     }
@@ -928,25 +957,14 @@ class PosApiController extends Controller
 
                     $recalculatedTotal -= $recalculatedDiscountAmount;
 
-                    // Calculate taxes using OrderTax records
-                    $recalculatedTaxAmount = 0;
-                    $orderTaxes = OrderTax::where('order_id', $order->id)->with('tax')->get();
-                    foreach ($orderTaxes as $orderTax) {
-                        if ($orderTax->tax) {
-                            $taxPercent = $orderTax->tax->tax_percent ?? 0;
-                            $taxAmount = ($recalculatedDiscountedTotal * $taxPercent) / 100;
-                            $recalculatedTotal += $taxAmount;
-                            $recalculatedTaxAmount += $taxAmount;
-                        }
-                    }
-
                     // Update order with recalculated totals
                     $order->update([
                         'sub_total' => $recalculatedSubTotal,
                         'total' => $recalculatedTotal,
                         'discount_amount' => $recalculatedDiscountAmount,
                         'total_tax_amount' => $recalculatedTaxAmount,
-                        'tax_mode' => 'order',
+                        'tax_base' => $recalculatedTaxBase,
+                        'tax_mode' => $taxMode,
                     ]);
                 }
                 // For new orders, totals are already correct from frontend - no recalculation needed
@@ -1035,26 +1053,35 @@ class PosApiController extends Controller
                     $recalculatedTotal -= $recalculatedDiscountAmount;
                     $recalculatedDiscountedTotal = $recalculatedTotal;
 
-                    // Recalculate taxes (taxes calculated on discounted total, not subtotal)
+                    // Step 2: Calculate service charges on discountedTotal
+                    $serviceTotal = 0;
+                    $orderCharges = OrderCharge::where('order_id', $order->id)->with('charge')->get();
+                    foreach ($orderCharges as $orderCharge) {
+                        if ($orderCharge->charge) {
+                            $chargeAmount = $orderCharge->charge->getAmount($recalculatedDiscountedTotal);
+                            $serviceTotal += $chargeAmount;
+                            $recalculatedTotal += $chargeAmount;
+                        }
+                    }
+
+                    // Step 3: Calculate tax_base based on setting
+                    $includeChargesInTaxBase = $this->restaurant->include_charges_in_tax_base ?? true;
+                    if ($includeChargesInTaxBase) {
+                        $recalculatedTaxBase = $recalculatedDiscountedTotal + $serviceTotal;
+                    } else {
+                        $recalculatedTaxBase = $recalculatedDiscountedTotal;
+                    }
+
+                    // Step 4: Calculate taxes on tax_base
                     $orderTaxes = OrderTax::where('order_id', $order->id)->with('tax')->get();
                     $recalculatedTaxAmount = 0;
 
                     foreach ($orderTaxes as $orderTax) {
                         if ($orderTax->tax) {
                             $taxPercent = $orderTax->tax->tax_percent ?? 0;
-                            // Calculate tax on discounted total (after discount), not subtotal
-                            $taxAmount = ($recalculatedDiscountedTotal * $taxPercent) / 100;
+                            $taxAmount = ($recalculatedTaxBase * $taxPercent) / 100;
                             $recalculatedTotal += $taxAmount;
                             $recalculatedTaxAmount += $taxAmount;
-                        }
-                    }
-
-                    // Add extra charges (calculated on discounted total)
-                    $orderCharges = OrderCharge::where('order_id', $order->id)->with('charge')->get();
-                    foreach ($orderCharges as $orderCharge) {
-                        if ($orderCharge->charge) {
-                            $chargeAmount = $orderCharge->charge->getAmount($recalculatedDiscountedTotal);
-                            $recalculatedTotal += $chargeAmount;
                         }
                     }
 
@@ -1072,7 +1099,8 @@ class PosApiController extends Controller
                         'total' => max(0, $recalculatedTotal),
                         'discount_amount' => $recalculatedDiscountAmount,
                         'total_tax_amount' => $recalculatedTaxAmount,
-                        'tax_mode' => 'order',
+                        'tax_base' => $recalculatedTaxBase,
+                        'tax_mode' => $taxMode,
                     ]);
 
                     // Update status variable for correct response message
@@ -1183,7 +1211,7 @@ class PosApiController extends Controller
                 // Refresh order to get latest discount values
                 $order->refresh();
 
-                // Recalculate totals based on actual items (matching Livewire component lines 2609-2651)
+                // Recalculate totals based on actual items (matching Livewire component logic)
                 $recalculatedSubTotal = $order->items()->sum('amount');
                 $recalculatedTotal = $recalculatedSubTotal;
                 $recalculatedDiscountedTotal = $recalculatedTotal;
@@ -1200,26 +1228,35 @@ class PosApiController extends Controller
                 $recalculatedTotal -= $recalculatedDiscountAmount;
                 $recalculatedDiscountedTotal = $recalculatedTotal;
 
-                // Recalculate taxes using centralized method (taxes calculated on discounted total)
+                // Step 2: Calculate service charges on discountedTotal
+                $serviceTotal = 0;
+                $orderCharges = OrderCharge::where('order_id', $order->id)->with('charge')->get();
+                foreach ($orderCharges as $orderCharge) {
+                    if ($orderCharge->charge) {
+                        $chargeAmount = $orderCharge->charge->getAmount($recalculatedDiscountedTotal);
+                        $serviceTotal += $chargeAmount;
+                        $recalculatedTotal += $chargeAmount;
+                    }
+                }
+
+                // Step 3: Calculate tax_base based on setting
+                $includeChargesInTaxBase = $this->restaurant->include_charges_in_tax_base ?? true;
+                if ($includeChargesInTaxBase) {
+                    $recalculatedTaxBase = $recalculatedDiscountedTotal + $serviceTotal;
+                } else {
+                    $recalculatedTaxBase = $recalculatedDiscountedTotal;
+                }
+
+                // Step 4: Calculate taxes on tax_base
                 $orderTaxes = OrderTax::where('order_id', $order->id)->with('tax')->get();
                 $recalculatedTaxAmount = 0;
 
                 foreach ($orderTaxes as $orderTax) {
                     if ($orderTax->tax) {
                         $taxPercent = $orderTax->tax->tax_percent ?? 0;
-                        // Calculate tax on discounted total (after discount), not subtotal
-                        $taxAmount = ($recalculatedDiscountedTotal * $taxPercent) / 100;
+                        $taxAmount = ($recalculatedTaxBase * $taxPercent) / 100;
                         $recalculatedTotal += $taxAmount;
                         $recalculatedTaxAmount += $taxAmount;
-                    }
-                }
-
-                // Add extra charges (calculated on discounted total)
-                $orderCharges = OrderCharge::where('order_id', $order->id)->with('charge')->get();
-                foreach ($orderCharges as $orderCharge) {
-                    if ($orderCharge->charge) {
-                        $chargeAmount = $orderCharge->charge->getAmount($recalculatedDiscountedTotal);
-                        $recalculatedTotal += $chargeAmount;
                     }
                 }
 
@@ -1237,7 +1274,8 @@ class PosApiController extends Controller
                     'total' => max(0, $recalculatedTotal),
                     'discount_amount' => $recalculatedDiscountAmount,
                     'total_tax_amount' => $recalculatedTaxAmount,
-                    'tax_mode' => 'order',
+                    'tax_base' => $recalculatedTaxBase,
+                    'tax_mode' => $taxMode,
                 ]);
             }
 
@@ -1298,13 +1336,60 @@ class PosApiController extends Controller
                         $deletedCount = count($orderIds);
                         Log::info("Deleted {$deletedCount} order(s) from merged tables via API");
                     }
+
+                    // Clear session data after successful deletion
+                    session()->forget('pos_merged_orders_to_delete');
                 } catch (\Exception $e) {
                     Log::error('Error deleting merged table orders via API: ' . $e->getMessage(), [
                         'trace' => $e->getTraceAsString(),
                         'order_ids' => $ordersToDeleteAfterMerge,
                     ]);
-                    // Don't fail the request if deletion fails, just log the error
+                    // Clear session even on error to prevent retry issues
+                    session()->forget('pos_merged_orders_to_delete');
                 }
+            }
+
+            // Get payment gateway QR code if applicable
+            $paymentGateway = $this->restaurant->paymentGateways;
+            $qrCodeImageUrl = $paymentGateway && $paymentGateway->is_qr_payment_enabled ? $paymentGateway->qr_code_image_url : null;
+
+            if ($status === 'billed') {
+                $customerDisplayData = [
+                    'order_number' => $order->order_number,
+                    'formatted_order_number' => $order->formatted_order_number,
+                    'items' => [],
+                    'sub_total' => 0,
+                    'discount' => 0,
+                    'total' => $order->total,
+                    'taxes' => [],
+                    'extra_charges' => [],
+                    'tip' => $order->tip_amount ?? 0,
+                    'delivery_fee' => $order->delivery_fee ?? 0,
+                    'order_type' => $orderTypeDisplay,
+                    'status' => 'billed',
+                    'cash_due' => $order->total,
+                    'qr_code_image_url' => $qrCodeImageUrl,
+                ];
+                $this->updateCustomerDisplayCache($customerDisplayData);
+            } else {
+                // For other statuses (kot, draft), reset to idle (matches Livewire pattern)
+                $customerDisplayData = [
+                    'order_number' => null,
+                    'formatted_order_number' => null,
+                    'items' => [],
+                    'sub_total' => 0,
+                    'discount' => 0,
+                    'total' => 0,
+                    'taxes' => [],
+                    'extra_charges' => [],
+                    'tip' => 0,
+                    'delivery_fee' => 0,
+                    'order_type' => null,
+                    'status' => 'idle',
+                    'cash_due' => null,
+                    'qr_code_image_url' => null,
+                ];
+                $this->updateCustomerDisplayCache($customerDisplayData);
             }
 
             // Load relationships for response
@@ -1350,7 +1435,7 @@ class PosApiController extends Controller
             'customer',
             'table',
             'waiter',
-            'kot' => function($query) {
+            'kot' => function ($query) {
                 $query->orderBy('created_at', 'asc');
             },
             'kot.items',
@@ -1626,10 +1711,10 @@ class PosApiController extends Controller
         }
 
         // Get base modifiers (where variation_id is null)
-        $baseModifiers = \App\Models\ModifierGroup::whereHas('itemModifiers', function($query) use ($id) {
+        $baseModifiers = \App\Models\ModifierGroup::whereHas('itemModifiers', function ($query) use ($id) {
             $query->where('menu_item_id', $id)
                 ->whereNull('menu_item_variation_id');
-        })->with(['options', 'itemModifiers' => function($query) use ($id) {
+        })->with(['options', 'itemModifiers' => function ($query) use ($id) {
             $query->where('menu_item_id', $id)
                 ->whereNull('menu_item_variation_id');
         }])->get();
@@ -1638,10 +1723,10 @@ class PosApiController extends Controller
 
         // If we have a variation, add variation-specific modifiers
         if ($variationId) {
-            $variationSpecificModifiers = \App\Models\ModifierGroup::whereHas('itemModifiers', function($query) use ($id, $variationId) {
+            $variationSpecificModifiers = \App\Models\ModifierGroup::whereHas('itemModifiers', function ($query) use ($id, $variationId) {
                 $query->where('menu_item_id', $id)
                     ->where('menu_item_variation_id', $variationId);
-            })->with(['options', 'itemModifiers' => function($query) use ($id, $variationId) {
+            })->with(['options', 'itemModifiers' => function ($query) use ($id, $variationId) {
                 $query->where('menu_item_id', $id)
                     ->where('menu_item_variation_id', $variationId);
             }])->get();
@@ -1697,12 +1782,63 @@ class PosApiController extends Controller
         $extraCharges = $request->input('extra_charges', []);
         $deliveryFee = $request->input('delivery_fee', 0);
         $tipAmount = $request->input('tip_amount', 0);
+        $taxMode = $request->input('tax_mode', 'order');
+        $includeChargesInTaxBase = $request->input('include_charges_in_tax_base', true);
 
         $subTotal = 0;
-        foreach ($items as $item) {
+        $totalTaxAmount = 0;
+        $orderItemTaxDetails = [];
+
+        // Get restaurant settings
+        $restaurant = $this->restaurant;
+        $taxes = $restaurant->taxes ?? [];
+        $isInclusive = $restaurant->tax_inclusive ?? false;
+
+        // Calculate subtotal and item taxes
+        foreach ($items as $key => $item) {
             $price = $item['price'] ?? 0;
             $quantity = $item['quantity'] ?? 1;
-            $subTotal += $price * $quantity;
+            $itemTotal = $price * $quantity;
+
+            if ($taxMode === 'item') {
+                // Calculate item-level taxes
+                $itemTaxes = $item['taxes'] ?? $taxes;
+                $itemTaxAmount = 0;
+
+                if ($itemTaxes && count($itemTaxes) > 0) {
+                    $totalTaxPercent = 0;
+                    foreach ($itemTaxes as $tax) {
+                        $totalTaxPercent += $tax['tax_percent'] ?? 0;
+                    }
+
+                    foreach ($itemTaxes as $tax) {
+                        $taxPercent = $tax['tax_percent'] ?? 0;
+                        $taxAmount = 0;
+
+                        if ($isInclusive) {
+                            $taxAmount = ($price * $taxPercent) / (100 + $totalTaxPercent);
+                        } else {
+                            $taxAmount = ($price * $taxPercent) / 100;
+                        }
+
+                        $itemTaxAmount += $taxAmount;
+                    }
+                }
+
+                $orderItemTaxDetails[$key] = [
+                    'tax_amount' => $itemTaxAmount * $quantity,
+                    'base_price' => $price,
+                    'qty' => $quantity
+                ];
+
+                if ($isInclusive) {
+                    $subTotal += ($itemTotal - ($itemTaxAmount * $quantity));
+                } else {
+                    $subTotal += $itemTotal;
+                }
+            } else {
+                $subTotal += $itemTotal;
+            }
         }
 
         // Calculate discount
@@ -1715,13 +1851,45 @@ class PosApiController extends Controller
 
         $discountedTotal = $subTotal - $discountAmount;
 
-        // Calculate total
+        // Calculate service charges
+        $serviceTotal = 0;
         $total = $discountedTotal;
 
-        // Add extra charges
         foreach ($extraCharges as $charge) {
             if (is_array($charge) && isset($charge['amount'])) {
                 $total += $charge['amount'];
+                $serviceTotal += $charge['amount'];
+            }
+        }
+
+        // Calculate tax_base
+        $taxBase = $includeChargesInTaxBase ? $discountedTotal + $serviceTotal : $discountedTotal;
+
+        // Calculate taxes
+        if ($taxMode === 'order') {
+            foreach ($taxes as $tax) {
+                $taxAmount = ($tax['tax_percent'] / 100) * $taxBase;
+                $totalTaxAmount += $taxAmount;
+                $total += $taxAmount;
+            }
+        } elseif ($taxMode === 'item') {
+            $totalInclusiveTax = 0;
+            $totalExclusiveTax = 0;
+
+            foreach ($orderItemTaxDetails as $taxDetail) {
+                $taxAmount = $taxDetail['tax_amount'] ?? 0;
+
+                if ($isInclusive) {
+                    $totalInclusiveTax += $taxAmount;
+                } else {
+                    $totalExclusiveTax += $taxAmount;
+                }
+            }
+
+            $totalTaxAmount = $totalInclusiveTax + $totalExclusiveTax;
+
+            if ($totalExclusiveTax > 0) {
+                $total += $totalExclusiveTax;
             }
         }
 
@@ -1736,7 +1904,11 @@ class PosApiController extends Controller
             'sub_total' => $subTotal,
             'discount_amount' => $discountAmount,
             'discounted_total' => $discountedTotal,
-            'total' => $total
+            'service_total' => $serviceTotal,
+            'tax_base' => $taxBase,
+            'total_tax_amount' => $totalTaxAmount,
+            'total' => $total,
+            'order_item_tax_details' => $orderItemTaxDetails
         ]);
     }
 
@@ -1767,7 +1939,7 @@ class PosApiController extends Controller
                 'activeOrder.items.menuItem',
                 'activeOrder.items.menuItemVariation',
                 'activeOrder.items.modifierOptions',
-                'activeOrder.kot' => function($query) {
+                'activeOrder.kot' => function ($query) {
                     $query->orderBy('created_at', 'asc');
                 },
                 'activeOrder.kot.items.menuItem',
@@ -1792,120 +1964,79 @@ class PosApiController extends Controller
     {
         $tableIds = $request->input('table_ids', []);
         $currentTableId = $request->input('current_table_id');
+        $orderTypeId = $request->input('order_type_id');
 
         if (empty($tableIds) || !is_array($tableIds)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please select at least one table to merge'
+                'message' => __('modules.order.selectAtLeastOneTable')
             ], 422);
         }
+        try {
+            // Get all unpaid orders for selected tables
+            $ordersToMerge = [];
+            $mergedOrderItemIds = [];
 
-        // Get all unpaid orders for selected tables
-        $ordersToMerge = [];
-        $mergedOrderItemIds = [];
+            foreach ($tableIds as $tableId) {
+                // Skip current table if it's in the list
+                if ($currentTableId && $tableId == $currentTableId) {
+                    continue;
+                }
 
-        foreach ($tableIds as $tableId) {
-            // Skip current table if it's in the list
-            if ($currentTableId && $tableId == $currentTableId) {
-                continue;
-            }
+                $unpaidOrders = Order::where('table_id', $tableId)
+                    ->where('branch_id', $this->branch->id)
+                    ->where('status', '!=', 'paid')
+                    ->where('status', '!=', 'canceled')
+                    ->with([
+                        'items.menuItem',
+                        'items.menuItemVariation',
+                        'items.modifierOptions',
+                        'kot' => function ($query) {
+                            $query->orderBy('created_at', 'asc');
+                        },
+                        'kot.items.menuItem',
+                        'kot.items.menuItemVariation',
+                        'kot.items.modifierOptions'
+                    ])
+                    ->get();
 
-            $unpaidOrders = Order::where('table_id', $tableId)
-                ->where('branch_id', $this->branch->id)
-                ->where('status', '!=', 'paid')
-                ->where('status', '!=', 'canceled')
-                ->with([
-                    'items.menuItem',
-                    'items.menuItemVariation',
-                    'items.modifierOptions',
-                    'kot' => function($query) {
-                        $query->orderBy('created_at', 'asc');
-                    },
-                    'kot.items.menuItem',
-                    'kot.items.menuItemVariation',
-                    'kot.items.modifierOptions'
-                ])
-                ->get();
-
-            foreach ($unpaidOrders as $order) {
-                $ordersToMerge[] = $order->id;
-
-                // Track OrderItem IDs from draft orders
-                if ($order->status === 'draft' && $order->items->count() > 0) {
-                    foreach ($order->items as $orderItem) {
-                        $mergedOrderItemIds[] = $orderItem->id;
+                    foreach ($unpaidOrders as $order) {
+                        $ordersToMerge[] = $order->id;
+                        $mergedData['order_ids_to_delete'][] = $order->id;
                     }
-                }
             }
-        }
 
-        // Get order items from all orders to merge
-        $orderItems = [];
-        foreach ($ordersToMerge as $orderId) {
-            $order = Order::with([
-                'items.menuItem',
-                'items.menuItemVariation',
-                'items.modifierOptions',
-                'kot.items.menuItem',
-                'kot.items.menuItemVariation',
-                'kot.items.modifierOptions'
-            ])->find($orderId);
-
-            if (!$order) continue;
-
-            // Handle draft orders - they have OrderItems
-            if ($order->status === 'draft' && $order->items->count() > 0) {
-                foreach ($order->items as $orderItem) {
-                    $orderItems[] = [
-                        'id' => $orderItem->id,
-                        'menu_item_id' => $orderItem->menu_item_id,
-                        'menu_item_variation_id' => $orderItem->menu_item_variation_id,
-                        'quantity' => $orderItem->quantity,
-                        'price' => $orderItem->price,
-                        'amount' => $orderItem->amount,
-                        'note' => $orderItem->note,
-                        'modifier_ids' => $orderItem->modifierOptions->pluck('id')->toArray(),
-                        'menu_item' => $orderItem->menuItem,
-                        'menu_item_variation' => $orderItem->menuItemVariation,
-                        'modifier_options' => $orderItem->modifierOptions,
-                        'type' => 'order_item'
-                    ];
-                }
-            } else {
-                // Handle regular orders with KOT items
-                foreach ($order->kot as $kot) {
-                    foreach ($kot->items->where('status', '!=', 'cancelled') as $kotItem) {
-                        $orderItems[] = [
-                            'id' => $kotItem->id,
-                            'kot_id' => $kot->id,
-                            'menu_item_id' => $kotItem->menu_item_id,
-                            'menu_item_variation_id' => $kotItem->menu_item_variation_id,
-                            'quantity' => $kotItem->quantity,
-                            'price' => $kotItem->menuItemVariation ? $kotItem->menuItemVariation->price : $kotItem->menuItem->price,
-                            'amount' => ($kotItem->menuItemVariation ? $kotItem->menuItemVariation->price : $kotItem->menuItem->price) * $kotItem->quantity,
-                            'note' => $kotItem->note,
-                            'modifier_ids' => $kotItem->modifierOptions->pluck('id')->toArray(),
-                            'menu_item' => $kotItem->menuItem,
-                            'menu_item_variation' => $kotItem->menuItemVariation,
-                            'modifier_options' => $kotItem->modifierOptions,
-                            'type' => 'kot_item'
-                        ];
-                    }
-                }
+            if (empty($ordersToMerge)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('modules.order.noOrdersToMerge')
+                ], 422);
             }
-        }
 
-        // Return the data needed for frontend to merge items into cart
-        return response()->json([
-            'success' => true,
-            'message' => 'Tables merged successfully',
-            'data' => [
+            // Store merge data in session to be used by POS after reload
+            session()->put('pos_merge_data', [
+                'order_item_ids' => $mergedData['order_item_ids'],
+                'kot_item_ids' => $mergedData['kot_item_ids'],
+                'order_ids_to_delete' => $mergedData['order_ids_to_delete'],
                 'orders_to_merge' => $ordersToMerge,
-                'merged_order_item_ids' => $mergedOrderItemIds,
-                'table_ids' => $tableIds,
-                'order_items' => $orderItems
-            ]
-        ]);
+                'merged_at' => now()->toDateTimeString()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => __('modules.order.tablesReadyToMerge'),
+                'data' => [
+                    'orders_count' => count($ordersToMerge),
+                    'reload_required' => true
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error merging tables: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.somethingWentWrong')
+            ], 500);
+        }
     }
 
     /**
@@ -2093,7 +2224,22 @@ class PosApiController extends Controller
             ], 404);
         }
 
-        // Delete the item
+        // Delete related KOT items first (same logic as Livewire version)
+        if ($orderItem) {
+            $kotItems = KotItem::where('menu_item_id', $orderItem->menu_item_id)
+                ->where('menu_item_variation_id', $orderItem->menu_item_variation_id)
+                ->where('quantity', $orderItem->quantity)
+                ->whereHas('kot', function ($query) use ($orderItem) {
+                    $query->where('order_id', $orderItem->order_id);
+                })
+                ->get();
+
+            foreach ($kotItems as $kotItem) {
+                $kotItem->delete();
+            }
+        }
+
+        // Delete the order item
         $orderItem->delete();
 
         // Refresh order to check remaining items
@@ -2115,8 +2261,13 @@ class PosApiController extends Controller
             // Unlock table if assigned
             if ($order->table_id) {
                 $table = Table::find($order->table_id);
+
                 if ($table) {
-                    $table->unlockForUser(user()->id);
+                    $table->update(['available_status' => 'available']);
+                    // Release table session lock if exists
+                    if ($table->tableSession) {
+                        $table->tableSession->releaseLock();
+                    }
                 }
             }
 
@@ -2133,72 +2284,253 @@ class PosApiController extends Controller
         // Recalculate order totals
         $this->recalculateOrderTotals($order);
 
+        // Refresh order to get updated data
+        $order->refresh();
+
+        // Calculate total tax from order's tax calculations
+        $totalTaxAmount = 0;
+        if ($this->restaurant->tax_mode === 'order') {
+            // For order-level taxes, get from taxes relationship
+            $taxes = Tax::all();
+            foreach ($taxes as $tax) {
+                $totalTaxAmount += ($order->sub_total * $tax->percent) / 100;
+            }
+        } else {
+            // For item-level taxes, sum from order items
+            $totalTaxAmount = $order->items()->sum('tax_amount');
+        }
+
         return response()->json([
             'success' => true,
             'message' => __('modules.order.itemDeleted'),
             'order' => [
                 'items_count' => $order->items()->count(),
                 'sub_total' => $order->sub_total,
-                'tax_amount' => $order->tax_amount,
+                'tax_amount' => $totalTaxAmount,
                 'total' => $order->total
             ]
         ]);
     }
 
-    
 
     /**
-     * Recalculate order totals after item deletion
+     * Calculate totals from cart items (matching Livewire Pos::calculateTotal)
+     * This is the core calculation logic used throughout POS
+     *
+     * @param array $items Cart items with price, quantity, etc.
+     * @param array $params Additional params (discount, charges, fees, etc.)
+     * @return array Calculated totals
      */
-    private function recalculateOrderTotals($order)
+    private function calculateTotalFromCart($items, $params = [])
     {
-        $subTotal = $order->items()->sum('amount');
-        $order->sub_total = $subTotal;
-
-        // Recalculate taxes
-        $order->taxes()->delete();
+        $subTotal = 0;
+        $total = 0;
         $totalTaxAmount = 0;
+        $orderItemTaxDetails = [];
 
-        if ($this->restaurant->tax_mode === 'order') {
-            $taxes = Tax::all();
+        $discountType = $params['discount_type'] ?? null;
+        $discountValue = $params['discount_value'] ?? 0;
+        $extraCharges = $params['extra_charges'] ?? [];
+        $deliveryFee = $params['delivery_fee'] ?? 0;
+        $tipAmount = $params['tip_amount'] ?? 0;
+        $taxMode = $params['tax_mode'] ?? 'order';
+
+        // Step 1: Calculate subtotal (matching Livewire)
+        if (is_array($items)) {
+            // Calculate item taxes first for proper subtotal calculation (matching Livewire)
+            if ($taxMode === 'item') {
+                $this->updateOrderItemTaxDetailsForCart($items, $orderItemTaxDetails, $totalTaxAmount);
+            }
+
+            foreach ($items as $key => $item) {
+                $itemAmount = is_array($item) ? ($item['amount'] ?? 0) : ($item->amount ?? 0);
+                $total += $itemAmount;
+
+                // For inclusive taxes, subtract tax from subtotal (matching Livewire)
+                if ($taxMode === 'item' && isset($orderItemTaxDetails[$key])) {
+                    $taxDetail = $orderItemTaxDetails[$key];
+                    $isInclusive = $this->restaurant->tax_inclusive ?? false;
+
+                    if ($isInclusive) {
+                        $subTotal += ($itemAmount - ($taxDetail['tax_amount'] ?? 0));
+                    } else {
+                        $subTotal += $itemAmount;
+                    }
+                } else {
+                    $subTotal += $itemAmount;
+                }
+            }
+        }
+
+        $discountedTotal = $total;
+
+        // Step 2: Apply discounts (matching Livewire)
+        $discountAmount = 0;
+        if ($discountValue > 0 && $discountType) {
+            if ($discountType === 'percent') {
+                $discountAmount = round(($subTotal * $discountValue) / 100, 2);
+            } elseif ($discountType === 'fixed') {
+                $discountAmount = min($discountValue, $subTotal);
+            }
+
+            $total -= $discountAmount;
+        }
+        $discountedTotal = $total;
+
+        // Step 3: Calculate service charges on discountedTotal (matching Livewire)
+        $serviceTotal = 0;
+        $applicableCharges = is_array($extraCharges) ? $extraCharges : [];
+
+        if (!empty($items) && !empty($applicableCharges)) {
+            foreach ($applicableCharges as $charge) {
+                $chargeAmount = is_object($charge)
+                    ? $charge->getAmount($discountedTotal)
+                    : ($charge['amount'] ?? 0);
+                $total += $chargeAmount;
+                $serviceTotal += $chargeAmount;
+            }
+        }
+
+        // Step 4: Calculate tax_base based on setting (matching Livewire)
+        $includeChargesInTaxBase = $this->restaurant->include_charges_in_tax_base ?? true;
+        $taxBase = $includeChargesInTaxBase ? $discountedTotal + $serviceTotal : $discountedTotal;
+
+        // Step 5: Calculate taxes on tax_base (matching Livewire recalculateTaxTotals)
+        if ($taxMode === 'order') {
+            $totalTaxAmount = 0;
+            $taxes = $this->restaurant->taxes ?? [];
+
             foreach ($taxes as $tax) {
-                $taxAmount = ($subTotal * $tax->percent) / 100;
-                OrderTax::create([
-                    'order_id' => $order->id,
-                    'tax_id' => $tax->id,
-                    'tax_name' => $tax->tax_name,
-                    'tax_percent' => $tax->percent,
-                    'tax_amount' => $taxAmount,
-                ]);
+                $taxAmount = ($taxBase * $tax->rate_percent) / 100;
                 $totalTaxAmount += $taxAmount;
             }
-        } else {
-            // Item-level tax - sum from items
-            $totalTaxAmount = $order->items()->sum('tax_amount');
+            $total += $totalTaxAmount;
+        } elseif ($taxMode === 'item') {
+            // Item taxes already calculated above
+            $isInclusive = $this->restaurant->tax_inclusive ?? false;
+            if (!$isInclusive) {
+                $total += $totalTaxAmount;
+            }
         }
 
-        // Recalculate extra charges
-        $extraChargesTotal = 0;
-        $discountedSubTotal = $subTotal - ($order->discount_amount ?? 0);
-
-        foreach ($order->extraCharges as $charge) {
-            $chargeAmount = $charge->getAmount($discountedSubTotal);
-            $extraChargesTotal += $chargeAmount;
+        // Step 6: Add tip and delivery fees (matching Livewire)
+        if ($tipAmount > 0) {
+            $total += $tipAmount;
         }
 
-        // Calculate total
-        $total = $subTotal + $totalTaxAmount + $extraChargesTotal;
-        $total = $total - ($order->discount_amount ?? 0);
-        $total = $total + ($order->delivery_fee ?? 0);
-        $total = $total + ($order->tip_amount ?? 0);
+        if ($deliveryFee > 0) {
+            $total += $deliveryFee;
+        }
 
-        $order->tax_amount = $totalTaxAmount;
-        $order->total = $total;
-        $order->save();
+        return [
+            'sub_total' => $subTotal,
+            'discount_amount' => $discountAmount,
+            'discounted_total' => $discountedTotal,
+            'service_total' => $serviceTotal,
+            'tax_base' => $taxBase,
+            'total_tax_amount' => $totalTaxAmount,
+            'total' => max(0, $total),
+            'order_item_tax_details' => $orderItemTaxDetails,
+        ];
     }
 
     /**
-     * Remove an extra charge from an order
+     * Update order item tax details for cart items (matching Livewire)
+     */
+    private function updateOrderItemTaxDetailsForCart($items, &$orderItemTaxDetails, &$totalTaxAmount)
+    {
+        $taxes = $this->restaurant->taxes ?? [];
+        $isInclusive = $this->restaurant->tax_inclusive ?? false;
+
+        foreach ($items as $key => $item) {
+            $price = is_array($item) ? ($item['price'] ?? 0) : ($item->price ?? 0);
+            $quantity = is_array($item) ? ($item['quantity'] ?? 1) : ($item->quantity ?? 1);
+
+            $itemTaxAmount = 0;
+            $totalTaxPercent = 0;
+
+            // Calculate total tax percent
+            foreach ($taxes as $tax) {
+                $totalTaxPercent += $tax->rate_percent;
+            }
+
+            // Calculate tax amount
+            foreach ($taxes as $tax) {
+                $taxPercent = $tax->rate_percent;
+                $taxAmount = 0;
+
+                if ($isInclusive) {
+                    $taxAmount = ($price * $taxPercent) / (100 + $totalTaxPercent);
+                } else {
+                    $taxAmount = ($price * $taxPercent) / 100;
+                }
+
+                $itemTaxAmount += $taxAmount;
+            }
+
+            $orderItemTaxDetails[$key] = [
+                'tax_amount' => $itemTaxAmount * $quantity,
+                'base_price' => $price,
+                'qty' => $quantity
+            ];
+
+            $totalTaxAmount += $itemTaxAmount * $quantity;
+        }
+    }
+
+    /**
+     * Recalculate order totals (matching Livewire Pos::calculateTotal flow)
+     * Uses calculateTotalFromCart for consistent calculation logic
+     */
+    private function recalculateOrderTotals($order)
+    {
+        // Step 1: Prepare items array from order
+        $items = [];
+
+        if ($order->status === 'draft') {
+            $items = $order->items->toArray();
+        } else {
+            // KOT orders: build items array from kot items
+            $order->load(['kot.items' => function ($query) {
+                $query->whereIn('status', ['pending', 'processing', 'ready']);
+            }]);
+
+            foreach ($order->kot as $kot) {
+                foreach ($kot->items as $kotItem) {
+                    $items[] = [
+                        'price' => $kotItem->price,
+                        'quantity' => $kotItem->quantity,
+                        'amount' => $kotItem->price * $kotItem->quantity,
+                    ];
+                }
+            }
+        }
+
+        // Step 2: Reload charges
+        $order->load('charges.charge');
+
+        // Step 3: Calculate using shared logic (matching Livewire calculateTotal)
+        $totals = $this->calculateTotalFromCart($items, [
+            'discount_type' => $order->discount_type,
+            'discount_value' => $order->discount_value,
+            'extra_charges' => $order->charges,
+            'delivery_fee' => $order->delivery_fee ?? 0,
+            'tip_amount' => $order->tip_amount ?? 0,
+            'tax_mode' => $order->tax_mode ?? 'order',
+        ]);
+
+        // Step 4: Update order (matching Livewire)
+        $order->update([
+            'sub_total' => $totals['sub_total'],
+            'discount_amount' => $totals['discount_amount'],
+            'total' => $totals['total'],
+            'total_tax_amount' => $totals['total_tax_amount'],
+            'tax_base' => $totals['tax_base'],
+        ]);
+    }
+
+    /**
+     * Remove an extra charge from an order (matching Livewire Pos::removeExtraCharge)
      */
     public function removeExtraCharge($orderId, $chargeId)
     {
@@ -2227,26 +2559,34 @@ class PosApiController extends Controller
             ], 400);
         }
 
-        // Delete the charge
-        $charge = OrderCharge::where('order_id', $orderId)
-            ->where('id', $chargeId)
-            ->first();
+        // Detach the charge (matching Livewire: $order->extraCharges()->detach($chargeId))
+        $detached = $order->extraCharges()->detach($chargeId);
 
-        if (!$charge) {
+        if ($detached === 0) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.chargeNotFound')
             ], 404);
         }
 
-        $charge->delete();
-
-        // Recalculate order totals
+        // Recalculate totals (matching Livewire: $this->calculateTotal())
         $this->recalculateOrderTotals($order);
+
+        // Refresh order to get updated values
+        $order->refresh();
 
         return response()->json([
             'success' => true,
-            'message' => __('modules.order.chargeRemoved')
+            'message' => __('messages.extraChargeRemoved'),
+            'order' => [
+                'id' => $order->id,
+                'status' => $order->status,
+                'sub_total' => number_format($order->sub_total, 2, '.', ''),
+                'discount_amount' => number_format($order->discount_amount ?? 0, 2, '.', ''),
+                'total_tax_amount' => number_format($order->total_tax_amount ?? 0, 2, '.', ''),
+                'total' => number_format($order->total, 2, '.', ''),
+                'tax_base' => number_format($order->tax_base ?? 0, 2, '.', ''),
+            ]
         ]);
     }
 
@@ -2256,7 +2596,7 @@ class PosApiController extends Controller
     public function updateWaiter(Request $request, $orderId)
     {
         $request->validate([
-            'waiter_id' => 'required|integer|exists:users,id',
+            'waiter_id' => 'nullable|integer|exists:users,id',
         ]);
 
         $order = Order::find($orderId);
@@ -2268,12 +2608,101 @@ class PosApiController extends Controller
             ], 404);
         }
 
-        $order->update(['waiter_id' => intval($request->waiter_id)]);
+        // Allow null to clear waiter assignment
+        $waiterId = $request->waiter_id ? intval($request->waiter_id) : null;
+        $order->update(['waiter_id' => $waiterId]);
 
         return response()->json([
             'success' => true,
-            'message' => __('messages.waiterUpdated'),
+            'message' => $waiterId ? __('messages.waiterUpdated') : __('messages.waiterRemoved'),
             'waiter_id' => $order->waiter_id
+        ]);
+    }
+
+    /**
+     * Clear merge session data
+     */
+    public function clearMergeSession()
+    {
+        session()->forget('pos_merge_data');
+        session()->forget('pos_merged_orders_to_delete');
+
+        return response()->json([
+            'success' => true
+        ]);
+    }
+
+    /**
+     * Update customer display cache with current cart data
+     * Follows the pattern from Livewire Pos.php calculateTotal() method
+     *
+     * @param array $displayData Complete display data with items, totals, etc.
+     * @return void
+     */
+    private function updateCustomerDisplayCache($displayData)
+    {
+        $userId = auth()->id();
+        if (!$userId) {
+            return;
+        }
+
+        // Store in cache (matches Livewire Pos.php pattern)
+        $cacheKey = 'customer_display_cart_user_' . $userId;
+        Cache::put($cacheKey, $displayData, now()->addMinutes(30));
+
+        // Broadcast customer display update if Pusher is enabled (matches Livewire pattern)
+        if (pusherSettings()->is_enabled_pusher_broadcast) {
+            broadcast(new \App\Events\CustomerDisplayUpdated($displayData, $userId));
+        }
+    }
+
+    /**
+     * Update customer display - called from JavaScript calculateTotal()
+     * Mirrors Livewire Pos.php calculateTotal() customer display update logic
+     */
+    public function updateCustomerDisplay(Request $request)
+    {
+        $items = $request->input('items', []);
+        $orderNumber = $request->input('order_number');
+        $formattedOrderNumber = $request->input('formatted_order_number');
+        $subTotal = $request->input('sub_total', 0);
+        $discount = $request->input('discount', 0);
+        $total = $request->input('total', 0);
+        $taxes = $request->input('taxes', []);
+        $extraCharges = $request->input('extra_charges', []);
+        $tip = $request->input('tip', 0);
+        $deliveryFee = $request->input('delivery_fee', 0);
+        $orderType = $request->input('order_type');
+        $status = $request->input('status', 'idle');
+
+        // Get payment gateway QR code (matching Livewire pattern)
+        $paymentGateway = $this->restaurant->paymentGateways;
+        $qrCodeImageUrl = $paymentGateway && $paymentGateway->is_qr_payment_enabled ? $paymentGateway->qr_code_image_url : null;
+
+        // Prepare customer display data (matching Livewire pattern exactly)
+        $customerDisplayData = [
+            'order_number' => $orderNumber,
+            'formatted_order_number' => $formattedOrderNumber,
+            'items' => $items,
+            'sub_total' => $subTotal,
+            'discount' => $discount,
+            'total' => $total,
+            'taxes' => $taxes,
+            'extra_charges' => $extraCharges,
+            'tip' => $tip,
+            'delivery_fee' => $deliveryFee,
+            'order_type' => $orderType,
+            'status' => $status,
+            'cash_due' => $status === 'billed' ? $total : null,
+            'qr_code_image_url' => $qrCodeImageUrl,
+        ];
+
+        // Update cache and broadcast (matching Livewire pattern)
+        $this->updateCustomerDisplayCache($customerDisplayData);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer display updated'
         ]);
     }
 }

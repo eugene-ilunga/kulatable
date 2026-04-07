@@ -28,6 +28,7 @@ class OrderSettings extends Component
     public $hideMenuItemImageOnCustomerSite = false;
     public $settings;
     public $tokenSettings = [];
+    public array $orderNumberSettings = [];
 
     public function mount()
     {
@@ -200,9 +201,10 @@ class OrderSettings extends Component
             return;
         }
 
-        $orderTypes = OrderType::where('branch_id', $this->branchId)->get(['id', 'enable_token_number', 'order_type_name']);
+        $orderTypes = OrderType::where('branch_id', $this->branchId)->get(['id', 'enable_token_number', 'show_order_number_on_board', 'order_type_name']);
         foreach ($orderTypes as $type) {
             $this->tokenSettings[$type->id] = (bool) $type->enable_token_number;
+            $this->orderNumberSettings[$type->id] = (bool) $type->show_order_number_on_board;
         }
     }
 
@@ -211,13 +213,18 @@ class OrderSettings extends Component
         $this->validate([
             'branchId' => 'required|exists:branches,id',
             'tokenSettings' => 'array',
+            'orderNumberSettings' => 'array',
         ]);
 
         $orderTypes = OrderType::where('branch_id', $this->branchId)->pluck('id');
 
         foreach ($orderTypes as $typeId) {
             $enabled = (bool) ($this->tokenSettings[$typeId] ?? false);
-            OrderType::where('id', $typeId)->update(['enable_token_number' => $enabled]);
+            $showOrderNumber = (bool) ($this->orderNumberSettings[$typeId] ?? false);
+            OrderType::where('id', $typeId)->update([
+                'enable_token_number' => $enabled,
+                'show_order_number_on_board' => $showOrderNumber,
+            ]);
         }
 
         $this->alert('success', __('messages.settingsUpdated'), [
@@ -229,7 +236,7 @@ class OrderSettings extends Component
     public function getOrderTypesProperty()
     {
         return OrderType::where('branch_id', $this->branchId)
-            ->select('id', 'order_type_name', 'enable_token_number')
+            ->select('id', 'order_type_name', 'enable_token_number', 'show_order_number_on_board')
             ->orderBy('id')
             ->get();
     }

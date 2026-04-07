@@ -44,9 +44,28 @@
                             input="faqDescription"
                             data-gramm="false"
                             placeholder="{{ __('placeholders.featureDescriptionPlaceHolder') }}"
-                            x-on:trix-change="$wire.set('faqDescription', $event.target.value)"
+                            x-on:trix-change="$wire.set('faqDescription', $event.target.value, false)"
                             x-ref="trixEditor"
                             x-init="
+                                // Ensure Trix starts with the current hidden input content
+                                $nextTick(() => {
+                                    if ($refs.trixEditor && $refs.faqDescription) {
+                                        $refs.trixEditor.editor.loadHTML($refs.faqDescription.value || '');
+                                    }
+                                });
+
+                                // Reload editor HTML when language changes (server updates faqDescription, but wire:ignore blocks DOM morphing)
+                                window.addEventListener('faq-description-updated', (e) => {
+                                    const detail = e?.detail;
+                                    const value = detail?.value ?? detail ?? '';
+                                    if ($refs.trixEditor && $refs.trixEditor.editor) {
+                                        $refs.trixEditor.editor.loadHTML(value || '');
+                                    }
+                                    if ($refs.faqDescription) {
+                                        $refs.faqDescription.value = value || '';
+                                    }
+                                });
+
                                 window.addEventListener('reset-trix-editor', () => {
                                     $refs.trixEditor.editor.loadHTML('');
                                 });" >

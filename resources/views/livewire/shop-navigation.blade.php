@@ -1,16 +1,16 @@
 
 <header class="lg:hidden">
     <nav class="bg-white border-gray-200 px-4 py-2.5 dark:bg-gray-800">
-        <div class="flex flex-wrap justify-between items-center mx-auto">
-            <a href="{{ route('shop_restaurant', [$restaurant->hash]).'?branch=' . $shopBranch->id }}" class="flex items-center app-logo">
-                <img src="{{ $restaurant->logoUrl }}" class="ltr:mr-3 rtl:ml-3 h-12 sm:h-9" alt="App Logo" />
+        <div class="flex flex-wrap justify-between items-center gap-2 mx-auto">
+            <a href="{{ route('shop_restaurant', [$restaurant->hash]).'?branch=' . $shopBranch->id }}" class="flex min-w-0 flex-1 items-center app-logo">
+                <img src="{{ $restaurant->logoUrl }}" class="h-6 flex-shrink-0 ltr:mr-2 rtl:ml-2 sm:h-9" alt="App Logo" />
                 @if ($restaurant->show_logo_text)
-                <span class="self-center text-xl font-semibold whitespace-nowrap dark:text-white">{{ $restaurant->name }}</span>
+                <span class="self-center truncate text-base font-semibold dark:text-white sm:text-xl">{{ $restaurant->name }}</span>
                 @endif
             </a>
 
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-shrink-0 items-center gap-1 sm:gap-2">
                 @if (languages()->count() > 1)
                     @livewire('shop.languageSwitcher')
                 @endif

@@ -34,7 +34,7 @@ class LanguageSettingObserver
         $trFrontDetail->header_title = 'Restaurant POS software made simple!';
         $trFrontDetail->header_description = 'Easily manage orders, menus, and tables in one place. Save time, reduce errors, and grow your business faster';
 
-        $trFrontDetail->feature_with_image_heading = 'Prenez le contrôle de votre restaurant';
+        $trFrontDetail->feature_with_image_heading = 'Take Control of Your Restaurant';
         $trFrontDetail->feature_with_icon_heading = 'Powerful Features Built to Elevate Your Restaurant Operations';
 
         $trFrontDetail->review_heading = 'What Restaurant Owners Are Saying';

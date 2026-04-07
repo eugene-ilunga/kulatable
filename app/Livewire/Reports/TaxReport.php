@@ -625,8 +625,8 @@ class TaxReport extends Component
             ->whereBetween('date_time', [$todayStart, $todayEnd])
             ->get();
 
-        // Get all taxes
-        $allTaxes = Tax::where('restaurant_id', restaurant()->id)->get();
+        // Get all taxes for this branch
+        $allTaxes = Tax::withoutGlobalScopes()->where('branch_id', branch()->id)->get();
 
         // Build tax breakdown from order details
         $taxBreakdown = $this->buildTaxBreakdownFromOrderDetails($orderDetails);

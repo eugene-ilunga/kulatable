@@ -52,6 +52,7 @@
                                 @lang('modules.update.updateNow')
                             </x-primary-link>
                         </div>
+                        
                     </div>
                 </x-alert>
             @endif

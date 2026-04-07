@@ -25,19 +25,24 @@ return new class extends Migration
         }
 
         // Update or create the desktop application
-        $desktopApplication = DesktopApplication::first();
+        if (Schema::hasTable('desktop_applications')) {
 
-        if ($desktopApplication) {
-            $desktopApplication->windows_file_path = DesktopApplication::WINDOWS_FILE_PATH;
-            $desktopApplication->mac_file_path = DesktopApplication::MAC_FILE_PATH;
-            $desktopApplication->linux_file_path = DesktopApplication::LINUX_FILE_PATH;
-            $desktopApplication->save();
-        } else {
-            DesktopApplication::create([
+            $query = DB::table('desktop_applications');
+            $existing = $query->first();
+        
+            $data = [
                 'windows_file_path' => DesktopApplication::WINDOWS_FILE_PATH,
-                'mac_file_path' => DesktopApplication::MAC_FILE_PATH,
-                'linux_file_path' => DesktopApplication::LINUX_FILE_PATH,
-            ]);
+                'mac_file_path'     => DesktopApplication::MAC_FILE_PATH,
+                'linux_file_path'   => DesktopApplication::LINUX_FILE_PATH,
+                'updated_at'        => now(),
+            ];
+        
+            if ($existing) {
+                $query->where('id', $existing->id)->update($data);
+            } else {
+                $data['created_at'] = now();
+                $query->insert($data);
+            }
         }
     }
 

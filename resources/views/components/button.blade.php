@@ -1,4 +1,4 @@
-<button {{ $attributes->merge(['type' => 'submit', 'class' => 'text-white justify-center bg-skin-base hover:bg-skin-base/[.8] sm:w-auto dark:bg-skin-base dark:hover:bg-skin-base/[.8] font-semibold rounded-lg text-sm px-3 py-2 text-center rtl:space-x-reverse']) }}
+<button {{ $attributes->merge(['type' => 'submit', 'class' => 'text-white justify-center bg-skin-base hover:bg-skin-base/[.8] sm:w-auto dark:bg-skin-base dark:hover:bg-skin-base/[.8] font-semibold rounded-lg text-xs px-3 py-2 text-center rtl:space-x-reverse']) }}
     wire:loading.attr="disabled" wire:target="{{ $target ?? 'submitForm' }}" wire:loading.class.remove="bg-skin-base"
     wire:loading.class="bg-skin-base/[.8]" >
 

@@ -5,10 +5,11 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
-use App\Models\Order;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Restaurant;
-use App\Models\Table;
+use App\Models\LanguageSetting;
 
 class CustomerSiteMiddleware
 {
@@ -20,57 +21,54 @@ class CustomerSiteMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $restaurant = $this->resolveRestaurant($request);
+        $hash = $request->route('hash');
 
-        if ($restaurant) {
-            $defaultLocale = normalize_locale(global_setting()?->locale, config('app.fallback_locale', 'en'));
+        $restaurant = null;
 
-            // On customer routes, only customer_locale should drive language (never admin locale).
-            if (session()->has('customer_locale')) {
-                $locale = normalize_locale(session('customer_locale'), $defaultLocale);
-            } else {
-                $locale = $defaultLocale;
+        if ($hash) {
+            $restaurant = Restaurant::where('hash', $hash)->first();
+
+            if ($restaurant && $restaurant->customer_site_language) {
+                // Always prefer customer-site locale key. Fallback to legacy key once.
+                $locale = session('customer_locale') ?: session('locale');
+
+                if (!$locale) {
+                    // First visit - use restaurant's customer_site_language directly
+                    $locale = $restaurant->customer_site_language;
+                }
+
+                // Get RTL from selected language setting.
+                $language = LanguageSetting::where('language_code', $locale)->first();
+                $rtl = $language?->is_rtl ?? false;
+
+                // Keep customer-site keys in sync for layouts/components.
+                session([
+                    'customer_locale' => $locale,
+                    'customer_site_language' => $locale,
+                    'customer_is_rtl' => $rtl,
+                ]);
+
+                // Clear unrelated/admin session keys to avoid conflicts.
+                session()->forget(['locale', 'is_rtl', 'isRtl']);
+                App::setLocale($locale);
             }
 
-            $rtl = locale_is_rtl($locale);
+            // Get RTL from selected language setting.
+            $language = LanguageSetting::where('language_code', $locale)->first();
+            $rtl = $language?->is_rtl ?? false;
 
+            // Keep customer-site keys in sync for layouts/components.
             session([
-                'customer_site_language' => $defaultLocale,
                 'customer_locale' => $locale,
+                'customer_site_language' => $locale,
                 'customer_is_rtl' => $rtl,
             ]);
-            session()->forget('isRtl'); // Clear admin session
 
+            // Clear unrelated/admin session keys to avoid conflicts.
+            session()->forget(['locale', 'is_rtl', 'isRtl']);
             App::setLocale($locale);
         }
 
         return $next($request);
-    }
-
-    private function resolveRestaurant(Request $request): ?Restaurant
-    {
-        $hash = $request->route('hash') ?? $request->query('hash');
-
-        if ($hash) {
-            $restaurant = Restaurant::where('hash', $hash)->first();
-            if ($restaurant) {
-                return $restaurant;
-            }
-
-            $table = Table::where('hash', $hash)->first();
-            if ($table) {
-                return $table->branch?->restaurant;
-            }
-        }
-
-        $orderId = $request->route('id');
-        if ($orderId) {
-            $order = Order::where('uuid', $orderId)->first();
-            if ($order) {
-                return $order->branch?->restaurant;
-            }
-        }
-
-        return null;
     }
 }

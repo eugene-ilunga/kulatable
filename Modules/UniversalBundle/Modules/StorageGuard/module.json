@@ -1,0 +1,11 @@
+{
+    "name": "StorageGuard",
+    "alias": "storageguard",
+    "description": "Ensures required cache directories exist at runtime to prevent file_put_contents errors.",
+    "keywords": ["storage", "cache", "filesystem", "guard"],
+    "priority": 0,
+    "providers": [
+        "Modules\\StorageGuard\\Providers\\StorageGuardServiceProvider"
+    ],
+    "files": []
+}

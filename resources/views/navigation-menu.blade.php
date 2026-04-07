@@ -3,27 +3,29 @@
     <div class="flex items-center justify-between">
 
       <div class="flex items-center justify-start">
-        <button id="toggleSidebarMobile" aria-expanded="true" aria-controls="sidebar"
-          class="p-2 text-gray-600 rounded cursor-pointer lg:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-          <svg id="toggleSidebarMobileHamburger" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd"
-              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-              clip-rule="evenodd"></path>
-          </svg>
-          <svg id="toggleSidebarMobileClose" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clip-rule="evenodd"></path>
-          </svg>
-        </button>
+        @if (!request()->routeIs('pos.*'))
+          <button id="toggleSidebarMobile" aria-expanded="true" aria-controls="sidebar"
+            class="p-2 text-gray-600 rounded cursor-pointer lg:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+            <svg id="toggleSidebarMobileHamburger" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd"
+                d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <svg id="toggleSidebarMobileClose" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        @endif
 
-        <a href="{{ route('dashboard') }}" class="flex ltr:ml-2 rtl:mr-2 items-center app-logo gap-2 min-w-0">
-          <img src="{{ restaurant()->logoUrl }}" class="h-7 w-7 sm:h-8 sm:w-8 ltr:mr-1 sm:ltr:mr-3 rtl:ml-1 sm:rtl:ml-3 shrink-0" alt="" />
+        <a href="{{ route('dashboard') }}" class="flex ltr:ml-2 rtl:mr-2 items-center app-logo gap-2 min-w-fit">
+          <img src="{{ restaurant()->logoUrl }}" class="h-7 w-7 ltr:mr-1 sm:ltr:mr-2 rtl:ml-1 sm:rtl:ml-2 shrink-0" alt="" />
 
           @if (restaurant()->show_logo_text)
-          <span class="self-center text-lg sm:text-xl font-semibold whitespace-nowrap dark:text-white hidden lg:block ltr:mr-2 rtl:ml-2 truncate max-w-[45vw]">{{ Str::limit(restaurant()->name, 10) }}</span>
+          <span class="self-center text-md font-semibold whitespace-nowrap dark:text-white hidden lg:block ltr:mr-2 rtl:ml-2 truncate max-w-[45vw]">{{ Str::limit(restaurant()->name, 10) }}</span>
           @endif
         </a>
 
@@ -41,7 +43,7 @@
          @endif
 
         <div class="flex gap-2">
-          @if (in_array('Order', restaurant_modules()) && user_can('Show Order') && restaurant()->hide_new_orders == 0)
+          @if (in_array('Order', restaurant_modules()) && (request()->routeIs('pos.*') || (user_can('Show Order') && restaurant()->hide_new_orders == 0)))
             @livewire('dashboard.todayOrders')
           @endif
 
@@ -53,18 +55,18 @@
             @livewire('dashboard.activeWaiterRequests')
           @endif
 
-
+          @if (!request()->routeIs('pos.*'))
             @livewire('dashboard.posShortCut')
-
+          @endif
 
           @if (request()->routeIs('pos.*'))
-          <x-primary-link href="{{ route('dashboard') }}" class="inline-flex items-center px-1 py-2 gap-1 text-xs ltr:mr-2 rtl:ml-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="w-4 h-4" viewBox="0 0 16 16">
-              <path d="M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2M3.732 3.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 8a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 8m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 7.31A.91.91 0 1 0 8.85 8.569l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
-              <path fill-rule="evenodd" d="M6.664 15.889A8 8 0 1 1 9.336.11a8 8 0 0 1-2.672 15.78zm-4.665-4.283A11.95 11.95 0 0 1 8 10c2.186 0 4.236.585 6.001 1.606a7 7 0 1 0-12.002 0"/>
-            </svg>
-            <span class="hidden lg:block">@lang('menu.dashboard')</span>
-          </x-primary-link>
+            <a href="{{ route('dashboard') }}" class="inline-flex items-center px-2 py-1 text-sm font-medium text-center text-white bg-skin-base border-skin-base border hover:bg-skin-base/[.8] rounded-md ltr:mr-2 rtl:ml-2 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-gray-800 dark:text-gray-300 gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="w-4 h-4" viewBox="0 0 16 16">
+                <path d="M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2M3.732 3.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 8a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 8m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 7.31A.91.91 0 1 0 8.85 8.569l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
+                <path fill-rule="evenodd" d="M6.664 15.889A8 8 0 1 1 9.336.11a8 8 0 0 1-2.672 15.78zm-4.665-4.283A11.95 11.95 0 0 1 8 10c2.186 0 4.236.585 6.001 1.606a7 7 0 1 0-12.002 0"/>
+              </svg>
+              <span class="hidden lg:block">@lang('menu.dashboard')</span>
+            </a>
           @endif
 
         </div>
@@ -73,16 +75,18 @@
       <div class="flex items-center gap-4 w-fit justify-end">
 
         <!-- Search mobile -->
-        <button id="toggleSidebarMobileSearch" type="button"
-          class="p-2 text-gray-500 rounded-lg hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
-          <span class="sr-only">Search</span>
-          <!-- Search icon -->
-          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd"
-              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              clip-rule="evenodd"></path>
-          </svg>
-        </button>
+        @if (!request()->routeIs('pos.*'))
+          <button id="toggleSidebarMobileSearch" type="button"
+            class="p-2 text-gray-500 rounded-lg hidden hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">
+            <span class="sr-only">Search</span>
+            <!-- Search icon -->
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd"
+                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        @endif
 
 
         @if (languages()->count() > 1)
@@ -92,9 +96,11 @@
 
         @livewire('restaurant.stop-impersonate-restaurant')
 
+        @livewire('restaurant.restaurantOpenCloseToggle')
+
         @if (restaurant()->package->package_type == \App\Enums\PackageType::DEFAULT)
             @php $upgradeText = __('modules.settings.upgradeLicense'); @endphp
-            <a href="{{ route('pricing.plan') }}" wire:navigate class="inline-flex" data-tooltip-target="upgrade-tooltip-toggle" data-tooltip-placement="bottom">
+            <a href="{{ route('pricing.plan') }}" wire:navigate class="hidden md:block inline-flex" data-tooltip-target="upgrade-tooltip-toggle" data-tooltip-placement="bottom">
                 <x-secondary-button class="inline-flex items-center gap-2 shadow-md text-skin-base dark:text-skin-base hover:origin-center group px-2 sm:px-3" aria-label="{{ $upgradeText }}">
                     <svg class="w-5 h-5 text-current group-hover:scale-110 duration-500 sm:hidden" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
                         <path d="M3 7a2 2 0 0 1 2-2h2.586l1.707-1.707A1 1 0 0 1 10 3h4a1 1 0 0 1 .707.293L16.414 5H19a2 2 0 0 1 2 2v2H3V7Zm0 4h18v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7Zm8 2v4a1 1 0 1 0 2 0v-4a1 1 0 1 0-2 0Z"/>
@@ -112,13 +118,13 @@
                 $daysLeftInTrial = floor(now(timezone())->diffInDays(\Carbon\Carbon::parse(restaurant()->trial_ends_at)->addDays(1)));
                 $trialText = $daysLeftInTrial > 0 ? $daysLeftInTrial .' ' . __('modules.package.daysLeftTrial') : __('modules.package.trialExpired');
             @endphp
-            <a href="{{ route('pricing.plan') }}" wire:navigate class="inline-flex" data-tooltip-target="trial-tooltip-toggle" data-tooltip-placement="bottom">
-                <x-secondary-button class="inline-flex items-center gap-2 px-2 sm:px-3 py-1" aria-label="{{ $trialText }}">
+            <a href="{{ route('pricing.plan') }}" wire:navigate class="hidden md:block inline-flex" data-tooltip-target="trial-tooltip-toggle" data-tooltip-placement="bottom">
+                <button aria-label="{{ $trialText }}">
                     <svg class="w-5 h-5 text-current group-hover:scale-110 duration-500 sm:hidden" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
                         <path d="M3 7a2 2 0 0 1 2-2h2.586l1.707-1.707A1 1 0 0 1 10 3h4a1 1 0 0 1 .707.293L16.414 5H19a2 2 0 0 1 2 2v2H3V7Zm0 4h18v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7Zm8 2v4a1 1 0 1 0 2 0v-4a1 1 0 1 0-2 0Z"/>
                     </svg>
-                    <span class="hidden sm:inline text-[10px] sm:text-sm whitespace-nowrap leading-4">{{ $trialText }}</span>
-                </x-secondary-button>
+                    <span class="hidden sm:inline text-xs px-3 py-1.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">{{ $trialText }}</span>
+                </button>
             </a>
             <div id="trial-tooltip-toggle" role="tooltip"
                 class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip">
@@ -128,7 +134,7 @@
         @endif
 
         <button onclick="openFullscreen();" type="button" data-tooltip-target="fullscreen-tooltip-toggle"
-        class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+        class="hidden md:block text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
             <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/>
           </svg>
@@ -230,7 +236,7 @@
             id="dropdown-3">
 
             <ul class="py-1" role="none">
-              @if (in_array(\App\Models\Package::FEATURE_CUSTOMER_DISPLAY, restaurant_modules(), true))
+              @if (in_array('Customer Display', restaurant_modules()))
               <li>
                 <a href="{{ route('customer.display') }}" target="_blank"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -239,7 +245,7 @@
               <li>
                 <a href="{{ route('customer.order-board') }}" target="_blank"
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-                  role="menuitem">@lang('menu.customerOrderBoard')</a>
+                  role="menuitem">@lang('modules.order.customerOrderBoard')</a>
               </li>
               @endif
 

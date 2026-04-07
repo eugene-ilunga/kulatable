@@ -13,7 +13,10 @@ class Tables extends Component
 {
     use LivewireAlert;
 
-    protected $listeners = ['waiterRequestCreated' => 'render'];
+    protected $listeners = [
+        'waiterRequestCreated' => 'render',
+        'refreshWaiterRequests' => '$refresh',
+    ];
 
     public $pollingEnabled = true;
     public $pollingInterval = 10;
@@ -25,7 +28,7 @@ class Tables extends Component
     private function getAssignedTableIds()
     {
         $user = user();
-        
+
         // Check if current user is a waiter
         if (!$user || !$user->hasRole('Waiter_' . $user->restaurant_id)) {
             return null; // Not a waiter, return null to show all requests
@@ -71,18 +74,18 @@ class Tables extends Component
 
     public function showTableOrder($id)
     {
-        return $this->redirect(route('pos.show', $id), navigate: true);
+        return $this->redirect(route('pos.show', $id));
     }
 
     public function showTableOrderDetail($id)
     {
-        return $this->redirect(route('pos.order', [$id]), navigate: true);
+        return $this->redirect(route('pos.order', [$id]));
     }
 
     public function markCompleted($id)
     {
         $waiterRequest = WaiterRequest::findOrFail($id);
-        
+
         // Check if waiter can access this table
         $assignedTableIds = $this->getAssignedTableIds();
         if ($assignedTableIds !== null && !in_array($waiterRequest->table_id, $assignedTableIds)) {
@@ -92,7 +95,7 @@ class Tables extends Component
             ]);
             return;
         }
-        
+
         WaiterRequest::where('table_id', $waiterRequest->table_id)->update(['status' => 'completed']);
 
         // Count waiter requests with filtering
@@ -122,10 +125,10 @@ class Tables extends Component
     public function render()
     {
         $assignedTableIds = $this->getAssignedTableIds();
-        
+
         $query = Area::with(['tables' => function ($query) use ($assignedTableIds) {
             $query->whereHas('activeWaiterRequest');
-            
+
             // If user is a waiter, filter by assigned tables
             if ($assignedTableIds !== null) {
                 if (empty($assignedTableIds)) {
@@ -135,7 +138,7 @@ class Tables extends Component
                     $query->whereIn('id', $assignedTableIds);
                 }
             }
-            
+
             return $query;
         }, 'tables.waiterRequests', 'tables.activeOrder']);
 

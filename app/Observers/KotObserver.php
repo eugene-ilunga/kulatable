@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Kot;
 use App\Models\KotSetting;
 use App\Events\KotUpdated;
+use App\Services\KotStatusNotificationFeed;
 
 class KotObserver
 {
@@ -56,15 +57,22 @@ class KotObserver
             ])
             ->first(['id', 'order_type', 'placed_via', 'order_status']);
 
-        if (!$order || $order->kot->isEmpty()) {
-            return;
+        if ($order && !$order->kot->isEmpty()) {
+            $aggregatedOrderStatus = $this->determineOrderStatusFromKots($order->kot, $order);
+
+            // Update order status if it changed (compare with enum value)
+            if ($aggregatedOrderStatus && $order->order_status->value !== $aggregatedOrderStatus) {
+                $order->updateQuietly(['order_status' => $aggregatedOrderStatus]);
+            }
         }
 
-        $aggregatedOrderStatus = $this->determineOrderStatusFromKots($order->kot, $order);
+        // Always notify subscribers (Pusher) when KOT status changes — even if the
+        // order has no active (non-cancelled) KOTs left for aggregation.
+        event(new KotUpdated($kot, 'status_updated'));
 
-        // Update order status if it changed (compare with enum value)
-        if ($aggregatedOrderStatus && $order->order_status->value !== $aggregatedOrderStatus) {
-            $order->updateQuietly(['order_status' => $aggregatedOrderStatus]);
+        // Cache feed for staff when Pusher broadcast is disabled (global Livewire poll).
+        if (!pusherSettings()->is_enabled_pusher_broadcast) {
+            KotStatusNotificationFeed::pushFromKot($kot);
         }
     }
 
@@ -117,7 +125,12 @@ class KotObserver
 
     public function saved(Kot $kot)
     {
+        // If status changed, updated() already emitted status_updated
+        if ($kot->wasChanged('status')) {
+            return;
+        }
 
-        event(new KotUpdated($kot));
+        // Generic refresh event (no toast notification on UI)
+        event(new KotUpdated($kot, 'updated'));
     }
 }

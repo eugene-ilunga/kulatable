@@ -51,6 +51,11 @@ class ReportController extends Controller
         return view('reports.delivery-app-report');
     }
 
+    public function codReport()
+    {
+        return view('reports.cod-report');
+    }
+
     public function cancelledOrderReport()
     {
         return view('reports.cancelled-order');

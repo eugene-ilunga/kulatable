@@ -13,7 +13,9 @@ $maxWidth = [
     '4xl' => 'sm:max-w-4xl',
 ][$maxWidth ?? '2xl'];
 
-$maxHeight = [
+$maxHeightKey = $maxHeight ?? '2xl';
+
+$maxHeightClasses = [
     'sm' => 'sm:max-h-sm',
     'md' => 'sm:max-h-md',
     'lg' => 'sm:max-h-lg',
@@ -24,8 +26,15 @@ $maxHeight = [
     '5xl' => 'sm:max-h-5xl',
     '6xl' => 'sm:max-h-6xl',
     'full' => 'sm:max-h-full',
-][$maxHeight ?? '2xl'];
+    'none' => '',
+    'auto' => '',
+];
 
+$resolvedMaxHeight = $maxHeightClasses[$maxHeightKey] ?? $maxHeightClasses['2xl'];
+
+$modalPanelOverflow = in_array($maxHeightKey, ['none', 'auto'], true)
+    ? 'overflow-visible'
+    : 'overflow-hidden overflow-y-auto';
 
 @endphp
 
@@ -47,7 +56,7 @@ $maxHeight = [
         <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
     </div>
 
-    <div x-show="show" class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full {{ $maxWidth }} {{ $maxHeight }} sm:mx-auto overflow-y-auto mt-16 sm:mt-20"
+    <div x-show="show" class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl transform transition-all sm:w-full {{ $maxWidth }} {{ $resolvedMaxHeight }} sm:mx-auto {{ $modalPanelOverflow }} mt-16 sm:mt-20"
                     x-trap.inert.noscroll="show"
                     x-transition:enter="ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"

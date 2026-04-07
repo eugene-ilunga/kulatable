@@ -53,6 +53,7 @@ class MenuItem extends BaseModel
     protected $guarded = ['id'];
 
     protected $casts = [
+        'is_available' => 'boolean',
         'show_on_customer_site' => 'boolean',
     ];
 

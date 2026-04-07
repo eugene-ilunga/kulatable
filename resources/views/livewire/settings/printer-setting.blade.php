@@ -235,69 +235,12 @@
             </div>
         </div>
 
-    {{-- Desktop App Download Section --}}
-
-        <div class="md:col-span-2 mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-8">
-            <h4 class="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">
-                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                @lang('modules.printerSetting.downloadDesktopApp')
-            </h4>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Windows -->
-                @if(!empty($desktopApp->windows_file_path))
-                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 text-center hover:shadow-md transition-shadow {{ request()->header('User-Agent') && str_contains(strtolower(request()->header('User-Agent')), 'windows') ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 dark:bg-blue-900/20' : '' }}">
-                    <div class="flex items-center justify-center mb-4">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-6 h-6"><rect x="3" y="3" width="7" height="7" rx="1" fill="#2563eb"></rect><rect x="14" y="3" width="7" height="7" rx="1" fill="#2563eb"></rect><rect x="3" y="14" width="7" height="7" rx="1" fill="#2563eb"></rect><rect x="14" y="14" width="7" height="7" rx="1" fill="#2563eb"></rect></svg>
-                        <h5 class="ml-2 text-lg font-semibold text-gray-900 dark:text-white">Windows</h5>
-                        @if(request()->header('User-Agent') && str_contains(strtolower(request()->header('User-Agent')), 'windows'))
-                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                </svg>
-                                @lang('modules.printerSetting.yourDevice')
-                            </span>
-                        @endif
-                    </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">@lang('modules.printerSetting.downloadDesktopAppWindows')</p>
-                    <a href="{{ $desktopApp->windows_file_path }}" target="_blank"
-                       class="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                        @lang('modules.printerSetting.downloadForWindows')
-                    </a>
-                </div>
-                @endif
-
-                <!-- Mac -->
-                @if(!empty($desktopApp->mac_file_path))
-                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 text-center hover:shadow-md transition-shadow {{ request()->header('User-Agent') && (str_contains(strtolower(request()->header('User-Agent')), 'mac') || str_contains(strtolower(request()->header('User-Agent')), 'darwin')) ? 'ring-2 ring-green-500 ring-offset-2 bg-green-50 dark:bg-green-900/20' : '' }}">
-                    <div class="flex items-center justify-center mb-4">
-                        <svg fill="currentColor" viewBox="0 0 24 24" class="w-8 h-8"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"></path></svg>
-                        <h5 class="ml-2 text-lg font-semibold text-gray-900 dark:text-white">macOS</h5>
-                        @if(request()->header('User-Agent') && (str_contains(strtolower(request()->header('User-Agent')), 'mac') || str_contains(strtolower(request()->header('User-Agent')), 'darwin')))
-                            <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                </svg>
-                                @lang('modules.printerSetting.yourDevice')
-                            </span>
-                        @endif
-                    </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">@lang('modules.printerSetting.downloadDesktopAppMac')</p>
-                    <a href="{{ $desktopApp->mac_file_path }}" target="_blank"
-                       class="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                        @lang('modules.printerSetting.downloadForMac')
-                    </a>
-                </div>
-                @endif
-            </div>
+        {{-- Link to Downloads page for desktop and mobile app downloads --}}
+        <div class="md:col-span-2 mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg mb-8">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                @lang('modules.printerSetting.downloadGoToDownloads')
+                <a href="{{ route('settings.index').'?tab=downloads' }}" wire:navigate class="font-medium text-skin-base hover:underline">@lang('modules.settings.downloads')</a>.
+            </p>
         </div>
     @endif
 

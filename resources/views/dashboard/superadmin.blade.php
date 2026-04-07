@@ -21,7 +21,7 @@
     @endif
 
     <div class="flex justify-between">
-        <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.dashboard')</h1>
+        <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.dashboard')</h1>
 
         <div class="inline-flex items-center gap-1 dark:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-calendar-event" viewBox="0 0 16 16">
@@ -45,13 +45,14 @@
     @livewire('dashboard.totalRestaurantCount')
     @livewire('dashboard.totalFreeRestaurantCount')
     @livewire('dashboard.totalPaidRestaurantCount')
+
+</div>
+<div class="p-4 ">
+    @livewire('dashboard.superadmin-system-stats')
 </div>
 
-<!-- Enhanced Dashboard Grid -->
-<div class="grid grid-cols-1 gap-6 p-4">
-
-    <!-- Platform Overview Stats -->
-    @livewire('dashboard.superadmin-system-stats')
+<!-- Enhanced Dashboard Grid (Responsive) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
 
     <!-- Revenue Analytics & Top Restaurants -->
     @livewire('dashboard.superadmin-revenue-chart')
@@ -59,8 +60,10 @@
     <!-- Restaurant Growth & Recent Restaurants -->
     @livewire('dashboard.superadmin-restaurant-growth')
 
-    <!-- Recent Activity Timeline -->
-    @livewire('dashboard.superadmin-recent-activity')
+    <!-- Recent Activity Timeline (spans both columns on large screens) -->
+    <div class="md:col-span-2">
+        @livewire('dashboard.superadmin-recent-activity')
+    </div>
 
 </div>
 

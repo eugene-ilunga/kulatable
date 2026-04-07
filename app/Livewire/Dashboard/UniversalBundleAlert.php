@@ -10,7 +10,7 @@ class UniversalBundleAlert extends Component
 {
     public $showAlert = false;
     public $modules = [];
-    public $universalBundleLink = 'https://1.envato.market/tt-universal';
+    public $universalBundleLink = 'https://codecanyon.net/item/universal-modules-bundle-for-tabletrack/60154227';
 
     public function mount()
     {
@@ -78,7 +78,7 @@ class UniversalBundleAlert extends Component
         }
     }
 
-    
+
 
     public function dismissAlert()
     {

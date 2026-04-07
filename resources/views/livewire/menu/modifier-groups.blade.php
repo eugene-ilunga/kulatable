@@ -2,7 +2,7 @@
     <div class="p-4 bg-white block sm:flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
         <div class="w-full mb-1">
             <div class="mb-4">
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.modifierGroups')</h1>
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">@lang('menu.modifierGroups')</h1>
             </div>
             <div class="items-center justify-between block sm:flex md:divide-x md:divide-gray-100 dark:divide-gray-700">
                 <div class="flex items-center mb-4 sm:mb-0">
@@ -36,8 +36,8 @@
                         <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                            @forelse ($modifierGroups as $group)
                             <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <td class="py-2.5 px-4 text-base text-gray-900 whitespace-nowrap dark:text-white">{{ $group->name }}</td>
-                                <td class="py-2.5 px-4 text-base text-gray-900 dark:text-white break-words">
+                                <td class="py-2.5 px-4 text-sm text-gray-900 whitespace-nowrap dark:text-white">{{ $group->name }}</td>
+                                <td class="py-2.5 px-4 text-sm text-gray-900 dark:text-white break-words">
                                     @forelse ($group->options as $option)
                                         <span @class([ 'text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap gap-x-1 me-1 mb-1'
                                              , 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'=> $option->is_available,

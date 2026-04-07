@@ -10,9 +10,7 @@
                     <table class="min-w-full divide-y divide-gray-200 table-fixed dark:divide-gray-600">
                         <thead class="bg-gray-100 dark:bg-gray-700">
                             <tr>
-                                <th
-                                    class="py-2.5 px-4 text-xs font-medium ltr:text-left rtl:text-right text-gray-500 uppercase dark:text-gray-400">
-                                </th>
+                               
                                 <th
                                     class="py-2.5 px-4 text-xs font-medium ltr:text-left rtl:text-right text-gray-500 uppercase dark:text-gray-400">
                                     @lang('modules.expenses.expenseTitle')
@@ -54,32 +52,21 @@
                         <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                             @if ($expenses->count() > 0)
                                 @foreach ($expenses as $expense)
-                                    <tr class="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                        <td class="py-2.5 px-2 text-gray-900 dark:text-white">
-                                            <button wire:click="showExpenseDetails({{ $expense->id }})"
-                                                wire:key="expense-detail-button-{{ $expense->id }}"
-                                                class="inline-flex items-center justify-center w-6 h-6 text-xs font-medium text-gray-800 bg-gray-100 rounded-full hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                                    class="w-4 h-4">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                            </button>
+                                    <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
+                            
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
+                                            <a href="javascript:;" wire:click="showExpenseDetails({{ $expense->id }})" class="underline underline-offset-2 decoration-dotted">
+                                                {{ Str::title($expense->expense_title)}}
+                                            </a>
                                         </td>
-
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
-                                            {{ Str::title($expense->expense_title)}}</td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             {{ optional($expense->category)->name ?? '--' }}</td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             {{ currency_format($expense->amount, restaurant()->currency_id) }}</td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             {{ $expense->expense_date->format(dateFormat()) }}
                                         </td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             <span @class([
                                                 'bg-green-100 text-green-800 rounded px-2 py-1 text-xs' =>
                                                     $expense->payment_status == 'paid',
@@ -90,14 +77,14 @@
                                                 @lang('modules.expenses.status.' . $expense->payment_status)
                                             </span>
                                         </td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             {{ $expense->payment_date ? $expense->payment_date->format(dateFormat()) : '--' }}
                                         </td>
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             {{ $expense->payment_due_date ? $expense->payment_due_date->format(dateFormat()) : '--' }}
                                         </td>
 
-                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white">
+                                        <td class="py-2.5 px-4 text-gray-900 dark:text-white text-sm">
                                             @if (!$expense->payment_method)
                                                 <span
                                                     class="ml-2 inline-flex items-center px-2.5 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
@@ -305,7 +292,7 @@
                                         </td>
 
 
-                                        <td class="py-2.5 px-4 space-x-2 text-right">
+                                        <td class="py-2.5 px-4 space-x-2 text-right text-sm">
                                             @if (user_can('Update Expense'))
                                                 <x-secondary-button-table
                                                     wire:click="showEditExpense({{ $expense->id }})"

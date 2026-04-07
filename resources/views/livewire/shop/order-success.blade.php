@@ -1,32 +1,4 @@
-<div class="px-4 space-y-6"
-    @if($order->status === 'pending_verification')
-        wire:poll.5s="pollOrderStatus"
-    @elseif(pusherSettings()->is_enabled_pusher_broadcast)
-        wire:poll.10s
-    @endif>
-
-    @if($order->status === 'pending_verification')
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
-                <div class="flex items-start gap-3">
-                    <div class="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
-                    <div>
-                        <p class="font-semibold">Verification du paiement FreshPay</p>
-                        <p class="text-sm opacity-90">Confirme le paiement sur le telephone. Cette page se met a jour automatiquement des que le callback valide la transaction.</p>
-                        <div class="mt-3">
-                            <x-danger-button wire:click="cancelPendingFreshpay" wire:loading.attr="disabled">
-                                Annuler ce paiement
-                            </x-danger-button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-    @if($freshpayConfirmed)
-        <div class="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-100">
-            Paiement FreshPay confirme. La commande a ete mise a jour automatiquement.
-        </div>
-    @endif
+<div class="px-4 space-y-6" @if(pusherSettings()->is_enabled_pusher_broadcast) wire:poll.10s @endif>
 
     <h2 class="text-xl font-bold dark:text-white inline-flex gap-2 items-center text-green-600">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-patch-check text-green-600" viewBox="0 0 16 16">
@@ -196,7 +168,7 @@
     </div>
 
     <div class="flex">
-        @if ($order->status == 'paid')
+        @if ($order->isFullyPaid())
 
             @if ($order->table_id)
                 @php

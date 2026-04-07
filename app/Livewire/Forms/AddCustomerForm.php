@@ -32,7 +32,8 @@ class AddCustomerForm extends Component
 
     public function mount()
     {
-        $this->initializePhoneCodes();
+         $this->initializePhoneCodes();
+         $this->customerPhoneCode = restaurant()->country->phonecode ?? $this->allPhoneCodes->first();
     }
 
     private function initializePhoneCodes()

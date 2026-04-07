@@ -9,10 +9,10 @@
     
     <style>
         .bg-skin-base {
-            background-color: #FB923C;
+            background-color: rgb(167, 139, 250);
         }
         .text-skin-base {
-            color: #FB923C;
+            color: rgb(167, 139, 250);
         }
     </style>
 

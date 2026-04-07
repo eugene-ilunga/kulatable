@@ -12,6 +12,7 @@ use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Log;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Component;
+use App\Services\RestaurantAvailabilityService;
 
 class BookATable extends Component
 {
@@ -293,6 +294,15 @@ class BookATable extends Component
 
     public function submitReservation()
     {
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch, null, 'reservation');
+        if (!($availability['is_open'] ?? true)) {
+            $this->alert('error', RestaurantAvailabilityService::getMessage($availability, $this->restaurant), [
+                'toast' => false,
+                'position' => 'center',
+            ]);
+            return;
+        }
+
         // Get minimum party size from restaurant settings
         $minimumPartySize = $this->restaurant->minimum_party_size ?? 1;
 
@@ -367,6 +377,11 @@ class BookATable extends Component
 
     public function render()
     {
-        return view('livewire.shop.book-a-table');
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch, null, 'reservation');
+
+        return view('livewire.shop.book-a-table', [
+            'isRestaurantOpenForReservations' => (bool) ($availability['is_open'] ?? true),
+            'restaurantClosedMessage' => RestaurantAvailabilityService::getMessage($availability, $this->restaurant),
+        ]);
     }
 }

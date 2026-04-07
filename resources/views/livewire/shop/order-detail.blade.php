@@ -688,8 +688,7 @@
                                             </p>
                                         </div>
                                         @php
-                                            // Check if order is paid - use both status fields to be safe
-                                            $isPaid = ($order->status === 'paid') || ($order->order_status->value ?? null) === 'paid';
+                                            $isPaid = $order->isFullyPaid();
                                         @endphp
                                         @if(!$isPaid)
                                             <x-danger-button type="button" wire:click="removeLoyaltyRedemption" size="sm" wire:loading.attr="disabled">
@@ -730,8 +729,7 @@
                                         </p>
                                     </div>
                                     @php
-                                        // Check if order is paid
-                                        $isPaid = ($order->status === 'paid') || ($order->order_status->value ?? null) === 'paid';
+                                        $isPaid = $order->isFullyPaid();
                                         $isCancelled = in_array($order->status, ['canceled', 'cancelled'], true)
                                             || (($order->order_status->value ?? null) === 'cancelled');
                                     @endphp
@@ -789,7 +787,7 @@
                                 // Check if points are already redeemed (from database or component)
                                 $hasRedeemedPoints = ($order->loyalty_points_redeemed ?? 0) > 0 || ($loyaltyPointsRedeemed ?? 0) > 0;
                             @endphp
-                            @if($customer && ($availableLoyaltyPoints ?? 0) > 0 && $order->status !== 'paid' && !$hasRedeemedPoints)
+                            @if($customer && ($availableLoyaltyPoints ?? 0) > 0 && !$order->isFullyPaid() && !$hasRedeemedPoints)
                                 <div class="border-t border-gray-200 dark:border-gray-700" wire:key="loyalty-redemption-section">
                                     <div class="flex items-center justify-between gap-3 mt-2">
                                         <!-- Left Section: Icon and Text -->
@@ -838,7 +836,7 @@
                                     });
                                 }
                             @endphp
-                            @if($customer && $hasRedeemableStamps && $order->status !== 'paid' && !$hasRedeemedStamps)
+                            @if($customer && $hasRedeemableStamps && !$order->isFullyPaid() && !$hasRedeemedStamps)
                                 <div class="border-t border-gray-200 dark:border-gray-700" wire:key="stamp-redemption-section">
                                     <div class="flex items-center justify-between gap-3 mt-2">
                                         <!-- Left Section: Icon and Text -->
@@ -960,7 +958,7 @@
 
             @php
                 $isSubdomainEnabled = function_exists('module_enabled') && module_enabled('Subdomain');
-                if ($order->order_type === 'delivery' || in_array($order->status, ['paid', 'pending_verification', 'canceled', 'delivered'])) {
+                if ($order->order_type === 'delivery' || $order->isFullyPaid() || in_array($order->status, ['pending_verification', 'canceled', 'delivered'])) {
                     $newOrderLink = $order->table_id
                         ? route('table_order', [$order->table->hash])
                         : ($isSubdomainEnabled ? url('/') : route('shop_restaurant', ['hash' => $restaurant->hash]));
@@ -1006,9 +1004,6 @@
                                             @case('epay')
                                             <svg class="w-5 h-5" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><g fill="#000000"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-.5-13h1v6h-1v-6zm0 8h1v2h-1v-2z"/></g></svg>
                                             @break
-                                            @case('freshpay')
-                                            <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-15 h-15" />
-                                            @break
                                             @case('upi')
                                                 <svg class="w-5 h-5 text-gray-700 dark:text-gray-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zm10 10h6v6h-6zm0-10h6v6h-6zm-4 10h.01v.01H10zm0 4h.01v.01H10zm-3 2h.01v.01H7zm0-4h.01v.01H7zm-3 2h.01v.01H4zm0-4h.01v.01H4z"/><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M7 7h.01v.01H7zm10 10h.01v.01H17z"/></svg>
                                             @break
@@ -1053,7 +1048,7 @@
             @endif
 
             <!-- Payment Status Banner -->
-            @if($order->status == 'paid')
+            @if($order->isFullyPaid())
                 <x-alert type="success">
                     <svg class="w-4 h-4 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 12 2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0"/></svg>
                     @lang('modules.order.paid')
@@ -1068,7 +1063,7 @@
             @else
                 <x-alert type="warning">
                     <svg class="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3"/></svg>
-                    @if ($order->status === 'pending_verification')
+                    @if ($order->status === 'pending_verification' && !$order->isFullyPaid())
                         @lang('modules.order.pendingPaymentVerification')
                     @else
                         @lang('modules.order.paymentPending')
@@ -1077,14 +1072,26 @@
 
                 <!-- Action Buttons -->
                 <div class="flex gap-4">
-                    @if (is_null($customer) && ($restaurant->customer_login_required || $orderType == 'delivery'))
+                    @if (!$isRestaurantOpenForOrders)
+                        <div class="grid w-full grid-cols-1 gap-4">
+                            <div class="w-full p-3 text-sm font-medium text-center text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                                {{ $restaurantClosedMessage }}
+                            </div>
+                            <x-secondary-link wire:navigate class="inline-flex items-center justify-center gap-2" href="{{ $newOrderLink }}">
+                                @lang('modules.order.newOrder')
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </x-secondary-link>
+                        </div>
+                    @elseif (is_null($customer) && ($restaurant->customer_login_required || $orderType == 'delivery'))
                         <x-button class="justify-center w-full" wire:click="$dispatch('showSignup')">
                             @lang('app.next')
                         </x-button>
                     @else
                         <div class="grid w-full grid-cols-3 gap-4">
                             @php
-                                $showPayNow = $paymentGateway->is_qr_payment_enabled || $paymentGateway->stripe_status || $paymentGateway->razorpay_status || $paymentGateway->flutterwave_status || $paymentGateway->paypal_status || $paymentGateway->payfast_status || $paymentGateway->paystack_status || $paymentGateway->xendit_status || $paymentGateway->epay_status || $paymentGateway->mollie_status || $paymentGateway->tap_status || $paymentGateway->freshpay_status || count($offlinePaymentMethods) > 0;
+                                $showPayNow = $paymentGateway->is_qr_payment_enabled || $paymentGateway->stripe_status || $paymentGateway->razorpay_status || $paymentGateway->flutterwave_status || $paymentGateway->paypal_status || $paymentGateway->payfast_status || $paymentGateway->paystack_status || $paymentGateway->xendit_status || $paymentGateway->epay_status || $paymentGateway->mollie_status || $paymentGateway->tap_status || count($offlinePaymentMethods) > 0;
                             @endphp
                             @if ($showPayNow)
                                 @if ($order && $order->order_status->value !== 'cancelled' && $order->status !== 'pending_verification')
@@ -1117,6 +1124,15 @@
             </x-slot>
 
             <x-slot name="content">
+                @php
+                    $offlinePaymentMethodMapForModal = isset($offlinePaymentMethods)
+                        ? $offlinePaymentMethods->keyBy('name')
+                        : collect();
+                    $activeOfflinePaymentMethodName = $selectedOfflinePaymentMethod ?? 'bank_transfer';
+                    $activeOfflinePaymentMethod = !empty($selectedOfflinePaymentMethod)
+                        ? $offlinePaymentMethodMapForModal->get($selectedOfflinePaymentMethod)
+                        : null;
+                @endphp
                 <div class="flex items-center justify-between p-2 mb-4 rounded-md cursor-pointer bg-gray-50 dark:bg-gray-800">
                     <div class="flex items-center min-w-0">
                         <div>
@@ -1139,9 +1155,34 @@
                         @if ($showQrCode)
                             <img src="{{ $paymentGateway->qr_code_image_url }}" alt="QR Code Preview"
                                 class="object-cover rounded-md h-30 w-30">
+                        @elseif ($showPaymentDetail)
+                            @if ($activeOfflinePaymentMethod && !empty($activeOfflinePaymentMethod->description))
+                                <div class="w-full p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ ucwords(str_replace('_', ' ', $activeOfflinePaymentMethod->name)) }}
+                                    </p>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line break-words">
+                                        {!! nl2br(e($activeOfflinePaymentMethod->description)) !!}
+                                    </p>
+                                </div>
+                            @else
+                                <div class="w-full p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ ucwords(str_replace('_', ' ', $activeOfflinePaymentMethodName)) }}
+                                    </p>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                        @lang('app.noDescription')
+                                    </p>
+                                </div>
+                            @endif
                         @endif
                     </div>
                 @else
+                    @if(!$isRestaurantOpenForOrders)
+                        <div class="w-full p-3 text-sm font-medium text-center text-red-700 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">
+                            {{ $restaurantClosedMessage }}
+                        </div>
+                    @else
                     <div class="grid items-center w-full grid-cols-1 gap-4 mt-4 md:grid-cols-2">
                         @if ($paymentGateway->stripe_status)
                                 <x-secondary-button wire:click='initiateStripePayment({{ $paymentOrder->id }})'>
@@ -1282,27 +1323,6 @@
                             </x-secondary-button>
                         @endif
 
-                        @if ($paymentGateway->freshpay_status)
-                            <x-secondary-button wire:click='initiateFreshpayPayment({{ $paymentOrder->id }})'>
-                                <span class="inline-flex items-center">
-                                    <img src="{{ asset('images/logo-freshpay.png') }}" alt="FreshPay" class="object-contain w-4 h-4 mr-2" />
-                                    @lang('modules.billing.freshpay')
-                                </span>
-                            </x-secondary-button>
-
-                            <div class="w-full mt-3">
-                                <label for="freshpay_customer_number_order_detail" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Numero de telephone FreshPay
-                                </label>
-                                <input
-                                    id="freshpay_customer_number_order_detail"
-                                    type="text"
-                                    wire:model.live="freshpayCustomerNumber"
-                                    placeholder="Ex: 0972148867"
-                                    class="w-full rounded-lg border-gray-300 text-sm focus:border-orange-500 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200" />
-                            </div>
-                        @endif
-
                             @if ($paymentGateway->is_qr_payment_enabled && $paymentGateway->qr_code_image_url)
                                 <!-- Button -->
                                 <x-secondary-button wire:click="toggleQrCode">
@@ -1316,7 +1336,7 @@
                             {{-- Dynamic Offline Payment Methods --}}
                             @if (count($offlinePaymentMethods) > 0)
                                 @foreach ($offlinePaymentMethods as $offlineMethod)
-                                    <x-secondary-button wire:click="makePayment({{ $paymentOrder->id }}, '{{ $offlineMethod->name }}')" wire:loading.attr="disabled" wire:target="makePayment">
+                                    <x-secondary-button wire:click="selectOfflinePaymentMethod('{{ $offlineMethod->name }}')" wire:loading.attr="disabled" wire:target="selectOfflinePaymentMethod">
                                         <span class="inline-flex items-center">
                                             <svg class="w-4 h-4" width="24" height="24" viewBox="0 0 24 24"
                                                 fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1334,13 +1354,19 @@
                                 @endforeach
                             @endif
                     </div>
+                    @endif
                 @endif
             </x-slot>
 
             <x-slot name="footer">
                 <x-button-cancel wire:click="hidePaymentModal" wire:loading.attr="disabled" />
-                @if ($showQrCode || $showPaymentDetail)
-                <x-button class="ml-3" wire:click="makePayment({{ $paymentOrder->id }}, '{{ $showQrCode ? 'upi' : 'others' }}')" wire:loading.attr="disabled">@lang('modules.billing.paymentDone')</x-button>
+                @if (($showQrCode || $showPaymentDetail) && $isRestaurantOpenForOrders)
+                    @php
+                        $selectedMethodForFooter = $showQrCode
+                            ? 'upi'
+                            : ($selectedOfflinePaymentMethod ?? 'others');
+                    @endphp
+                    <x-button class="ml-3" wire:click="makePayment({{ $paymentOrder->id }}, '{{ $selectedMethodForFooter }}')" wire:loading.attr="disabled">@lang('modules.billing.paymentDone')</x-button>
                 @endif
             </x-slot>
         </x-dialog-modal>

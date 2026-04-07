@@ -3,7 +3,9 @@
 namespace App\Exports;
 
 use Carbon\Carbon;
+use App\Models\User;
 use App\Models\MenuItem;
+use App\Scopes\BranchScope;
 use App\Scopes\AvailableMenuItemScope;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
@@ -20,9 +22,10 @@ class ItemReportExport implements WithMapping, FromCollection, WithHeadings, Wit
     protected string $startDateTime, $endDateTime;
     protected string $startTime, $endTime, $timezone, $searchTerm;
     protected $headingDateTime, $headingEndDateTime, $headingStartTime, $headingEndTime;
+    protected ?string $filterByHandler;
     protected ?string $filterByWaiter;
 
-    public function __construct(string $startDateTime, string $endDateTime, string $startTime, string $endTime, string $timezone, ?string $searchTerm = '', ?string $filterByWaiter = '')
+    public function __construct(string $startDateTime, string $endDateTime, string $startTime, string $endTime, string $timezone, ?string $searchTerm = '', ?string $filterByHandler = '', ?string $filterByWaiter = '')
     {
         $this->startDateTime = $startDateTime;
         $this->endDateTime = $endDateTime;
@@ -30,6 +33,7 @@ class ItemReportExport implements WithMapping, FromCollection, WithHeadings, Wit
         $this->endTime = $endTime;
         $this->timezone = $timezone;
         $this->searchTerm = $searchTerm ?? '';
+        $this->filterByHandler = $filterByHandler ?? '';
         $this->filterByWaiter = $filterByWaiter ?? '';
 
         $this->headingDateTime = Carbon::parse($startDateTime)->setTimezone($timezone)->format(dateFormat());
@@ -43,6 +47,20 @@ class ItemReportExport implements WithMapping, FromCollection, WithHeadings, Wit
         $headingTitle = $this->headingDateTime === $this->headingEndDateTime
             ? __('modules.report.salesDataFor') . " {$this->headingDateTime}, " . __('modules.report.timePeriod') . " {$this->headingStartTime} - {$this->headingEndTime}"
             : __('modules.report.salesDataFrom') . " {$this->headingDateTime} " . __('app.to') . " {$this->headingEndDateTime}, " . __('modules.report.timePeriodEachDay') . " {$this->headingStartTime} - {$this->headingEndTime}";
+
+        $filterParts = [];
+        $branch = branch();
+        foreach ([$this->filterByHandler => __('modules.report.filterByHandler'), $this->filterByWaiter => __('modules.report.waiter')] as $userId => $label) {
+            if ($userId === null || $userId === '') {
+                continue;
+            }
+            $q = User::withoutGlobalScope(BranchScope::class)->where('id', $userId)->where('restaurant_id', restaurant()->id);
+            $branch && $q->where(fn ($sub) => $sub->where('branch_id', $branch->id)->orWhereNull('branch_id'));
+            $filterParts[] = $label . ': ' . ($q->value('name') ?? $userId);
+        }
+        if ($filterParts !== []) {
+            $headingTitle .= ' | ' . implode(' | ', $filterParts);
+        }
 
         return [
             [__('menu.itemReport') . ' ' . $headingTitle],
@@ -123,8 +141,11 @@ class ItemReportExport implements WithMapping, FromCollection, WithHeadings, Wit
                         });
                     }
                 })
+                ->when($this->filterByHandler, function ($q) {
+                    $q->where('orders.added_by', $this->filterByHandler);
+                })
                 ->when($this->filterByWaiter, function ($q) {
-                    $q->where('orders.added_by', $this->filterByWaiter);
+                    $q->where('orders.waiter_id', $this->filterByWaiter);
                 });
         }, 'category', 'variations'])
             ->where(function ($query) {

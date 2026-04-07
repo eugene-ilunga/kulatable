@@ -49,6 +49,16 @@ class CallWaiterButton extends Component
 
     public function confirmCall()
     {
+
+        if (!$this->tableNumber) {
+            $this->showTableSelection = true;
+            $this->alert('error', __('messages.tableNumberOrTableNotFound'), [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+            return;
+        }
+        
         // Save request to database
         WaiterRequest::create([
             'table_id' => $this->tableNumber,

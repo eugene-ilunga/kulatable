@@ -82,4 +82,9 @@ class Customer extends BaseModel
         return null;
     }
 
+    public function routeNotificationForAndroidSmsGateway($notification)
+    {
+        return $this->routeNotificationForVonage($notification);
+    }
+
 }

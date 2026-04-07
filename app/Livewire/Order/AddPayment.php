@@ -7,17 +7,13 @@ use App\Models\Payment;
 use App\Models\SplitOrder;
 use App\Models\Table;
 use App\Models\PredefinedAmount;
-use App\Models\PaymentGatewayCredential;
-use App\Models\FreshpayPayment;
-use App\Support\FreshpayNetworkDetector;
 use App\Notifications\SendOrderBill;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use App\Events\SendOrderBillEvent;
+use App\Services\RestaurantAvailabilityService;
 
 class AddPayment extends Component
 {
@@ -47,8 +43,8 @@ class AddPayment extends Component
     public $showTipModal = false;
     public $canAddTip;
     public $predefinedAmounts = [];
-    public $isFreshpayEnabled = false;
-    public $freshpayCustomerNumber = '';
+    // Payer information for split payments
+    public $payerNames = [];
 
     #[On('showPaymentModal')]
     public function showPaymentModal($id)
@@ -60,26 +56,10 @@ class AddPayment extends Component
             'taxes',
             'payments',
             'splitOrders.items',
-            'charges.charge',
-            'customer',
-            'branch.restaurant.currency',
+            'charges.charge'
         ])->find($id);
 
-        // Log order total for debugging
-        Log::info('Payment Modal Opened', [
-            'order_id' => $this->order->id,
-            'order_total' => $this->order->total,
-            'subtotal' => $this->order->sub_total,
-            'discount_amount' => $this->order->discount_amount,
-            'loyalty_discount_amount' => $this->order->loyalty_discount_amount,
-            'loyalty_points_redeemed' => $this->order->loyalty_points_redeemed,
-        ]);
-
         $this->canAddTip = restaurant()->enable_tip_pos && $this->order->status !== 'paid';
-        $this->isFreshpayEnabled = (bool) PaymentGatewayCredential::withoutGlobalScopes()
-            ->where('restaurant_id', restaurant()->id)
-            ->value('freshpay_status');
-        $this->freshpayCustomerNumber = (string) ($this->order->customer?->phone ?? '');
 
         // Load predefined amounts
         $this->predefinedAmounts = restaurant()->predefinedAmounts()->pluck('amount')->toArray();
@@ -178,6 +158,9 @@ class AddPayment extends Component
                 // For order-level tax, calculate proportionally
                 if ($this->order->total > 0) {
                     foreach ($this->order->taxes as $tax) {
+                        if (!$tax->tax) {
+                            continue;
+                        }
                         $itemTaxAmount += (($tax->tax->tax_percent / 100) * $unitBasePriceAfterDiscount);
                     }
                 }
@@ -332,11 +315,6 @@ class AddPayment extends Component
     public function setPaymentMethod($method)
     {
         $this->paymentMethod = $method;
-
-        if ($method === 'freshpay' && $this->freshpayCustomerNumber === '') {
-            $this->freshpayCustomerNumber = (string) ($this->order?->customer?->phone ?? '');
-        }
-
         $this->updatedPaymentAmount();
     }
 
@@ -401,7 +379,8 @@ class AddPayment extends Component
                         'order_id' => $this->order->id,
                         'amount' => $split['amount'],
                         'payment_method' => $split['paymentMethod'],
-                        'status' => 'paid'
+                        'status' => 'paid',
+                        'payer_name' => $this->payerNames[$i] ?? null,
                     ]);
 
                     Payment::create([
@@ -426,7 +405,8 @@ class AddPayment extends Component
                         'order_id' => $this->order->id,
                         'amount' => $this->splits[$split]['amount'],
                         'payment_method' => $this->splits[$split]['paymentMethod'],
-                        'status' => 'paid'
+                        'status' => 'paid',
+                        'payer_name' => $this->payerNames[$split] ?? null,
                     ]);
 
                     Payment::create([
@@ -458,7 +438,8 @@ class AddPayment extends Component
                             'order_id' => $this->order->id,
                             'amount' => $splitTotal,
                             'payment_method' => $split['paymentMethod'],
-                            'status' => 'paid'
+                            'status' => 'paid',
+                            'payer_name' => $this->payerNames[$split['id']] ?? null,
                         ]);
 
                         // Create split payment record
@@ -489,6 +470,22 @@ class AddPayment extends Component
 
     public function submitForm()
     {
+        $this->order = $this->order->fresh(['items', 'items.menuItem', 'taxes', 'payments', 'splitOrders.items']);
+        if ($this->order->status === 'paid') {
+            return;
+        }
+
+        $restaurant = $this->order->branch?->restaurant ?? restaurant();
+        $availability = RestaurantAvailabilityService::getAvailability($restaurant, $this->order->branch);
+
+        if (!($availability['is_open'] ?? true)) {
+            $this->alert('error', RestaurantAvailabilityService::getMessage($availability, $restaurant), [
+                'toast' => true,
+                'position' => 'top-end',
+            ]);
+            return;
+        }
+
         if ($this->showSplitOptions && $this->splitType) {
             // Validate split by items
             if ($this->splitType === 'items') {
@@ -509,32 +506,6 @@ class AddPayment extends Component
             $this->processSplitPayment();
 
         } else {
-            if ($this->paymentMethod === 'freshpay') {
-                $paymentAmount = (float) ($this->paymentAmount - $this->returnAmount);
-
-                if ($paymentAmount <= 0) {
-                    $this->alert('error', 'FreshPay requires a valid amount.', ['toast' => true]);
-                    return;
-                }
-
-                if ($paymentAmount > (float) $this->dueAmount) {
-                    $this->alert('error', 'FreshPay amount cannot be greater than due amount.', ['toast' => true]);
-                    return;
-                }
-
-                if (!$this->initiateFreshpayPayment($paymentAmount)) {
-                    return;
-                }
-
-                $this->dispatch('showOrderDetail', id: $this->order->id);
-                $this->dispatch('refreshOrders');
-                $this->dispatch('resetPos');
-                $this->dispatch('refreshPayments');
-                $this->showAddPaymentModal = false;
-
-                return;
-            }
-
             if ($this->paymentAmount >= 0) {
                 // Check if order has existing due payments
                 $hasDuePayments = Payment::where('order_id', $this->order->id)
@@ -615,136 +586,6 @@ class AddPayment extends Component
         $this->dispatch('resetPos');
         $this->dispatch('refreshPayments');
         $this->showAddPaymentModal = false;
-    }
-
-    private function initiateFreshpayPayment(float $amount): bool
-    {
-        try {
-            $restaurant = $this->order->branch?->restaurant ?? restaurant();
-            $paymentGateway = PaymentGatewayCredential::withoutGlobalScopes()
-                ->where('restaurant_id', $restaurant->id)
-                ->first();
-
-            if (!$paymentGateway || !($paymentGateway->freshpay_status ?? false)) {
-                $this->alert('error', 'FreshPay is not enabled for this restaurant.', ['toast' => true]);
-                return false;
-            }
-
-            $merchantId = trim((string) ($paymentGateway->freshpay_merchant_id ?? ''));
-            $merchantSecret = trim((string) ($paymentGateway->freshpay_merchant_secret ?? ''));
-            $endpoint = $paymentGateway->freshpay_endpoint;
-
-            if ($merchantId === '' || $merchantSecret === '') {
-                $this->alert('error', 'FreshPay credentials are not configured.', ['toast' => true]);
-                return false;
-            }
-
-            $phoneInput = $this->freshpayCustomerNumber ?: (string) ($this->order->customer?->phone ?? '');
-            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
-
-            if ($phoneNumber === '') {
-                $this->alert('error', 'FreshPay requires a customer phone number.', ['toast' => true]);
-                return false;
-            }
-
-            $method = FreshpayNetworkDetector::detectMethod($phoneNumber);
-            if (!$method) {
-                $this->alert('error', 'Unsupported phone prefix. FreshPay network could not be detected.', ['toast' => true]);
-                return false;
-            }
-
-            // Temporary diagnostic override to match the working FreshPay curl.
-            $firstName = 'AFRYA';
-            $lastName = 'AFRYA';
-            $email = 'kasisrael@gmail.com';
-            $formattedAmount = number_format($amount, 2, '.', '');
-            $reference = 'fp_pos_' . $this->order->id . '_' . Str::upper(Str::random(8));
-            $currency = strtoupper((string) ($restaurant->currency?->currency_code ?? 'CDF'));
-
-            $freshpayPayment = FreshpayPayment::create([
-                'order_id' => $this->order->id,
-                'amount' => $formattedAmount,
-                'payment_status' => 'pending',
-                'freshpay_reference' => $reference,
-                'freshpay_action' => 'debit',
-                'freshpay_method' => $method,
-                'customer_number' => $phoneNumber,
-            ]);
-
-            $payload = [
-                'merchant_id' => $merchantId,
-                'merchant_secrete' => $merchantSecret,
-                'amount' => $formattedAmount,
-                'currency' => $currency,
-                'action' => 'debit',
-                'customer_number' => $phoneNumber,
-                'firstname' => $firstName,
-                'lastname' => $lastName,
-                'email' => $email,
-                'reference' => $reference,
-                'method' => $method,
-                'callback_url' => route('freshpay.webhook', ['hash' => $restaurant->hash]),
-            ];
-
-            $payloadForLog = $payload;
-            $payloadForLog['merchant_secrete'] = str_repeat('*', max(strlen($merchantSecret) - 4, 0)) . substr($merchantSecret, -4);
-
-            Log::info('FreshPay POS request payload', [
-                'endpoint' => $endpoint,
-                'order_id' => $this->order->id,
-                'restaurant_id' => $restaurant->id,
-                'payload' => $payloadForLog,
-            ]);
-
-            $response = Http::timeout(30)->acceptJson()->post($endpoint, $payload);
-            $responseData = $response->json();
-
-            Log::info('FreshPay POS response', [
-                'endpoint' => $endpoint,
-                'order_id' => $this->order->id,
-                'http_status' => $response->status(),
-                'successful' => $response->successful(),
-                'json' => $responseData,
-                'raw_body' => $response->body(),
-            ]);
-
-            $freshpayPayment->freshpay_payment_id = $responseData['Transaction_id'] ?? null;
-            $freshpayPayment->payment_error_response = is_array($responseData) ? $responseData : ['body' => $response->body()];
-            $freshpayPayment->save();
-
-            if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
-                $this->order->status = 'pending_verification';
-                $this->order->save();
-
-                $this->alert('success', 'FreshPay request submitted. Ask the customer to confirm on phone.', ['toast' => true]);
-                return true;
-            }
-
-            $freshpayPayment->payment_status = 'failed';
-            $freshpayPayment->save();
-
-            Log::warning('FreshPay POS initiation failed', [
-                'order_id' => $this->order->id,
-                'http_status' => $response->status(),
-                'response' => $responseData,
-            ]);
-
-            $this->alert('error', $responseData['Comment'] ?? 'FreshPay payment initiation failed.', ['toast' => true]);
-            return false;
-        } catch (\Exception $e) {
-            Log::error('FreshPay POS Payment Initiation Error: ' . $e->getMessage());
-            $this->alert('error', 'Payment initiation failed: ' . $e->getMessage(), ['toast' => true]);
-            return false;
-        }
-    }
-
-    private function splitName(string $fullName): array
-    {
-        $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? '';
-        $lastName = $nameParts[1] ?? $firstName;
-
-        return [$firstName, $lastName];
     }
 
     public function render()
@@ -934,6 +775,8 @@ class AddPayment extends Component
             $this->numberOfSplits--;
             unset($this->splits[$index]);
 
+            unset($this->payerNames[$index]);
+
             // Reindex the splits array
             $this->splits = array_values($this->splits);
 
@@ -976,6 +819,9 @@ class AddPayment extends Component
             // Remove from splits array
             unset($this->splits[$splitNumber]);
 
+            // Clean up orphaned payer name
+            unset($this->payerNames[$splitNumber]);
+
             $this->updateBalanceAmount();
         }
     }
@@ -1011,6 +857,9 @@ class AddPayment extends Component
 
             // Remove the split
             unset($this->splits[$splitId]);
+
+            // Clean up orphaned payer name
+            unset($this->payerNames[$splitId]);
 
             // Reset active split to first split if removed split was active
             if ($this->activeSplitId === $splitId) {
@@ -1088,6 +937,7 @@ class AddPayment extends Component
     public function updatedSplitType()
     {
         if ($this->splitType) {
+            $this->payerNames = [];
             $this->initializeSplits();
         }
     }
@@ -1100,6 +950,7 @@ class AddPayment extends Component
         } else {
             $this->splitType = null;
             $this->splits = [];
+            $this->payerNames = []; // Clear payer names when closing split options
         }
     }
 

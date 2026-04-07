@@ -1,55 +1,36 @@
 
 <div>
     <div @class([
-        'group flex flex-col gap-3 border bg-white shadow-sm rounded-lg hover:shadow-md transition dark:bg-gray-700 dark:border-gray-600 p-3',
+        'group flex flex-col gap-3 sm:gap-4 bg-white/90 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 dark:bg-gray-800/90',
+        'border border-gray-100/80 dark:border-gray-700/80 p-3.5 sm:p-4',
        ]) wire:key='kot-item-{{ $kot->id }}'>
-        <div class="flex items-center justify-between w-full">
+        <div class="flex items-start justify-between w-full gap-3">
             <div class="space-y-1">
-                <div class="font-semibold text-skin-base">@lang('menu.kot') #{{ $kot->kot_number }}</div>
+                <div class="font-semibold text-skin-base text-sm">@lang('menu.kot') #{{ $kot->kot_number }}</div>
                 @if($kot->token_number)
-                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    <div class="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
                         @lang('modules.order.tokenNumber'): {{ $kot->token_number }}
                     </div>
                 @endif
-                <div class="text-sm font-medium text-gray-800 dark:text-neutral-400">
+                <div class="text-xs  font-medium text-gray-700 dark:text-neutral-300">
                     {{ $kot->items->where('status', '!=', 'cancelled')->count() }} @lang('modules.menu.item')
                 </div>
             </div>
-            <div class="flex flex-col items-end gap-1">
+            <div class="flex flex-col items-end gap-1.5">
                 @if($kot->order && $kot->order->order_type)
                     <span @class([
-                        'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium',
+                        'inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide shadow-sm/50',
                         'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700' => $kot->order->order_type === 'dine_in',
                         'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-200 dark:border-green-700' => $kot->order->order_type === 'takeaway',
                         'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-700' => $kot->order->order_type === 'pickup',
                         'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border border-orange-200 dark:border-orange-700' => $kot->order->order_type === 'delivery',
                         'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600' => !in_array($kot->order->order_type, ['dine_in', 'takeaway', 'pickup', 'delivery'])
                     ])>
-                        @if($kot->order->order_type === 'pickup' && $kot->order->pickup_date)
-                            <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                            </svg>
-                        @elseif($kot->order->order_type === 'delivery')
-                            <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path>
-                                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V9a1 1 0 00-1-1h-3z"></path>
-                            </svg>
-                        @elseif($kot->order->order_type === 'takeaway')
-                            <svg class="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd"></path>
-                            </svg>
-                        @elseif($kot->order->order_type === 'dine_in')
-                        <svg class="w-3 h-3 mr-1 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white" fill="currentColor" version="1.0" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-                            <g transform="translate(0 512) scale(.1 -.1)">
-                                <path d="m249 4691c-19-20-29-40-29-60 0-16-14-243-31-503s-28-495-25-522 19-77 35-111c46-100 126-167 236-200l40-12 3-400 2-401-25-6c-58-15-56 21-53-867l3-814 23-45c35-72 75-114 144-151 58-31 70-34 148-34s90 3 148 34c70 38 100 69 140 145l27 51 5 293 5 294 52-64c380-466 1036-731 1654-667 645 65 1211 449 1511 1024l57 110 3-495c3-491 3-495 26-540 35-72 75-114 144-151 58-31 70-34 148-34s90 3 148 34c70 38 100 69 140 145l27 51 3 1938 2 1938-52 52-161-5c-184-6-260-25-384-93-90-50-218-178-268-268-66-120-87-202-93-370l-5-148-86 84c-469 455-1109 646-1736 517-295-61-612-212-835-399l-75-63-6 53c-4 30-15 182-24 339-12 208-21 291-32 308-31 50-98 53-130 6-15-24-15-48 6-387 12-199 24-383 27-409 5-41 3-48-19-62-28-19-159-52-234-60l-53-5v455 455l-25 24c-15 16-36 25-55 25s-40-9-55-25l-25-24v-456-457l-27 6c-16 3-53 8-83 12-69 8-174 40-188 57-7 8-3 125 14 382 30 467 30 450-1 480-33 33-70 32-106-4zm4551-1171v-1040h-320-320v783c0 512 4 804 11 843 29 162 151 321 303 394 91 44 149 57 254 59l72 1v-1040zm-1955 776c271-49 475-131 701-282 126-83 292-236 390-358l64-80v-604-603l25-24c23-24 30-25 150-25 101 0 125-3 125-14 0-34-33-179-60-269-90-288-240-529-465-745-443-426-1063-587-1665-432-403 103-777 372-1019 732l-51 76v382 381l-25 24c-13 14-31 25-40 25-14 0-15 44-13 401l3 402 40 12c111 33 189 100 238 203 29 60 32 77 34 166l1 98 49 50c243 250 626 440 978 487 44 6 94 13 110 15 60 9 352-3 430-18zm-2470-652c200-61 554-55 731 13 15 6 16 1 10-38-9-57-46-112-98-146l-42-28h-256-256l-42 28c-52 34-89 89-98 145-4 23-5 42-3 42s27-7 54-16zm425-764v-400h-80-80v400 400h80 80v-400zm78-1309c-3-739-3-750-24-777-39-53-71-69-134-69s-95 16-134 69c-21 27-21 38-24 777l-2 749h160 160l-2-749zm3920 0c-3-739-3-750-24-777-39-53-71-69-134-69s-95 16-134 69c-21 27-21 38-24 777l-2 749h160 160l-2-749z"></path>
-                                <path d="m2420 3834c-293-38-560-167-763-371-476-475-502-1239-60-1743 495-563 1356-588 1875-52 196 202 313 436 352 703 60 408-69 797-363 1090-182 182-382 293-631 350-83 19-331 33-410 23zm315-169c467-75 826-424 927-900 16-77 16-333 0-410-98-461-436-799-897-897-77-16-333-16-410 0-348 74-626 281-783 580-173 331-175 697-7 1032 214 427 696 672 1170 595z"></path>
-                            </g>
-                        </svg>
-                        @endif
+                        
                         <span class="flex items-center">
                             {{ Str::title(ucwords(str_replace('_', ' ', $kot->order->order_type))) }}
                             @if($kot->order->order_type === 'pickup' && $kot->order->pickup_date)
-                                <span class="ml-2 text-xs opacity-75 font-semibold" style="letter-spacing:0.5px;">
+                                <span class="ml-1 text-[10px] opacity-75 font-semibold" style="letter-spacing:0.5px;">
                                     {{ $kot->order->pickup_date->timezone(timezone())->format(timeFormat()) }}
                                 </span>
                             @endif
@@ -58,18 +39,18 @@
                 @endif
 
                 @if($kot->kotPlace && $showAllKitchens)
-                    <span class="text-xs text-gray-500 dark:text-gray-500 text-center w-full block">{{ $kot->kotPlace->name }}</span>
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 text-center w-full block">{{ $kot->kotPlace->name }}</span>
                 @endif
             </div>
             <div class="space-y-1 text-right">
-                <div class="text-sm font-medium text-gray-600 dark:text-neutral-400">
+                <div class="text-xs sm:text-sm font-medium text-gray-600 dark:text-neutral-300">
                     {{ $kot->order ? $kot->order->show_formatted_order_number : '--' }}
 
                     @if ($kot->order && $kot->order->table)
                         <span class="font-bold text-skin-base">({{ $kot->order->table->table_code }})</span>
                     @endif
                 </div>
-                <div class="text-xs text-gray-600 dark:text-gray-400">
+                <div class="text-[11px] text-gray-500 dark:text-gray-400">
                     {{ $kot->created_at->timezone(timezone())->format(dateFormat() . ' ' . timeFormat()) }}
                 </div>
             </div>
@@ -79,8 +60,8 @@
 
         </div>
 
-        <div class="flex justify-between">
-            <div class="flex items-center text-gray-600 text-sm gap-1 dark:text-gray-400">
+        <div class="flex justify-between items-center border-t border-dashed border-gray-200 dark:border-gray-600/80 pt-3">
+            <div class="flex items-center text-gray-600 text-xs  gap-1 dark:text-gray-400">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 -2.89 122.88 122.88" version="1.1"
                     id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                     style="enable-background:new 0 0 122.88 117.09" xml:space="preserve">
@@ -108,7 +89,7 @@
             <div>
 
                  <span @class([
-                    'text-xs font-medium px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap border',
+                    'text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide whitespace-nowrap border shadow-sm/40',
                     'bg-yellow-100 text-yellow-800 dark:!bg-yellow-600 dark:!text-white border-yellow-400 dark:!border-yellow-500' =>
                         $kot->status == 'in_kitchen',
                     'bg-blue-100 text-blue-800 dark:!bg-blue-600 dark:!text-white border-blue-400 dark:!border-blue-500' =>
@@ -126,26 +107,26 @@
         </div>
 
 
-        <div class="bg-white border rounded-lg dark:bg-gray-800 dark:border-gray-700">
+        <div class="bg-white/90 border border-gray-100 rounded-lg dark:bg-gray-800/80 dark:border-gray-700/80 overflow-hidden">
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <thead class="bg-gray-50/90 dark:bg-gray-700/40">
                     <tr>
                         <th
-                            class="px-4 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                            class="px-2 py-1.5 text-xs font-medium text-left text-gray-500  dark:text-gray-400">
                             @lang('modules.menu.itemName')
                         </th>
                         <th
-                            class="px-4 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase dark:text-gray-400">
+                            class="px-2 py-1.5 text-xs font-medium text-right text-gray-500  dark:text-gray-400">
                             &nbsp;
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                     @foreach ($kot->items->where('status', '!=', 'cancelled') as $item)
                         <tr>
-                            <td @class(['p-2',  'bg-green-50 dark:bg-green-800/30' => $item->status == 'ready'])>
+                            <td @class(['p-2.5',  'bg-green-50 dark:bg-green-800/30' => $item->status == 'ready'])>
                                 <div class="flex flex-col">
-                                    <div class="flex items-center gap-1 text-xs text-gray-900 dark:text-white">
+                                    <div class="flex items-center gap-1 text-[11px] text-gray-900 dark:text-white">
                                         @if ($item->status == 'cooking')
                                             <img src="{{ asset('img/cooking-icon.svg') }}" alt="cooking" class="w-6 h-6">
                                         @endif
@@ -181,7 +162,7 @@
                                     @endif
                                 </div>
                             </td>
-                            <td @class(['p-2 pl-0 text-right font-medium text-gray-900 dark:text-white', 'bg-green-50 dark:bg-green-800/30' => $item->status == 'ready'])>
+                            <td @class(['p-2.5 pl-0 text-right font-medium text-gray-900 dark:text-white', 'bg-green-50 dark:bg-green-800/30' => $item->status == 'ready'])>
                                 @if($kotSettings->enable_item_level_status && $kot->status != 'cancelled')
                                     @php
                                         $currentStatus = $item->status ?? 'pending';
@@ -274,22 +255,21 @@
         </div>
 
         @if ($kot->note)
-            <div class="w-full bg-gray-50 dark:bg-gray-600 rounded-md p-4 text-sm mb-2">
-                <blockquote>
-                    <div class="relative z-10">
-                        <p class="text-gray-900 dark:text-white"><em>
-                                "{{ $kot->note }}"
-                            </em></p>
-                    </div>
-                </blockquote>
+            <div class="w-full mt-1">
+                <div class="rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-dashed border-gray-200 dark:border-gray-600 px-2 py-1.5">
+                    <p class="text-gray-700 dark:text-gray-200 text-xs  leading-relaxed">
+                        <span class="font-semibold text-gray-800 dark:text-gray-100">@lang('modules.order.note'):</span>
+                        <span class="italic"> "{{ $kot->note }}"</span>
+                    </p>
+                </div>
             </div>
         @endif
 
-        <div class="flex justify-end gap-1">
+        <div class="flex justify-end gap-2 pt-1">
             <button wire:click="printKot({{ $kot->id }})"
                 wire:loading.attr="disabled"
                 wire:loading.class="opacity-50 cursor-not-allowed"
-                class="relative inline-flex items-center justify-center rounded-md border border-skin-base bg-transparent px-2 py-1 text-sm font-medium text-skin-base transition hover:bg-skin-muted focus:outline-none focus:ring-2 focus:ring-skin-base focus:ring-offset-2"
+                class="relative inline-flex items-center justify-center rounded-lg border border-skin-base/70 bg-transparent px-2 py-1 text-sm font-medium text-skin-base transition hover:bg-skin-muted/70 focus:outline-none focus:ring-2 focus:ring-skin-base focus:ring-offset-2"
                 title="{{ $kotPlace->printerSetting->name ?? '' }}">
 
                 <!-- Loading Spinner -->
@@ -298,7 +278,7 @@
                 </div>
 
                 <!-- Print Icon -->
-                <svg  wire:target="printKot({{ $kot->id }})" class="h-10 w-10 text-skin-base" width="24" height="24" viewBox="0 0 24 24"
+                <svg  wire:target="printKot({{ $kot->id }})" class="h-5 w-5 text-skin-base" width="24" height="24" viewBox="0 0 24 24"
                     fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                     <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
@@ -319,13 +299,13 @@
             </button>
                 @if ($kot->status == 'pending_confirmation')
                     <x-secondary-button wire:click="changeKotStatus('in_kitchen')">
-                        <img src="{{ asset('img/cooking-icon.svg') }}" alt="cooking" class="w-6 h-6 mr-1">
+                        <img src="{{ asset('img/cooking-icon.svg') }}" alt="cooking" class="w-4 h-4 mr-1">
                         @lang('modules.order.start_cooking')
                     </x-secondary-button>
                 @endif
                 @if ($kot->status == 'in_kitchen')
                     <x-secondary-button wire:click="changeKotStatus('food_ready')">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor"
                             class="mr-1 text-green-600 bi bi-check2-circle" viewBox="0 0 16 16">
                             <path d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0" />
                             <path d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0z" />
@@ -335,7 +315,7 @@
                 @endif
                 @if ($kot->status == 'food_ready')
                     <x-secondary-button wire:click="changeKotStatus('served')">
-                        <svg fill="currentColor" width="16" height="16" version="1.1" id="Capa_1"
+                        <svg fill="currentColor" width="10" height="10" version="1.1" id="Capa_1"
                             class="mr-1 text-yellow-400" xmlns="http://www.w3.org/2000/svg"
                             xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 600.801 600.801" xml:space="preserve">
                             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -376,7 +356,7 @@
 
                 @if (user_can('Delete Order') && $kot->status != 'cancelled')
                 <x-danger-button wire:click="$dispatch('showCancelKotModal', { id: {{ $kot->id }} })">
-                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                             <path fill-rule="evenodd"
                                 d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
                                 clip-rule="evenodd"></path>

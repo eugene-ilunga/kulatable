@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => '存储卫士',
+  'status_title' => 'Storage Guard 系统路径',
+  'permissions_badge' => '模式：0775（目录）/0664（文件）',
+  'success_message' => '尝试修复 :count 项（文件和目录）。',
+  'error_alert' => '需要注意一个或多个存储路径。单击“递归修复”修复权限。',
+  'recursive_repair' => '递归修复',
+  'secure_repair' => '保护和修复权限',
+  'refresh_status' => '刷新状态',
+  'path' => '小路',
+  'status' => '地位',
+  'perms' => '烫发',
+  'readable' => '可读',
+  'writable' => '可写',
+  'yes' => '是的',
+  'no' => '不',
+  'ok' => '好的',
+  'issue' => '问题',
+];

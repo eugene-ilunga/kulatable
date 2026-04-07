@@ -14,8 +14,10 @@ class EditExecutive extends Component
 
     public $member;
     public $memberName;
+    public $memberEmail;
     public $memberPhone;
     public $status;
+    public $availabilityStatus = 1;
     public $phoneCode;
     public $phoneCodeSearch = '';
     public $phoneCodeIsOpen = false;
@@ -25,9 +27,11 @@ class EditExecutive extends Component
     public function mount()
     {
         $this->memberName = $this->member->name;
+        $this->memberEmail = $this->member->email;
         $this->memberPhone = $this->member->phone;
         $this->phoneCode = $this->member->phone_code;
         $this->status = $this->member->status;
+        $this->availabilityStatus = (int) ($this->member->is_online ?? 0);
 
         // Initialize phone codes
         $this->allPhoneCodes = collect(Country::pluck('phonecode')->unique()->filter()->values());
@@ -61,22 +65,27 @@ class EditExecutive extends Component
     {
         $this->validate([
             'memberName' => 'required',
+            'memberEmail' => 'required|email|unique:delivery_executives,email,' . $this->member->id,
             'phoneCode' => 'required',
-          
+            'availabilityStatus' => 'required|in:0,1',
         ]);
 
         DeliveryExecutive::where('id', $this->member->id)->update([
             'name' => $this->memberName,
+            'email' => strtolower($this->memberEmail),
             'phone' => $this->memberPhone,
             'phone_code' => $this->phoneCode,
             'status' => $this->status,
+            'is_online' => (int) $this->availabilityStatus,
         ]);
 
         // Reset the value
         $this->memberName = '';
+        $this->memberEmail = '';
         $this->memberPhone = '';
         $this->phoneCode = '';
         $this->status = 'available';
+        $this->availabilityStatus = 1;
 
         $this->dispatch('hideEditStaff');
 

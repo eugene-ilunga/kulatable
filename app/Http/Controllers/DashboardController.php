@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
@@ -41,7 +43,12 @@ class DashboardController extends Controller
 
     public function beamAuth()
     {
-        $userID = Str::slug(global_setting()->name) . '-' . auth()->id();
+        $user = Auth::user();
+        if (!$user) {
+            return response('Unauthorized', 401);
+        }
+
+        $userID = Str::slug(global_setting()->name) . '-' . $user->id;
         $userIDInQueryParam = request()->user_id;
 
         if ($userID != $userIDInQueryParam) {
@@ -60,20 +67,38 @@ class DashboardController extends Controller
 
     public function sendPushNotifications($usersIDs, $title, $body, $link)
     {
-        if (App::environment('codecanyon') && pusherSettings()->beamer_status && count($usersIDs) > 0) {
+        if (!App::environment('codecanyon') || !pusherSettings()->beamer_status) {
+            return;
+        }
+
+        if (!is_array($usersIDs) || count($usersIDs) === 0) {
+            return;
+        }
+
+        // Call sites sometimes pass `[ [1,2,3] ]` instead of `[1,2,3]`
+        $ids = $usersIDs;
+        if (isset($usersIDs[0]) && is_array($usersIDs[0])) {
+            $ids = $usersIDs[0];
+        }
+
+        $pushIDs = collect($ids)
+            ->filter(fn ($uid) => !empty($uid))
+            ->unique()
+            ->map(fn ($uid) => Str::slug(global_setting()->name) . '-' . $uid)
+            ->values()
+            ->all();
+
+        // Pusher throws if we publish to zero users
+        if (count($pushIDs) === 0) {
+            return;
+        }
+
+        try {
             $beamsClient = new \Pusher\PushNotifications\PushNotifications([
                 'instanceId' =>  pusherSettings()->instance_id,
                 'secretKey' =>  pusherSettings()->beam_secret,
             ]);
-
-
-            $pushIDs = [];
-
-            foreach ($usersIDs[0] as $key => $uid) {
-                $pushIDs[] = Str::slug(global_setting()->name) . '-' . $uid;
-            }
-
-            $publishResponse = $beamsClient->publishToUsers(
+            $beamsClient->publishToUsers(
                 $pushIDs,
                 array(
                     'web' => array(
@@ -86,6 +111,8 @@ class DashboardController extends Controller
                     )
                 )
             );
+        } catch (\Throwable $e) {
+            Log::error('Error sending push notification: ' . $e->getMessage());
         }
     }
 

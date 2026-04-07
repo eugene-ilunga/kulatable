@@ -1,0 +1,20 @@
+<?php 
+return [
+  'name' => 'Opslag bewaker',
+  'status_title' => 'Paden voor opslagbewakingssysteem',
+  'permissions_badge' => 'Modus: 0775 (Dirs) / 0664 (Bestanden)',
+  'success_message' => 'Poging tot reparatie van :count-items (bestanden en mappen).',
+  'error_alert' => 'Eén of meerdere opslagpaden behoeven aandacht. Klik op "Recursief herstel" om de machtigingen te herstellen.',
+  'recursive_repair' => 'Recursieve reparatie',
+  'secure_repair' => 'Beveilig en herstel machtigingen',
+  'refresh_status' => 'Vernieuwingsstatus',
+  'path' => 'Pad',
+  'status' => 'Status',
+  'perms' => 'Permanenten',
+  'readable' => 'Leesbaar',
+  'writable' => 'Beschrijfbaar',
+  'yes' => 'Ja',
+  'no' => 'Nee',
+  'ok' => 'OK',
+  'issue' => 'Probleem',
+];

@@ -3,6 +3,7 @@
 namespace App\Livewire\Order;
 
 use App\Events\OrderTableAssigned;
+use App\Events\OrderWaiterAssigned;
 use Carbon\Carbon;
 use App\Models\Tax;
 use App\Models\Order;
@@ -59,15 +60,23 @@ class OrderDetail extends Component
     public $confirmDeleteItemModal = false;
     public $itemToDelete;
     public $showKotAlert = false;
+    public $showPrintOptionsModal = false;
+    public $printMode = null; // 'all', 'summary', 'individual', 'single'
+    public $selectedSplitId = null;
+
+    // Discount modal
+    public $showDiscountModal = false;
+    public $discountType = 'fixed';
+    public $discountValue = null;
 
     public function mount()
     {
         $this->total = 0;
         $this->subTotal = 0;
         $this->taxes = Tax::all();
-        $this->deliveryExecutives = cache()->remember('delivery_executives_' . restaurant()->id, 60 * 60 * 24, function () {
-            return DeliveryExecutive::where('status', 'available')->get();
-        });
+        $this->deliveryExecutives = DeliveryExecutive::where('status', 'available')
+            ->where('is_online', true)
+            ->get();
         if ($this->order) {
             $this->deliveryExecutive = $this->order->delivery_executive_id;
         }
@@ -87,7 +96,37 @@ class OrderDetail extends Component
 
     public function printOrder($orderId)
     {
+        $order = Order::find($orderId);
 
+        if (!$order) {
+            $this->alert('error', __('messages.orderNotFound'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+            return;
+        }
+
+        // Check if order has split payments
+        if ($order->split_type && $order->splitOrders()->where('status', 'paid')->count() > 0) {
+            // Open print options modal instead of printing directly
+            $this->showPrintOptionsModal = true;
+            $this->printMode = null;
+            $this->selectedSplitId = null;
+            return;
+        }
+
+        // Original print logic for non-split orders
+        $this->executePrint($orderId);
+    }
+
+    public function executePrint($orderId)
+    {
+        $order = Order::find($orderId);
+
+        // Check if order has paid split orders
+        $hasPaidSplits = $order->split_type && $order->splitOrders()->where('status', 'paid')->count() > 0;
 
         $orderPlaces = \App\Models\MultipleOrder::with('printerSetting')->get();
 
@@ -103,7 +142,10 @@ class OrderDetail extends Component
                 $this->handleOrderPrint($orderId);
                     break;
             default:
-                $url = route('orders.print', $orderId);
+                // Use print-split-receipts route if order has paid splits, otherwise regular print
+                $url = $hasPaidSplits
+                    ? route('orders.print-split-receipts', ['orderId' => $orderId])
+                    : route('orders.print', $orderId);
                 $this->dispatch('print_location', $url);
                     break;
             }
@@ -117,13 +159,121 @@ class OrderDetail extends Component
         }
     }
 
+    public function handlePrintOption($mode)
+    {
+        if (!$this->order) {
+            return;
+        }
+
+        $this->printMode = $mode;
+
+        switch ($mode) {
+            case 'all':
+                // Print summary + all individual splits
+                $this->printAllReceipts();
+                break;
+            case 'summary':
+                // Print summary only
+                $this->printSummaryReceipt();
+                break;
+            case 'individual':
+                // Print individual splits only
+                $this->printIndividualReceipts();
+                break;
+            case 'single':
+                // Show split selection - don't close modal yet
+                return;
+            default:
+                break;
+        }
+
+        // Close modal after printing (except for single mode)
+        if ($mode !== 'single') {
+            $this->showPrintOptionsModal = false;
+            $this->printMode = null;
+        }
+    }
+
+    public function printAllReceipts()
+    {
+        $url = route('orders.print-split-receipts', [
+            'orderId' => $this->order->id,
+            'includeSummary' => true
+        ]);
+
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printSummaryReceipt()
+    {
+        $url = route('orders.print', $this->order->id);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printIndividualReceipts()
+    {
+        // Use the optimized controller for all individual receipts on one page
+        $url = route('orders.print-split-receipts', ['orderId' => $this->order->id]);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+    }
+
+    public function printSingleSplit()
+    {
+        if (!$this->selectedSplitId) {
+            $this->alert('error', __('modules.order.selectSplitToPrint'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+            return;
+        }
+
+        // Use the optimized controller with specific split filter
+        $url = route('orders.print-split-receipts', [
+            'orderId' => $this->order->id,
+            'splitId' => $this->selectedSplitId
+        ]);
+        $this->dispatch('print_location', $url);
+
+        $this->showPrintOptionsModal = false;
+        $this->printMode = null;
+        $this->selectedSplitId = null;
+    }
+
     #[On('showOrderDetail')]
     public function showOrder($id, $fromPos = null)
     {
-        $this->order = Order::with('items', 'items.menuItem', 'items.menuItemVariation', 'items.modifierOptions', 'payments', 'freshpayPayments', 'cancelReason')->find($id);
+        $this->order = Order::with(
+            'items',
+            'items.menuItem',
+            'items.menuItemVariation',
+            'items.modifierOptions',
+            'payments',
+            'cancelReason',
+            'orderCashCollection',
+            'deliveryExecutive'
+        )
+            ->when(is_numeric($id), fn ($q) => $q->where('id', $id), fn ($q) => $q->where('uuid', $id))
+            ->first();
+
+        if (!$this->order) {
+            $this->showOrderDetail = false;
+            return;
+        }
+
         $this->orderStatus = $this->order->status;
         $this->fromPos = $fromPos;
-        $this->orderProgressStatus = $this->order->order_status->value;
+        $this->orderProgressStatus = $this->order->order_status?->value ?? 'placed';
         $restaurant = restaurant();
         $this->currencyId = $restaurant->currency_id;
         $this->taxMode = $this->order?->tax_mode ?? ($this->restaurant->tax_mode ?? 'order');
@@ -142,7 +292,7 @@ class OrderDetail extends Component
         $this->pendingTable = null;
     }
 
-    #[On('setTable')]
+    #[On('setOrderDetailTable')]
     public function setTable(Table $table)
     {
         // Check if there's an existing table assigned
@@ -175,9 +325,8 @@ class OrderDetail extends Component
                     ]);
                 }
 
-                $this->order->fresh();
+                $this->order = $currentOrder->fresh(['customer', 'branch.restaurant', 'waiter', 'table']);
 
-                // Dispatch table assignment event
                 OrderTableAssigned::dispatch($this->order, $table, $previousTable);
 
                 $this->dispatch('showOrderDetail', id: $this->order->id);
@@ -232,7 +381,7 @@ class OrderDetail extends Component
                 ]);
             }
 
-            $this->order->fresh();
+            $this->order = $currentOrder->fresh(['customer', 'branch.restaurant', 'waiter', 'table']);
 
             OrderTableAssigned::dispatch($this->order, $table, $previousTable);
 
@@ -348,7 +497,7 @@ class OrderDetail extends Component
                 break;
 
         case 'kot':
-                return $this->redirect(route('pos.show', $this->order->table_id), navigate: true);
+                return $this->redirect(route('pos.show', $this->order->table_id));
         }
 
         $taxes = Tax::all();
@@ -448,28 +597,28 @@ class OrderDetail extends Component
             // Step 1: Calculate discounts first
             $regularDiscount = 0;
             $loyaltyDiscount = floatval($this->order->loyalty_discount_amount ?? 0);
-            
+
             if ($this->order->discount_type === 'percent') {
                 $regularDiscount = round(($this->subTotal * $this->order->discount_value) / 100, 2);
             } elseif ($this->order->discount_type === 'fixed') {
                 $regularDiscount = min($this->order->discount_value, $this->subTotal);
             }
             $this->discountAmount = $regularDiscount;
-            
+
             // Step 2: Calculate net = subtotal - regular discount - loyalty discount
             $net = $this->subTotal - $regularDiscount - $loyaltyDiscount;
-            
+
             // Step 3: Calculate service charges on net (after discounts)
             $serviceTotal = 0;
             foreach ($this->order->charges as $charge) {
                 $serviceTotal += $charge->charge->getAmount($net);
             }
-            
+
             // Step 4: Calculate tax_base based on setting
             // Tax base = (subtotal - regular discount - loyalty discount) + service charges (if enabled)
             $includeChargesInTaxBase = restaurant()->include_charges_in_tax_base ?? true;
             $taxBase = $includeChargesInTaxBase ? ($net + $serviceTotal) : $net;
-            
+
             // Step 5: Calculate taxes on tax_base
             if ($this->taxMode === 'order') {
                 foreach ($taxes as $value) {
@@ -502,16 +651,16 @@ class OrderDetail extends Component
                             }
                         }
                     }
-                    
+
                     // Redeem stamps for each stamp rule
                     if (!empty($stampRuleIdsFromKotItems)) {
                         $loyaltyService = app(\Modules\Loyalty\Services\LoyaltyService::class);
-                        
+
                         foreach ($stampRuleIdsFromKotItems as $stampRuleId) {
                             // Check if more items can be redeemed
                             $this->order->refresh();
                             $this->order->load('items');
-                            
+
                             $eligibleItemsCount = $this->order->items()
                                 ->where(function ($q) use ($stampRuleId) {
                                     $q->where('stamp_rule_id', $stampRuleId)
@@ -528,7 +677,7 @@ class OrderDetail extends Component
                                       });
                                 })
                                 ->count();
-                            
+
                             $existingTransactionsCount = 0;
                             if (module_enabled('Loyalty')) {
                                 $existingTransactionsCount = \Modules\Loyalty\Entities\LoyaltyStampTransaction::where('order_id', $this->order->id)
@@ -536,7 +685,7 @@ class OrderDetail extends Component
                                     ->where('type', 'REDEEM')
                                     ->count();
                             }
-                            
+
                             // Redeem stamps for all eligible items
                             if ($eligibleItemsCount > $existingTransactionsCount) {
                                 $this->redeemStampsForAllEligibleItems($this->order, $stampRuleId);
@@ -621,7 +770,7 @@ class OrderDetail extends Component
                 // Count eligible items
                 $order->refresh();
                 $order->load('items');
-                
+
                 $eligibleItemsCount = $order->items()
                     ->where(function ($q) use ($stampRuleId) {
                         $q->where('stamp_rule_id', $stampRuleId)
@@ -726,7 +875,7 @@ class OrderDetail extends Component
                 $this->cancelReason = null;
                 $this->cancelReasonText = null;
 
-                return $this->redirect(route('pos.index'), navigate: true);
+                return $this->redirect(route('pos.index'));
             }
         }
     }
@@ -779,7 +928,7 @@ class OrderDetail extends Component
             ]);
 
             if ($this->fromPos) {
-                return $this->redirect(route('pos.index'), navigate: true);
+                return $this->redirect(route('pos.index'));
             } else {
                 $this->dispatch('resetPos');
             }
@@ -801,11 +950,28 @@ class OrderDetail extends Component
         }
 
         if ($status === 'received') {
+            $wasPaid = $order->status === 'paid';
             $amountPaid = $order->payments->sum('amount');
             $order->update([
                 'status' => 'paid',
                 'amount_paid' => $amountPaid
             ]);
+
+            // Earn loyalty points/stamps after payment confirmation (customer site + kiosk)
+            if (!$wasPaid && module_enabled('Loyalty')) {
+                $hasPointsEarned = class_exists(\Modules\Loyalty\Entities\LoyaltyLedger::class)
+                    && \Modules\Loyalty\Entities\LoyaltyLedger::where('order_id', $order->id)
+                        ->where('type', 'EARN')
+                        ->exists();
+                $hasStampsEarned = class_exists(\Modules\Loyalty\Entities\LoyaltyStampTransaction::class)
+                    && \Modules\Loyalty\Entities\LoyaltyStampTransaction::where('order_id', $order->id)
+                        ->where('type', 'EARN')
+                        ->exists();
+
+                if (!$hasPointsEarned || !$hasStampsEarned) {
+                    event(new \App\Events\SendNewOrderReceived($order));
+                }
+            }
         } elseif ($status === 'not_received') {
             $latestPayment = $order->payments->last();
             if ($latestPayment) {
@@ -863,7 +1029,7 @@ class OrderDetail extends Component
 
 
         if ($this->fromPos) {
-            return $this->redirect(route('pos.index'), navigate: true);
+            return $this->redirect(route('pos.index'));
         }
         else {
 
@@ -876,6 +1042,19 @@ class OrderDetail extends Component
 
     public function saveDeliveryExecutive()
     {
+        $selectedExecutive = DeliveryExecutive::find($this->deliveryExecutive);
+
+        if (!$selectedExecutive || $selectedExecutive->status !== 'available' || !(bool) $selectedExecutive->is_online) {
+            $this->alert('error', __('messages.invalidRequest'), [
+                'toast' => true,
+                'position' => 'top-end',
+                'showCancelButton' => false,
+                'cancelButtonText' => __('app.close')
+            ]);
+
+            return;
+        }
+
         $this->order->update(['delivery_executive_id' => $this->deliveryExecutive]);
         $this->order->fresh();
         $this->alert('success', __('messages.deliveryExecutiveAssigned'), [
@@ -937,7 +1116,15 @@ class OrderDetail extends Component
     public function updatedSelectWaiter($value)
     {
         if ($this->order) {
-            $this->order->update(['waiter_id' => $value ?: null]);
+            $currentOrder = Order::with(['waiter', 'table', 'branch.restaurant', 'customer'])->find($this->order->id);
+            $previousWaiter = $currentOrder?->waiter;
+
+            $currentOrder?->update(['waiter_id' => $value ?: null]);
+            $this->order = $currentOrder?->fresh(['waiter', 'table', 'branch.restaurant', 'customer']);
+
+            if ($this->order?->waiter_id) {
+                OrderWaiterAssigned::dispatch($this->order, $previousWaiter);
+            }
 
             $this->alert('success', __('messages.waiterUpdated'), [
                 'toast' => true,
@@ -1057,7 +1244,83 @@ class OrderDetail extends Component
     }
 
     /**
-     * Recalculate order totals including all components
+     * Open discount modal for adding discount to billed orders
+     */
+    public function showAddDiscount()
+    {
+        if (!$this->order || $this->order->status !== 'billed') {
+            return;
+        }
+        $this->discountType = $this->order->discount_type ?? 'fixed';
+        $this->discountValue = null;
+        $this->showDiscountModal = true;
+    }
+
+    /**
+     * Save discount and recalculate all order totals
+     */
+    public function addDiscounts()
+    {
+        if (!$this->order || $this->order->status !== 'billed') {
+            return;
+        }
+
+        if (($this->order->loyalty_points_redeemed ?? 0) > 0) {
+            $this->showAlert('error', __('loyalty::app.cannotAddDiscountWithLoyaltyPoints'));
+            $this->showDiscountModal = false;
+            return;
+        }
+
+        $this->validate([
+            'discountValue' => 'required|numeric|min:0',
+            'discountType'  => 'required|in:fixed,percent',
+        ]);
+
+        if ($this->discountType === 'percent' && $this->discountValue > 100) {
+            $this->showAlert('error', __('messages.discountPercentError'));
+            return;
+        }
+
+        $this->order->update([
+            'discount_type'  => $this->discountType,
+            'discount_value' => $this->discountValue,
+        ]);
+
+        $this->recalculateOrderTotals();
+        $this->showDiscountModal = false;
+        $this->showAlert('success', __('messages.discountApplied'));
+        $this->dispatch('refreshOrders');
+        $this->dispatch('refreshPos');
+    }
+
+    /**
+     * Remove discount and recalculate all order totals
+     */
+    public function removeDiscount()
+    {
+        if (!$this->order || $this->order->status !== 'billed') {
+            return;
+        }
+
+        $this->order->update([
+            'discount_type'   => null,
+            'discount_value'  => null,
+            'discount_amount' => null,
+        ]);
+
+        // Reset component properties to match Pos.php removeCurrentDiscount()
+        $this->discountType  = null;
+        $this->discountValue = null;
+        $this->discountAmount = null;
+
+        $this->recalculateOrderTotals();
+        $this->showAlert('success', __('messages.discountRemoved'));
+        $this->dispatch('refreshOrders');
+        $this->dispatch('refreshPos');
+    }
+
+    /**
+     * Recalculate order totals — mirrors the same step-by-step logic as POS calculateTotal().
      */
     public function recalculateOrderTotals()
     {
@@ -1065,100 +1328,100 @@ class OrderDetail extends Component
             return;
         }
 
-        // Refresh the order to get latest data
         $this->order->refresh();
-        $this->order->load(['items', 'charges', 'taxes', 'payments']);
+        $this->order->load(['items', 'charges.charge', 'taxes.tax', 'payments', 'orderType']);
 
-        // Reset totals
+        // Step 1: Calculate SubTotal from items
         $this->subTotal = 0;
-        $this->total = 0;
-        $totalTaxAmount = 0;
-
-        // Calculate subtotal from items
         foreach ($this->order->items as $item) {
             $this->subTotal += $item->amount;
         }
 
-        // Calculate taxes
-        if ($this->taxMode === 'order') {
-            // Order-level taxation
-            foreach ($this->order->taxes as $orderTax) {
-                $taxAmount = ($orderTax->tax->tax_percent / 100) * $this->subTotal;
-                $totalTaxAmount += $taxAmount;
-            }
-        } else {
-            // Item-level taxation
-            $isInclusive = restaurant()->tax_inclusive ?? false;
-            foreach ($this->order->items as $item) {
-                $totalTaxAmount += ($item->tax_amount ?? 0);
-            }
-        }
-
-        // Start with subtotal + taxes
-        $this->total = $this->subTotal + $totalTaxAmount;
-
-        // Apply discount (loyalty points cannot be combined with other discounts)
-        // Step 1: Calculate net = subtotal - discount
-        $net = $this->subTotal;
+        // Step 2: Calculate discount amount (exactly like Pos.php)
         $discountAmount = 0;
-        if ($this->order->loyalty_points_redeemed > 0) {
-            // Use loyalty discount
+        if (($this->order->loyalty_points_redeemed ?? 0) > 0) {
+            // Loyalty discount takes priority
             $discountAmount = $this->order->loyalty_discount_amount ?? 0;
         } elseif ($this->order->discount_type === 'percent') {
             $discountAmount = round(($this->subTotal * $this->order->discount_value) / 100, 2);
         } elseif ($this->order->discount_type === 'fixed') {
-            $discountAmount = min($this->order->discount_value, $this->subTotal);
+            $discountAmount = min((float) $this->order->discount_value, $this->subTotal);
         }
-        $net -= $discountAmount;
 
-        // Step 2: Calculate service charges on net
+        // Step 3: Calculate discountedTotal (net after discount)
+        $discountedTotal = $this->subTotal - $discountAmount;
+
+        // Step 4: Calculate service charges on discountedTotal
+        // Filter charges by order type like Pos.php does
         $serviceTotal = 0;
-        foreach ($this->order->charges as $charge) {
-            $serviceTotal += $charge->charge->getAmount($net);
+        $orderType = $this->order->orderType?->slug ?? $this->order->order_type;
+
+        foreach ($this->order->charges as $orderCharge) {
+            if ($orderCharge->charge) {
+                // Check if charge applies to this order type
+                $allowedTypes = $orderCharge->charge->order_types ?? [];
+                if (empty($allowedTypes) || in_array($orderType, $allowedTypes)) {
+                    $serviceTotal += $orderCharge->charge->getAmount($discountedTotal);
+                }
+            }
         }
 
-        // Step 3: Calculate tax_base based on setting
+        // Step 5: Calculate tax base based on restaurant setting
         $includeChargesInTaxBase = restaurant()->include_charges_in_tax_base ?? true;
-        $taxBase = $includeChargesInTaxBase ? ($net + $serviceTotal) : $net;
+        $taxBase = $includeChargesInTaxBase
+            ? ($discountedTotal + $serviceTotal)
+            : $discountedTotal;
+        $taxBase = max(0.0, (float) $taxBase);
 
-        // Step 4: Calculate taxes on tax_base
+        // Step 6: Calculate taxes (order-level or item-level)
+        $totalTaxAmount = 0;
         if ($this->taxMode === 'order') {
-            // Order-level taxation on tax_base
+            // Order-level tax: calculate on tax_base
             foreach ($this->order->taxes as $orderTax) {
-                $taxAmount = ($orderTax->tax->tax_percent / 100) * $taxBase;
-                $totalTaxAmount += $taxAmount;
+                if ($orderTax->tax) {
+                    $totalTaxAmount += ($orderTax->tax->tax_percent / 100) * $taxBase;
+                }
             }
         } else {
-            // Item-level taxation
+            // Item-level tax: use stored tax amounts from items
             foreach ($this->order->items as $item) {
                 $totalTaxAmount += ($item->tax_amount ?? 0);
             }
-            // Adjust subtotal for inclusive taxes
-            if (restaurant()->tax_inclusive ?? false) {
-                $this->subTotal -= $totalTaxAmount;
+        }
+
+        // Step 7: Calculate final total (exactly like Pos.php)
+        $finalTotal = $discountedTotal + $serviceTotal;
+
+        // Add taxes based on mode
+        if ($this->taxMode === 'order') {
+            $finalTotal += $totalTaxAmount;
+        } else {
+            // For item tax with inclusive mode, tax is already in subtotal
+            $isInclusive = restaurant()->tax_inclusive ?? false;
+            if (!$isInclusive) {
+                $finalTotal += $totalTaxAmount;
             }
         }
 
-        // Step 5: Calculate total = tax_base + total_tax_amount
-        $this->total = $taxBase + $totalTaxAmount;
-
-        // Add tip and delivery fees to grand total
-        if ($this->order->tip_amount > 0) {
-            $this->total += $this->order->tip_amount;
-        }
-
+        // Add tip and delivery fee
+        $finalTotal += ($this->order->tip_amount ?? 0);
         if ($this->order->order_type === 'delivery' && !is_null($this->order->delivery_fee)) {
-            $this->total += $this->order->delivery_fee;
+            $finalTotal += $this->order->delivery_fee;
         }
 
-        // Update the order in database
+        $this->total = round($finalTotal, 2);
+
+        // Step 8: Persist all calculated values to database
         $this->order->update([
-            'sub_total' => $this->subTotal,
-            'total' => $this->total,
-            'discount_amount' => $discountAmount,
+            'sub_total'        => $this->subTotal,
+            'total'            => $this->total,
+            'discount_amount'  => $discountAmount,
             'total_tax_amount' => $totalTaxAmount,
-            'tax_base' => $taxBase,
+            'tax_base'         => $taxBase,
         ]);
+
+        // Refresh order to ensure component has latest values
+        $this->order->refresh();
     }
 
     /**
@@ -1212,7 +1475,7 @@ class OrderDetail extends Component
         if (!module_enabled('Loyalty')) {
             return false;
         }
-        
+
         // Check if module is in restaurant's package
         if (function_exists('restaurant_modules')) {
             $restaurantModules = restaurant_modules();
@@ -1220,7 +1483,7 @@ class OrderDetail extends Component
                 return false;
             }
         }
-        
+
         try {
             if (module_enabled('Loyalty')) {
                 $restaurantId = restaurant()->id ?? null;
@@ -1229,17 +1492,17 @@ class OrderDetail extends Component
                     if (!$settings->enabled) {
                         return false;
                     }
-                    
+
                     $loyaltyType = $settings->loyalty_type ?? 'points';
                     $stampsEnabled = in_array($loyaltyType, ['stamps', 'both']) && ($settings->enable_stamps ?? true);
-                    
+
                     if (!$stampsEnabled) {
                         return false;
                     }
-                    
+
                     // Check if new platform field exists
                     $hasNewField = !is_null($settings->enable_stamps_for_pos);
-                    
+
                     if ($hasNewField) {
                         // Use loose comparison because DB returns 1/0, not true/false
                         return (bool) $settings->enable_stamps_for_pos;
@@ -1252,7 +1515,7 @@ class OrderDetail extends Component
         } catch (\Exception $e) {
             // Silently fail
         }
-        
+
         return false;
     }
 

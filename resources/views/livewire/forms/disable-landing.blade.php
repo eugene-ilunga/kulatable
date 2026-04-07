@@ -231,6 +231,14 @@
                                     wire:model='yelp' />
                                 <x-input-error for="yelp" class="mt-2" />
                             </div>
+
+                            <div>
+                                <x-label for="googleBusiness" value="{{ __('modules.settings.google_business_link') }}" />
+                                <x-input id="googleBusiness" class="block mt-1 w-full" type="url"
+                                    placeholder="{{ __('placeholders.googleBusinessPlaceHolder') }}" autofocus
+                                    wire:model='googleBusinessLink' />
+                                <x-input-error for="googleBusinessLink" class="mt-2" />
+                            </div>
                         @endif
                      @endif
                 </div>

@@ -22,7 +22,6 @@ use App\Models\OrderItem;
 use App\Models\OrderType;
 use App\Models\TapPayment;
 use App\Models\EpayPayment;
-use App\Models\FreshpayPayment;
 use App\Models\OrderCharge;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -53,8 +52,8 @@ use Illuminate\Support\Facades\Http;
 use App\Scopes\AvailableMenuItemScope;
 use App\Models\PaymentGatewayCredential;
 use App\Models\OfflinePaymentMethod;
-use App\Support\FreshpayNetworkDetector;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
+use App\Services\RestaurantAvailabilityService;
 
 class Cart extends Component
 {
@@ -98,7 +97,6 @@ class Cart extends Component
     public $orderNumber;
     public $paymentGateway;
     public $paymentOrder;
-    public $freshpayCustomerNumber = '';
     public $showVeg;
     public $razorpayStatus;
     public $stripeStatus;
@@ -166,6 +164,7 @@ class Cart extends Component
     public $menuItemsLoaded = 50;
     public $menuItemsPerLoad = 50;
     public $offlinePaymentMethods = [];
+    public $selectedOfflinePaymentMethod = null;
 
     // Loyalty properties - defined here so they exist even if trait doesn't
     public $loyaltyPointsRedeemed = 0;
@@ -204,7 +203,7 @@ class Cart extends Component
                            request()->boolean('from_qr') ||
                            !is_null($this->tableID);
         $this->paymentGateway = PaymentGatewayCredential::withoutGlobalScopes()->where('restaurant_id', $this->restaurant->id)->first();
-        $this->taxes = Tax::withoutGlobalScopes()->where('restaurant_id', $this->restaurant->id)->get();
+        $this->taxes = Tax::withoutGlobalScopes()->where('branch_id', $this->shopBranch->id)->get();
 
         // Load enabled offline payment methods
         $this->offlinePaymentMethods = OfflinePaymentMethod::where('restaurant_id', $this->restaurant->id)->where('status', 'active')->orderBy('created_at', 'desc')->get();
@@ -802,6 +801,9 @@ class Cart extends Component
         if (!isset($this->itemNotes[$id])) {
             $this->itemNotes[$id] = '';
         }
+
+        // Close item detail modal after add button is clicked
+        $this->showItemDetailModal = false;
     }
 
     public function subCartItems($id)
@@ -1588,6 +1590,15 @@ class Cart extends Component
 
     public function placeOrder($pay = false, $updateOrder = null, $method = null)
     {
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch);
+
+        if (!($availability['is_open'] ?? true)) {
+            $this->alert('error', RestaurantAvailabilityService::getMessage($availability, $this->restaurant), [
+                'toast' => false,
+                'position' => 'center',
+            ]);
+            return;
+        }
 
         // FINAL QR RADIUS CHECK - always validate fresh
         if ($this->cameFromQR && !empty($this->restaurant->qr_order_radius_meters)) {
@@ -1788,16 +1799,7 @@ class Cart extends Component
                 $orderData['loyalty_discount_amount'] = $this->loyaltyDiscountAmount;
             }
 
-            if( !$orderNumberData['order_number']){
-                $order = Order::create($orderData);
-            } else {
-                $order = Order::where('order_number', $orderNumberData['order_number'])->first();
-                if(!$order){
-                    $order = Order::create($orderData);
-                } else {
-                $order->update($orderData);
-                }
-            }
+            $order = Order::create($orderData);
         }
 
         if ($this->customer && $this->orderType === 'delivery' && !empty($this->deliveryAddress) && isset($deliverySetting)) {
@@ -1811,21 +1813,25 @@ class Cart extends Component
 
         session(['transaction_id' => $transactionId]);
 
-        $kot = Kot::create([
-            'branch_id' => $this->shopBranch->id,
-            'kot_number' => (Kot::generateKotNumber($this->shopBranch) + 1),
-            'order_id' => $order->id,
-            'order_type_id' => $order->order_type_id,
-            'token_number' => Kot::generateTokenNumber($this->shopBranch->id, $order->order_type_id),
-            'note' => $this->orderNote,
-            'transaction_id' => $transactionId
-        ]);
-
         // CRITICAL: Create order_items FIRST so we can link kot_items to them
         // This ensures kot_items have price and amount from order_items
         $orderItems = [];
-        OrderItem::where('order_id', $order->id)->delete();
+        
+        // Only create KOT if there are items to add (new items for existing order, or all items for new order)
+        $kot = null;
+        if (!empty($this->orderItemList)) {
+            $kot = Kot::create([
+                'branch_id' => $this->shopBranch->id,
+                'kot_number' => (Kot::generateKotNumber($this->shopBranch) + 1),
+                'order_id' => $order->id,
+                'order_type_id' => $order->order_type_id,
+                'token_number' => Kot::generateTokenNumber($this->shopBranch->id, $order->order_type_id),
+                'note' => $this->orderNote,
+                'transaction_id' => $transactionId
+            ]);
+        }
 
+        // Only create order items for new items (existing items remain untouched)
         foreach ($this->orderItemList ?? [] as $key => $value) {
             $menuItemId = isset($this->orderItemVariation[$key]) ? $this->orderItemVariation[$key]->menu_item_id : $this->orderItemList[$key]->id;
 
@@ -1855,42 +1861,44 @@ class Cart extends Component
             $orderItems[$key] = $orderItem;
         }
 
-        // Now create kot_items with price and amount from order_items
-        foreach ($this->orderItemList ?? [] as $key => $value) {
-            $orderItem = $orderItems[$key] ?? null;
+        // Now create kot_items with price and amount from order_items (only for new items)
+        if ($kot) {
+            foreach ($this->orderItemList ?? [] as $key => $value) {
+                $orderItem = $orderItems[$key] ?? null;
 
-            // CRITICAL: Ensure order_item exists before creating kot_item
-            if (!$orderItem || !$orderItem->id) {
-                Log::error('Missing order_item for key: ' . $key, [
-                    'order_id' => $order->id,
-                    'orderItemList_keys' => array_keys($this->orderItemList ?? []),
-                    'orderItems_keys' => array_keys($orderItems),
+                // CRITICAL: Ensure order_item exists before creating kot_item
+                if (!$orderItem || !$orderItem->id) {
+                    Log::error('Missing order_item for key: ' . $key, [
+                        'order_id' => $order->id,
+                        'orderItemList_keys' => array_keys($this->orderItemList ?? []),
+                        'orderItems_keys' => array_keys($orderItems),
+                    ]);
+                    continue; // Skip this kot_item if order_item is missing
+                }
+
+                // Get price and amount from order_item (which has the correct values)
+                $itemPrice = $orderItem->price;
+                $itemAmount = $orderItem->amount;
+
+                $menuItemId = isset($this->orderItemVariation[$key]) ? $this->orderItemVariation[$key]->menu_item_id : $this->orderItemList[$key]->id;
+
+                $menuItemVariationId = isset($this->orderItemVariation[$key]) ? $this->orderItemVariation[$key]->id : null;
+
+                $kotItem = KotItem::create([
+                    'kot_id' => $kot->id,
+                    'order_item_id' => $orderItem->id, // Link to order_item - must exist
+                    'menu_item_id' => $menuItemId,
+                    'menu_item_variation_id' => $menuItemVariationId,
+                    'quantity' => $this->orderItemQty[$key],
+                    'price' => $itemPrice, // Copy from order_item
+                    'amount' => $itemAmount, // Copy from order_item
+                    'transaction_id' => $transactionId,
+                    'note' => $this->itemNotes[$key] ?? null,
                 ]);
-                continue; // Skip this kot_item if order_item is missing
+
+                $this->itemModifiersSelected[$key] = $this->itemModifiersSelected[$key] ?? [];
+                $kotItem->modifierOptions()->sync($this->itemModifiersSelected[$key]);
             }
-
-            // Get price and amount from order_item (which has the correct values)
-            $itemPrice = $orderItem->price;
-            $itemAmount = $orderItem->amount;
-
-            $menuItemId = isset($this->orderItemVariation[$key]) ? $this->orderItemVariation[$key]->menu_item_id : $this->orderItemList[$key]->id;
-
-            $menuItemVariationId = isset($this->orderItemVariation[$key]) ? $this->orderItemVariation[$key]->id : null;
-
-            $kotItem = KotItem::create([
-                'kot_id' => $kot->id,
-                'order_item_id' => $orderItem->id, // Link to order_item - must exist
-                'menu_item_id' => $menuItemId,
-                'menu_item_variation_id' => $menuItemVariationId,
-                'quantity' => $this->orderItemQty[$key],
-                'price' => $itemPrice, // Copy from order_item
-                'amount' => $itemAmount, // Copy from order_item
-                'transaction_id' => $transactionId,
-                'note' => $this->itemNotes[$key] ?? null,
-            ]);
-
-            $this->itemModifiersSelected[$key] = $this->itemModifiersSelected[$key] ?? [];
-            $kotItem->modifierOptions()->sync($this->itemModifiersSelected[$key]);
         }
 
         // Create order taxes BEFORE calculating totals (so they're available for calculation)
@@ -2103,7 +2111,8 @@ class Cart extends Component
         // Check if auto_confirm_orders_before_payment is enabled (use order value or fallback to restaurant setting)
         $autoConfirmBeforePayment = $order->auto_confirm_orders_before_payment ?? $this->restaurant->auto_confirm_orders_before_payment ?? false;
 
-        if ($order->status != 'draft' && $autoConfirmBeforePayment) {
+        // Only print KOT if a new KOT was created and order is confirmed
+        if ($kot && $order->status != 'draft' && $autoConfirmBeforePayment) {
             $this->printKot($order, $kot);
         }
 
@@ -2117,7 +2126,6 @@ class Cart extends Component
         if ($pay) {
             $this->showPaymentModal = true;
             $this->paymentOrder = $order;
-            $this->freshpayCustomerNumber = (string) ($order->customer?->phone ?? '');
         } else {
             Order::where('id', $order->id)->update([
                 'status' => 'kot'
@@ -2271,9 +2279,10 @@ class Cart extends Component
 
         $unsupportedCurrencies = ['INR'];
         if (in_array($currency, $unsupportedCurrencies)) {
-            session()->flash('flash.banner', 'Currency not supported by PayPal.');
+            $order = Order::find($id);
+            session()->flash('flash.banner', __('messages.paypalCurrencyNotSupported'));
             session()->flash('flash.bannerStyle', 'warning');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
 
         $clientId = $this->paymentGateway->paypal_payment_client_id;
@@ -2338,17 +2347,17 @@ class Cart extends Component
             $clientSecret = $isSandbox ? $paymentGateway->test_epay_client_secret : $paymentGateway->epay_client_secret;
             $terminalId = $isSandbox ? $paymentGateway->test_epay_terminal_id : $paymentGateway->epay_terminal_id;
 
-            if (!$clientId || !$clientSecret || !$terminalId) {
-                session()->flash('flash.banner', 'Epay credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $id);
-            }
-
             $order = Order::find($id);
             if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
+                session()->flash('flash.banner', __('messages.orderNotFound'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->back();
+            }
+
+            if (!$clientId || !$clientSecret || !$terminalId) {
+                session()->flash('flash.banner', __('messages.epayCredentialsNotConfigured'));
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
             }
 
             // Generate secret hash (random string for security)
@@ -2389,9 +2398,10 @@ class Cart extends Component
             if (!$tokenResponse || !isset($tokenResponse['access_token'])) {
                 $epayPayment->payment_status = 'failed';
                 $epayPayment->save();
-                session()->flash('flash.banner', 'Failed to authenticate with Epay. Please try again.');
+                $order = Order::find($id);
+                session()->flash('flash.banner', __('messages.epayFailedToAuthenticate'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->route('order_success', $order->uuid ?? $id);
             }
 
             // Store full token response as JSON in payment record
@@ -2412,9 +2422,10 @@ class Cart extends Component
             $this->dispatch('epayPaymentInitiated', payment: $epayPayment);
         } catch (\Exception $e) {
             Log::error('Epay Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
+            $order = Order::find($id);
+            session()->flash('flash.banner', __('messages.paymentInitiationFailedWithError', ['message' => $e->getMessage()]));
             session()->flash('flash.bannerStyle', 'danger');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
     }
 
@@ -2425,7 +2436,7 @@ class Cart extends Component
         $terminalId = $isSandbox ? $paymentGateway->test_epay_terminal_id : $paymentGateway->epay_terminal_id;
 
         if (!$clientId || !$clientSecret || !$terminalId) {
-            session()->flash('flash.banner', 'Epay credentials are not configured.');
+            session()->flash('flash.banner', __('messages.epayCredentialsNotConfigured'));
             session()->flash('flash.bannerStyle', 'warning');
             return null;
         }
@@ -2462,7 +2473,7 @@ class Cart extends Component
 
         $errorResponse = $response->json();
         Log::error('Epay Token Error: ' . json_encode($errorResponse));
-        session()->flash('flash.banner', 'Failed to authenticate with Epay. Please check your credentials.');
+        session()->flash('flash.banner', __('messages.epayFailedToAuthenticateCheckCredentials'));
         session()->flash('flash.bannerStyle', 'danger');
         return null;
     }
@@ -2535,7 +2546,7 @@ class Cart extends Component
             $data = [
                 'reference' => $reference,
                 'amount' => (int)($amount * 100), // Paystack expects amount in kobo
-                'email' => $user->email,
+                'email' => $user->email ?? 'guest@example.com',
                 'currency' => $this->restaurant->currency->currency_code,
                 'callback_url' => route('paystack.success'),
                 'metadata' => [
@@ -2561,7 +2572,7 @@ class Cart extends Component
                 return redirect($responseData['data']['authorization_url']);
             } else {
 
-                session()->flash('error', 'Payment initiation failed.');
+                session()->flash('error', __('messages.paymentInitiationFailed'));
                 return redirect()->route('paystack.failed');
             }
         } catch (\Exception $e) {
@@ -2622,11 +2633,11 @@ class Cart extends Component
 
                 return redirect($responseData['invoice_url']);
             } else {
-                session()->flash('error', 'Xendit payment initiation failed: ' . ($responseData['message'] ?? 'Unknown error'));
+                session()->flash('error', __('messages.xenditPaymentInitiationFailed', ['message' => $responseData['message'] ?? 'Unknown error']));
                 return redirect()->route('xendit.failed');
             }
         } catch (\Exception $e) {
-            session()->flash('error', 'Xendit payment error: ' . $e->getMessage());
+            session()->flash('error', __('messages.xenditPaymentError', ['message' => $e->getMessage()]));
             return redirect()->route('xendit.failed');
         }
     }
@@ -2692,17 +2703,17 @@ class Cart extends Component
             $publicKey = $isSandbox ? $paymentGateway->test_tap_public_key : $paymentGateway->live_tap_public_key;
             $merchantId = $paymentGateway->tap_merchant_id;
 
-            if (!$secretKey || !$publicKey || !$merchantId) {
-                session()->flash('flash.banner', 'Tap credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $id);
-            }
-
             $order = Order::find($id);
             if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
+                session()->flash('flash.banner', __('messages.orderNotFound'));
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->back();
+            }
+
+            if (!$secretKey || !$publicKey || !$merchantId) {
+                session()->flash('flash.banner', __('messages.tapCredentialsNotConfigured'));
+                session()->flash('flash.bannerStyle', 'warning');
+                return redirect()->route('order_success', $order->uuid);
             }
 
             $currency = strtoupper($this->restaurant->currency->currency_code);
@@ -2781,9 +2792,9 @@ class Cart extends Component
                     if (isset($responseData['status']) && $responseData['status'] === 'CAPTURED') {
                         return redirect()->route('tap.success', ['order_id' => $id, 'tap_id' => $responseData['id']]);
                     } else {
-                        session()->flash('flash.banner', 'Payment initiation failed. Please try again.');
+                        session()->flash('flash.banner', __('messages.paymentInitiationFailedTryAgain'));
                         session()->flash('flash.bannerStyle', 'danger');
-                        return redirect()->route('order_success', $id);
+                        return redirect()->route('order_success', $order->uuid);
                     }
                 }
             } else {
@@ -2792,142 +2803,26 @@ class Cart extends Component
                 $tapPayment->payment_error_response = $responseData;
                 $tapPayment->save();
 
-                $errorMessage = $responseData['errors'][0]['message'] ?? 'Payment initiation failed. Please try again.';
+                $errorMessage = $responseData['errors'][0]['message'] ?? __('messages.paymentInitiationFailedTryAgain');
                 session()->flash('flash.banner', $errorMessage);
                 session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->route('order_success', $id);
+                return redirect()->route('order_success', $order->uuid);
             }
         } catch (\Exception $e) {
             Log::error('Tap Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
+            $order = Order::find($id);
+            session()->flash('flash.banner', __('messages.paymentInitiationFailedWithError', ['message' => $e->getMessage()]));
             session()->flash('flash.bannerStyle', 'danger');
-            return redirect()->route('order_success', $id);
+            return redirect()->route('order_success', $order->uuid ?? $id);
         }
-    }
-
-    public function initiateFreshpayPayment($id)
-    {
-        $order = null;
-
-        try {
-            $order = Order::with('customer')->find($id);
-
-            if (!$order) {
-                session()->flash('flash.banner', 'Order not found.');
-                session()->flash('flash.bannerStyle', 'danger');
-                return redirect()->back();
-            }
-
-            $paymentGateway = $this->restaurant->paymentGateways;
-            $merchantId = trim((string) ($paymentGateway->freshpay_merchant_id ?? ''));
-            $merchantSecret = trim((string) ($paymentGateway->freshpay_merchant_secret ?? ''));
-            $endpoint = $paymentGateway->freshpay_endpoint;
-
-            if ($merchantId === '' || $merchantSecret === '') {
-                session()->flash('flash.banner', 'FreshPay credentials are not configured.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $phoneInput = $this->freshpayCustomerNumber !== ''
-                ? $this->freshpayCustomerNumber
-                : (string) ($order->customer?->phone ?? '');
-
-            $phoneNumber = FreshpayNetworkDetector::normalize((string) $phoneInput);
-
-            if ($phoneNumber === '') {
-                session()->flash('flash.banner', 'FreshPay exige un numéro de téléphone client.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $method = FreshpayNetworkDetector::detectMethod($phoneNumber);
-            if (!$method) {
-                session()->flash('flash.banner', 'Préfixe non pris en charge. Impossible de détecter le réseau mobile.');
-                session()->flash('flash.bannerStyle', 'warning');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            // Temporary diagnostic override to match the working FreshPay curl.
-            $firstName = 'AFRYA';
-            $lastName = 'AFRYA';
-            $email = 'kasisrael@gmail.com';
-            $amount = number_format((float) $this->total, 2, '.', '');
-            $reference = 'fp_' . $order->id . '_' . Str::upper(Str::random(8));
-
-            $freshpayPayment = FreshpayPayment::create([
-                'order_id' => $order->id,
-                'amount' => $amount,
-                'payment_status' => 'pending',
-                'freshpay_reference' => $reference,
-                'freshpay_action' => 'debit',
-                'freshpay_method' => $method,
-                'customer_number' => $phoneNumber,
-            ]);
-
-            $payload = [
-                'merchant_id' => $merchantId,
-                'merchant_secrete' => $merchantSecret,
-                'amount' => $amount,
-                'currency' => strtoupper((string) $this->restaurant->currency->currency_code),
-                'action' => 'debit',
-                'customer_number' => $phoneNumber,
-                'firstname' => $firstName,
-                'lastname' => $lastName,
-                'email' => $email,
-                'reference' => $reference,
-                'method' => $method,
-                'callback_url' => route('freshpay.webhook', ['hash' => $this->restaurant->hash]),
-            ];
-
-            $response = Http::timeout(30)->acceptJson()->post($endpoint, $payload);
-            $responseData = $response->json();
-
-            $freshpayPayment->freshpay_payment_id = $responseData['Transaction_id'] ?? null;
-            $freshpayPayment->payment_error_response = is_array($responseData) ? $responseData : ['body' => $response->body()];
-            $freshpayPayment->save();
-
-            if ($response->successful() && (($responseData['Status'] ?? '') === 'Success')) {
-                $order->update([
-                    'status' => 'pending_verification',
-                ]);
-
-                $this->sendNotifications($order);
-
-                session()->flash('flash.banner', 'FreshPay request submitted. Please confirm payment on the customer phone.');
-                session()->flash('flash.bannerStyle', 'success');
-                return redirect()->route('order_success', $order->uuid);
-            }
-
-            $freshpayPayment->payment_status = 'failed';
-            $freshpayPayment->save();
-
-            session()->flash('flash.banner', $responseData['Comment'] ?? 'FreshPay payment initiation failed.');
-            session()->flash('flash.bannerStyle', 'danger');
-
-            return redirect()->route('order_success', $order->uuid);
-        } catch (\Exception $e) {
-            Log::error('FreshPay Payment Initiation Error: ' . $e->getMessage());
-            session()->flash('flash.banner', 'Payment initiation failed: ' . $e->getMessage());
-            session()->flash('flash.bannerStyle', 'danger');
-            return $order
-                ? redirect()->route('order_success', $order->uuid)
-                : redirect()->back();
-        }
-    }
-
-    private function splitName(string $fullName): array
-    {
-        $nameParts = preg_split('/\s+/', trim($fullName), 2, PREG_SPLIT_NO_EMPTY);
-        $firstName = $nameParts[0] ?? '';
-        $lastName = $nameParts[1] ?? $firstName;
-
-        return [$firstName, $lastName];
     }
 
     public function hidePaymentModal()
     {
         $this->showPaymentModal = false;
+        $this->showQrCode = false;
+        $this->showPaymentDetail = false;
+        $this->selectedOfflinePaymentMethod = null;
         Order::where('id', $this->paymentOrder->id)->where('status', 'draft')->delete();
 
         Kot::where('transaction_id', session('transaction_id'))->delete();
@@ -2961,6 +2856,21 @@ class Cart extends Component
     public function togglePaymenntDetail()
     {
         $this->showPaymentDetail = !$this->showPaymentDetail;
+    }
+
+    /**
+     * Select an offline payment method (bank transfer / cash etc) and show its description.
+     * The actual order placement happens when the user clicks the modal footer "paymentDone" button.
+     */
+    public function selectOfflinePaymentMethod($method)
+    {
+        if (empty($method)) {
+            return;
+        }
+
+        $this->selectedOfflinePaymentMethod = $method;
+        $this->showQrCode = false;
+        $this->showPaymentDetail = true;
     }
 
     #[On('closeModifiersModal')]
@@ -3039,7 +2949,8 @@ class Cart extends Component
 
     public function showItemDetail($id)
     {
-        $this->selectedItem = MenuItem::find($id);
+        // Load counts so the detail modal button behaves like the item card
+        $this->selectedItem = MenuItem::withCount(['variations', 'modifierGroups'])->find($id);
         $this->showItemDetailModal = true;
     }
 
@@ -3170,7 +3081,7 @@ class Cart extends Component
     #[Computed]
     public function getMenuItemsProperty()
     {
-        $locale = session('customer_locale', app()->getLocale());
+        $locale = session('locale', app()->getLocale());
 
         $query = MenuItem::select('menu_items.*', 'item_categories.category_name')
             ->join('item_categories', 'menu_items.item_category_id', '=', 'item_categories.id')
@@ -3380,9 +3291,13 @@ class Cart extends Component
 
     public function render()
     {
+        $availability = RestaurantAvailabilityService::getAvailability($this->restaurant, $this->shopBranch);
+
         return view('livewire.shop.cart', [
             'orderTypes' => $this->orderTypes,
             'phonecodes' => $this->filteredPhoneCodes,
+            'isRestaurantOpenForOrders' => (bool) ($availability['is_open'] ?? true),
+            'restaurantClosedMessage' => RestaurantAvailabilityService::getMessage($availability, $this->restaurant),
         ]);
     }
 

@@ -1,12 +1,12 @@
 <div
-    class="p-4 bg-white border border-gray-200 rounded-lg shadow-sm 2xl:col-span-2 dark:border-gray-700 sm:p-6 dark:bg-gray-800">
+    class="">
     <div class="flex items-center justify-between mb-4">
         <div class="flex-shrink-0">
-            <span class="text-xl font-bold leading-none text-gray-900 sm:text-2xl dark:text-white">{{ currency_format($monthlyEarnings, restaurant()->currency_id) }}</span>
-            <h3 class="text-base font-light text-gray-500 dark:text-gray-400">@lang('modules.dashboard.salesThisMonth')</h3>
+            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-400">@lang('modules.dashboard.salesThisMonth')</h3>
+            <span class="text-xl font-semibold text-gray-900 mt-0.5 dark:text-white">{{ currency_format($monthlyEarnings, restaurant()->currency_id) }}</span>
         </div>
         <div class="flex flex-col justify-end ">
-            <div @class(["flex justify-end  text-sm", 'text-green-500 dark:text-green-400'=> ($percentChange >
+            <div @class(["flex justify-end  text-xs", 'text-green-500 dark:text-green-400'=> ($percentChange >
                 0), 'text-red-600 dark:text-red-600' => ($percentChange < 0)])>
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"
                         aria-hidden="true">
@@ -22,12 +22,12 @@
                     </svg>
                     {{ round($percentChange, 2) }}%
             </div>
-            <h3 class="text-sm font-light text-gray-500 dark:text-gray-400">@lang('modules.dashboard.sincePreviousMonth')</h3>
+            <h3 class="text-xs text-skin-base mt-0.5 dark:text-gray-400">@lang('modules.dashboard.sincePreviousMonth')</h3>
 
         </div>
 
     </div>
-    <div id="main-chart"></div>
+    <div id="main-chart" class="relative w-full h-44"></div>
     <!-- Card Footer -->
 
 
@@ -68,7 +68,7 @@
 
             return {
                 chart: {
-                    height: 420,
+                    height: 300,
                     type: 'area',
                     fontFamily: 'Inter, sans-serif',
                     foreColor: mainChartColors.labelColor,
@@ -84,12 +84,15 @@
                         opacityTo: mainChartColors.opacityTo
                     }
                 },
+                stroke: {
+                    width: 2
+                },
                 dataLabels: {
                     enabled: false
                 },
                 tooltip: {
                     style: {
-                        fontSize: '14px',
+                        fontSize: '11px',
                         fontFamily: 'Inter, sans-serif',
                     },
                 },
@@ -130,8 +133,8 @@
                     labels: {
                         style: {
                             colors: [mainChartColors.labelColor],
-                            fontSize: '14px',
-                            fontWeight: 500,
+                            fontSize: '10px',
+                            fontWeight: 400,
                         },
                     },
                     axisBorder: {
@@ -154,8 +157,8 @@
                     labels: {
                         style: {
                             colors: [mainChartColors.labelColor],
-                            fontSize: '14px',
-                            fontWeight: 500,
+                            fontSize: '10px',
+                            fontWeight: 400,
                         },
                         formatter: function (value) {
                             return '{{ currency() }}' + value;
@@ -163,7 +166,7 @@
                     },
                 },
                 legend: {
-                    fontSize: '14px',
+                    fontSize: '11px',
                     fontWeight: 500,
                     fontFamily: 'Inter, sans-serif',
                     labels: {

@@ -6,7 +6,13 @@ use App\Models\BaseModel;
 
 class SplitOrder extends BaseModel
 {
-    protected $fillable = ['order_id', 'amount', 'payment_method', 'status'];
+    protected $fillable = [
+        'order_id', 
+        'amount', 
+        'payment_method', 
+        'status',
+        'payer_name',
+    ];
 
     public function items()
     {

@@ -2,23 +2,24 @@
 
 namespace App\Livewire\Order;
 
-use App\Models\Order;
-use App\Models\User;
-use App\Models\ReceiptSetting;
-use App\Models\KotCancelReason;
-use App\Models\Kot;
-use App\Models\KotItem;
-use App\Models\PusherSetting;
-use App\Models\DeliveryPlatform;
 use App\Models\BranchOperationalShift;
+use App\Models\DeliveryPlatform;
+use App\Models\Kot;
+use App\Models\KotCancelReason;
+use App\Models\KotItem;
+use App\Models\Order;
+use App\Models\OrderNotificationSetting;
+use App\Models\PusherSetting;
+use App\Models\ReceiptSetting;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Jantinnerezo\LivewireAlert\LivewireAlert;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 
 class Orders extends Component
 {
@@ -52,10 +53,24 @@ class Orders extends Component
     public $showMergeModal = false;
     public $unpaidOrders = [];
     public $selectedOrders = [];
+    private const DEFAULT_TIMEZONE = 'UTC';
+    public $deliveryExecutiveId = null;
+    public $deliveryExecutiveName = null;
+    public $backUrl = null;
+    public $isDeliveryExecutiveContext = false;
+    public $trackingEnabled = false;
+    public $mapApiKey = null;
 
-    public function mount()
+    public function mount($deliveryExecutiveId = null, $deliveryExecutiveName = null, $backUrl = null)
     {
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
+        $this->deliveryExecutiveId = !empty($deliveryExecutiveId) ? (int)$deliveryExecutiveId : null;
+        $this->deliveryExecutiveName = $deliveryExecutiveName;
+        $this->backUrl = $backUrl;
+        $this->isDeliveryExecutiveContext = !empty($this->deliveryExecutiveId);
+        $this->trackingEnabled = $this->isDeliveryExecutiveContext && module_enabled('RestApi');
+        $this->mapApiKey = global_setting()->google_map_api_key ?? restaurant()?->map_api_key ?? null;
+
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
 
         // Load date range type from cookie
@@ -66,7 +81,7 @@ class Orders extends Component
             return User::role('Waiter_' . restaurant()->id)->get();
         });
         $this->deliveryApps = DeliveryPlatform::all();
-        
+
         // Load operational shifts for the current branch (for filter dropdown)
         // Will be filtered by current day of week in render() method
         $this->shifts = BranchOperationalShift::where('branch_id', branch()->id)
@@ -129,13 +144,25 @@ class Orders extends Component
             ->first();
 
         if ($recentOrder) {
+            // Check order notification settings for current user's role
+            $user = user();
+            $restaurant = restaurant();
+
+            if ($user && $restaurant && method_exists($user, 'roles')) {
+                $orderNotificationSetting = OrderNotificationSetting::where('restaurant_id', $restaurant->id)
+                    ->whereIn('role_id', $user->roles->pluck('id'))
+                    ->where('hide_new_order_notification', true)
+                    ->exists();
+
+                if ($orderNotificationSetting) {
+                    // Skip showing notification if setting is enabled for this role
+                    session()->put('new_order_notification_pending', false);
+                    return;
+                }
+            }
+
             // Build order description
             $orderDescription = __('modules.order.newOrderReceived') . ': ' . $recentOrder->show_formatted_order_number;
-
-
-
-
-
 
 
             // Add table info if it exists
@@ -177,7 +204,7 @@ class Orders extends Component
 
     private function getOrdersCount()
     {
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
 
         $start = Carbon::createFromFormat($dateFormat, $this->startDate, $tz)
@@ -238,7 +265,7 @@ class Orders extends Component
 
     public function setDateRange()
     {
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
 
         switch ($this->dateRangeType) {
@@ -287,7 +314,7 @@ class Orders extends Component
                 $this->endDate = Carbon::now($tz)->endOfWeek()->format($dateFormat);
                 break;
         }
-        
+
         // Clear shift filter if not viewing today (shift filter only works for today)
         if ($this->dateRangeType !== 'today') {
             $this->filterShift = null;
@@ -297,7 +324,7 @@ class Orders extends Component
 
     public function showTableOrderDetail($id)
     {
-        return $this->redirect(route('pos.order', [$id]), navigate: true);
+        return $this->redirect(route('pos.order', [$id]));
     }
 
     public function confirmCancelOrder()
@@ -525,7 +552,7 @@ class Orders extends Component
 
             // Delete merged orders
             $orderIdsToDelete = $ordersToMerge->pluck('id')->toArray();
-            
+
             // Delete KOTs and KOT items for orders to be deleted
             foreach ($ordersToMerge as $order) {
                 foreach ($order->kot as $kot) {
@@ -538,7 +565,7 @@ class Orders extends Component
             \App\Models\OrderItem::whereIn('order_id', $orderIdsToDelete)->delete();
             \App\Models\OrderTax::whereIn('order_id', $orderIdsToDelete)->delete();
             \App\Models\OrderCharge::whereIn('order_id', $orderIdsToDelete)->delete();
-            
+
             // Delete payments if any
             \App\Models\Payment::whereIn('order_id', $orderIdsToDelete)->delete();
 
@@ -571,8 +598,8 @@ class Orders extends Component
     {
         $order->refresh();
         $order->load([
-            'items', 
-            'taxes.tax', 
+            'items',
+            'taxes.tax',
             'charges.charge',
             'kot.items.menuItem.taxes',
             'kot.items.menuItemVariation',
@@ -597,7 +624,7 @@ class Orders extends Component
                     // Get menu item price
                     $menuItem = $kotItem->menuItem;
                     $menuItemVariation = $kotItem->menuItemVariation;
-                    
+
                     // Set price context if order type is available
                     if ($order->order_type_id && $menuItem) {
                         $menuItem->setPriceContext($order->order_type_id, $order->delivery_app_id);
@@ -609,7 +636,7 @@ class Orders extends Component
                             $modifier->setPriceContext($order->order_type_id, $order->delivery_app_id);
                         }
                     }
-                    
+
                     $menuItemPrice = $menuItem->price ?? 0;
                     $variationPrice = $menuItemVariation ? $menuItemVariation->price : 0;
                     $basePrice = $variationPrice ?: $menuItemPrice;
@@ -633,7 +660,7 @@ class Orders extends Component
                             if (!$menuItem->relationLoaded('taxes')) {
                                 $menuItem->load('taxes');
                             }
-                            
+
                             if ($menuItem->taxes && $menuItem->taxes->isNotEmpty()) {
                                 $menuItemPrice = $menuItem->price ?? 0;
                                 $menuItemVariation = $kotItem->menuItemVariation;
@@ -641,11 +668,11 @@ class Orders extends Component
                                 $basePrice = $variationPrice ?: $menuItemPrice;
                                 $modifierPrice = $kotItem->modifierOptions->sum('price');
                                 $itemPriceWithModifiers = $basePrice + $modifierPrice;
-                                
+
                                 $taxes = $menuItem->taxes;
                                 $isInclusive = restaurant()->tax_inclusive ?? false;
                                 $taxResult = \App\Models\MenuItem::calculateItemTaxes($itemPriceWithModifiers, $taxes, $isInclusive);
-                                
+
                                 $itemTaxAmount = $taxResult['tax_amount'] * $kotItem->quantity;
                                 $totalTaxAmount += $itemTaxAmount;
                             }
@@ -710,7 +737,7 @@ class Orders extends Component
 
     private function fetchUnpaidOrders()
     {
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
 
         $start = Carbon::createFromFormat($dateFormat, $this->startDate, $tz)
@@ -758,37 +785,37 @@ class Orders extends Component
         $deliveredOrders = $statusCounts['delivered'] ?? 0;
         $draftOrders = $statusCounts['draft'] ?? 0;
 
-        $receiptSettings = restaurant()->receiptSetting;
+        $receiptSettings = branch()->receiptSetting;
 
         // Check if "today" is selected
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
         $startDateObj = Carbon::createFromFormat($dateFormat, $this->startDate, $tz);
         $endDateObj = Carbon::createFromFormat($dateFormat, $this->endDate, $tz);
         $todayDateObj = Carbon::now($tz);
-        
-        $isToday = ($this->dateRangeType === 'today') || 
-                (($this->startDate === $this->endDate) && 
+
+        $isToday = ($this->dateRangeType === 'today') ||
+                (($this->startDate === $this->endDate) &&
                     ($startDateObj->toDateString() === $todayDateObj->toDateString()));
 
         // Get business day boundaries for informational message - only if today is selected
         $businessDayInfo = null;
         $filteredShifts = collect();
-        
+
         if ($isToday && branch()) {
             // Get business day info
             $boundaries = getBusinessDayBoundaries(branch(), now());
             $restaurantTimezone = branch()->restaurant->timezone ?? 'UTC';
             $timeFormat = branch()->restaurant->time_format ?? 'h:i A';
-            
+
             // Use business_day_end for display (shows full business day end, not "now")
-            $displayEnd = isset($boundaries['business_day_end']) 
-                ? $boundaries['business_day_end'] 
+            $displayEnd = isset($boundaries['business_day_end'])
+                ? $boundaries['business_day_end']
                 : $boundaries['end'];
-            
+
             $businessDayStart = $boundaries['start']->setTimezone($restaurantTimezone);
             $calendarDate = $boundaries['calendar_date'];
-            
+
             // If business day ends on next calendar day, show info
             if ($displayEnd->toDateString() !== $calendarDate) {
                 $businessDayInfo = [
@@ -808,7 +835,7 @@ class Orders extends Component
                     'extends_to_next_day' => false,
                 ];
             }
-            
+
             // Filter shifts to only show those that apply to today's day of week
             $currentDayOfWeek = Carbon::now($tz)->format('l'); // e.g., "Friday"
             $filteredShifts = $this->shifts->filter(function($shift) use ($currentDayOfWeek) {
@@ -820,13 +847,23 @@ class Orders extends Component
                 if (!is_array($shiftDays)) {
                     $shiftDays = [];
                 }
-                
+
                 // Include shift if it has 'All' days or includes the current day
                 // Only return true if the shift actually applies to today
                 $applies = in_array('All', $shiftDays) || in_array($currentDayOfWeek, $shiftDays);
                 return $applies;
+            })->map(function ($shift) use ($restaurantTimezone, $timeFormat) {
+                $startLocal = $this->convertUtcTimeToRestaurantTime($shift->start_time, $restaurantTimezone);
+                $endLocal = $this->convertUtcTimeToRestaurantTime($shift->end_time, $restaurantTimezone);
+
+                $shift->start_time_local = $startLocal;
+                $shift->end_time_local = $endLocal;
+                $shift->start_time_display = Carbon::createFromFormat('H:i', $startLocal)->format($timeFormat);
+                $shift->end_time_display = Carbon::createFromFormat('H:i', $endLocal)->format($timeFormat);
+
+                return $shift;
             })->values(); // Re-index the collection to ensure clean array keys
-            
+
             // If a shift is currently selected but it's not in the filtered list, clear it
             if (!empty($this->filterShift)) {
                 $shiftIds = $filteredShifts->pluck('id')->toArray();
@@ -846,6 +883,12 @@ class Orders extends Component
             'filteredShifts' => $filteredShifts, // Pass filtered shifts (only for today) - use different name to avoid conflict
             'isToday' => $isToday, // Pass flag to view
             'hasMore' => $this->hasMore,
+            'isDeliveryExecutiveContext' => $this->isDeliveryExecutiveContext,
+            'deliveryExecutiveId' => $this->deliveryExecutiveId,
+            'deliveryExecutiveName' => $this->deliveryExecutiveName,
+            'trackingEnabled' => $this->trackingEnabled,
+            'backUrl' => $this->backUrl,
+            'mapApiKey' => $this->mapApiKey,
             'kotCount' => $kotCount,
             'billedCount' => $billedCount,
             'paymentDueCount' => $paymentDue,
@@ -863,23 +906,23 @@ class Orders extends Component
 
     private function fetchOrders(): array
     {
-        $tz = timezone();
+        $tz = $this->getRestaurantTimezone();
         $dateFormat = restaurant()->date_format ?? 'd-m-Y';
 
         // Check if we're viewing "today" (startDate and endDate are the same and equal to today)
         $startDateObj = Carbon::createFromFormat($dateFormat, $this->startDate, $tz);
         $endDateObj = Carbon::createFromFormat($dateFormat, $this->endDate, $tz);
         $todayDateObj = Carbon::now($tz);
-        
-        $isToday = ($this->startDate === $this->endDate) && 
+
+        $isToday = ($this->startDate === $this->endDate) &&
                 ($startDateObj->toDateString() === $todayDateObj->toDateString());
-        
+
         if ($isToday && branch()) {
             // Use business day boundaries for "today"
             $boundaries = getBusinessDayBoundaries(branch(), now());
 
-            $start = $boundaries['start']->shiftTimezone('UTC')->toDateTimeString();
-            $end = $boundaries['end']->shiftTimezone('UTC')->toDateTimeString();
+            $start = $boundaries['start']->setTimezone('UTC')->toDateTimeString();
+            $end = $boundaries['end']->setTimezone('UTC')->toDateTimeString();
         } else {
             // Use calendar day boundaries for other date ranges
             $start = $startDateObj->startOfDay()
@@ -896,6 +939,10 @@ class Orders extends Component
             ->orderBy('id', 'desc')
             ->where('orders.date_time', '>=', $start)
             ->where('orders.date_time', '<=', $end);
+
+        if ($this->isDeliveryExecutiveContext) {
+            $ordersQuery->where('delivery_executive_id', $this->deliveryExecutiveId);
+        }
 
         if (!empty($this->filterOrderType)) {
             $ordersQuery->where('order_type', $this->filterOrderType);
@@ -922,42 +969,44 @@ class Orders extends Component
             $selectedShift = BranchOperationalShift::find($this->filterShift);
             if ($selectedShift && branch()) {
                 $restaurantTimezone = branch()->restaurant->timezone ?? 'UTC';
-                
+                $shiftStartTime = $this->convertUtcTimeToRestaurantTime($selectedShift->start_time, $restaurantTimezone);
+                $shiftEndTime = $this->convertUtcTimeToRestaurantTime($selectedShift->end_time, $restaurantTimezone);
+
                 // Build query to match orders within shift times for each day in the date range
-                $ordersQuery->where(function($query) use ($selectedShift, $restaurantTimezone, $start, $end, $tz, $dateFormat) {
+                $ordersQuery->where(function($query) use ($selectedShift, $restaurantTimezone, $shiftStartTime, $shiftEndTime, $tz, $dateFormat) {
                     // Parse the start and end dates from UTC back to restaurant timezone to iterate
                     $startDate = Carbon::createFromFormat($dateFormat, $this->startDate, $tz);
                     $endDate = Carbon::createFromFormat($dateFormat, $this->endDate, $tz);
-                    
+
                     $currentDate = $startDate->copy();
                     $firstCondition = true;
-                    
+
                     while ($currentDate->lte($endDate)) {
                         $dayOfWeek = $currentDate->format('l'); // e.g., "Monday"
                         $shiftDays = $selectedShift->day_of_week ?? [];
-                        
+
                         // Check if shift applies to this day
                         if (in_array('All', $shiftDays) || in_array($dayOfWeek, $shiftDays)) {
                             // Parse shift times in restaurant timezone for this date
                             $shiftStart = Carbon::parse(
-                                $currentDate->toDateString() . ' ' . $selectedShift->start_time,
+                                $currentDate->toDateString() . ' ' . $shiftStartTime,
                                 $restaurantTimezone
                             );
-                            
+
                             $shiftEnd = Carbon::parse(
-                                $currentDate->toDateString() . ' ' . $selectedShift->end_time,
+                                $currentDate->toDateString() . ' ' . $shiftEndTime,
                                 $restaurantTimezone
                             );
-                            
+
                             // Handle overnight shifts
-                            if ($selectedShift->end_time < $selectedShift->start_time) {
+                            if ($shiftEndTime < $shiftStartTime) {
                                 $shiftEnd->addDay();
                             }
-                            
+
                             // Convert to UTC for database query
                             $shiftStartUTC = $shiftStart->setTimezone('UTC')->toDateTimeString();
                             $shiftEndUTC = $shiftEnd->setTimezone('UTC')->toDateTimeString();
-                            
+
                             // Use where for first condition, orWhere for subsequent ones
                             if ($firstCondition) {
                                 $query->where(function($q) use ($shiftStartUTC, $shiftEndUTC) {
@@ -972,7 +1021,7 @@ class Orders extends Component
                                 });
                             }
                         }
-                        
+
                         $currentDate->addDay();
                     }
                 });
@@ -988,7 +1037,7 @@ class Orders extends Component
         });
 
         $ordersTotal = $allOrders->count();
-        
+
         // Apply pagination after filtering
         $orders = $allOrders->take($this->perPage);
 
@@ -1023,5 +1072,22 @@ class Orders extends Component
             'ordersTotal' => $ordersTotal,
             'statusCounts' => $statusCounts,
         ];
+    }
+
+    private function convertUtcTimeToRestaurantTime(?string $time, string $restaurantTimezone): string
+    {
+        if (!$time) {
+            return '00:00';
+        }
+
+        return Carbon::now(self::DEFAULT_TIMEZONE)
+            ->setTimeFromTimeString($time)
+            ->setTimezone($restaurantTimezone)
+            ->format('H:i');
+    }
+
+    private function getRestaurantTimezone(): string
+    {
+        return branch()->restaurant->timezone ?? timezone();
     }
 }

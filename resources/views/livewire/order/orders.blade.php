@@ -1,37 +1,48 @@
-<div >
-    <div class="p-4 bg-white block  dark:bg-gray-800 dark:border-gray-700">
+<div x-data="{{ ($isDeliveryExecutiveContext && $trackingEnabled) ? 'deliveryExecutiveOrderTracking(' . (int) $deliveryExecutiveId . ')' : '{}' }}">
+    <div class="p-4  block  dark:bg-gray-800 dark:border-gray-700">
         <div class="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center">
-            <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">@lang('menu.orders') ({{ $orders->count() }})</h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-base font-semibold text-gray-900 dark:text-white">
+                    @lang('menu.orders') ({{ $orders->count() }})
+                    @if($isDeliveryExecutiveContext && $deliveryExecutiveName)
+                        - {{ $deliveryExecutiveName }}
+                    @endif
+                </h1>
+            </div>
             <div class="sm:ml-auto w-full sm:w-auto">
                 <div class="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2 w-full sm:w-auto">
-                    @if(pusherSettings()->is_enabled_pusher_broadcast)
-                        <div class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            @lang('app.realTime')
-                        </div>
-                    @else
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-                            <label class="relative inline-flex items-center cursor-pointer w-full sm:w-auto">
-                                <input type="checkbox" class="sr-only peer" wire:model.live="pollingEnabled">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">@lang('app.autoRefresh')</span>
-                            </label>
-                            <x-select class="w-full sm:w-32 text-sm" wire:model.live="pollingInterval" :disabled="!$pollingEnabled">
-                                <option value="5">5 @lang('app.seconds')</option>
-                                <option value="10">10 @lang('app.seconds')</option>
-                                <option value="15">15 @lang('app.seconds')</option>
-                                <option value="30">30 @lang('app.seconds')</option>
-                                <option value="60">1 @lang('app.minute')</option>
-                            </x-select>
-                        </div>
+                    @if(!$isDeliveryExecutiveContext)
+                        @if(pusherSettings()->is_enabled_pusher_broadcast)
+                            <div class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                @lang('app.realTime')
+                            </div>
+                        @else
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                                <label class="relative inline-flex items-center cursor-pointer w-full sm:w-auto">
+                                    <input type="checkbox" class="sr-only peer" wire:model.live="pollingEnabled">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-skin-base rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-skin-base"></div>
+                                    <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">@lang('app.autoRefresh')</span>
+                                </label>
+                                <x-select class="w-full sm:w-32 text-sm" wire:model.live="pollingInterval" :disabled="!$pollingEnabled">
+                                    <option value="5">5 @lang('app.seconds')</option>
+                                    <option value="10">10 @lang('app.seconds')</option>
+                                    <option value="15">15 @lang('app.seconds')</option>
+                                    <option value="30">30 @lang('app.seconds')</option>
+                                    <option value="60">1 @lang('app.minute')</option>
+                                </x-select>
+                            </div>
+                        @endif
                     @endif
 
-                    <x-select class="w-full sm:w-32 text-sm" wire:model.live.debounce.250ms='filterOrderType'>
-                        <option value="">@lang('modules.order.all')</option>
-                        <option value="dine_in">@lang('modules.order.dine_in')</option>
-                        <option value="delivery">@lang('modules.order.delivery')</option>
-                        <option value="pickup">@lang('modules.order.pickup')</option>
-                    </x-select>
+                    @if(!$isDeliveryExecutiveContext)
+                        <x-select class="w-full sm:w-32 text-sm" wire:model.live.debounce.250ms='filterOrderType'>
+                            <option value="">@lang('modules.order.all')</option>
+                            <option value="dine_in">@lang('modules.order.dine_in')</option>
+                            <option value="delivery">@lang('modules.order.delivery')</option>
+                            <option value="pickup">@lang('modules.order.pickup')</option>
+                        </x-select>
+                    @endif
 
                     <x-select class="w-full sm:w-40 text-sm" wire:model.live.debounce.250ms='filterDeliveryApp'>
                         <option value="">@lang('modules.report.allDeliveryApps')</option>
@@ -41,6 +52,14 @@
                         @endforeach
                     </x-select>
 
+                    @if($isDeliveryExecutiveContext && $backUrl)
+                        <div class="w-full sm:w-auto sm:ml-auto">
+                            <a href="{{ $backUrl }}"
+                                class="inline-flex items-center justify-center w-full sm:w-auto px-3 py-2 text-sm font-medium text-gray-800 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+                                @lang('app.back')
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -96,108 +115,95 @@
         <!-- Second Line: filterWaiter, filterShift, Business Day Info, and buttons -->
         <div class="flex flex-col sm:flex-row sm:items-center flex-wrap gap-2 mb-4">
 
-                @if($isToday && $filteredShifts && $filteredShifts->count() > 0)
-                    <x-select class="text-sm w-full sm:w-auto" wire:model.live.debounce.250ms='filterShift'>
-                        <option value="">@lang('app.showAll') @lang('modules.settings.operationalShifts')</option>
-                        @foreach ($filteredShifts as $shift)
-                            <option value="{{ $shift->id }}">
-                                {{ $shift->shift_name ?: __('modules.settings.shift') . ' #' . $shift->id }}
-                                ({{ \Carbon\Carbon::parse($shift->start_time)->format(restaurant()->time_format ?? 'h:i A') }} -
-                                {{ \Carbon\Carbon::parse($shift->end_time)->format(restaurant()->time_format ?? 'h:i A') }})
-                            </option>
-                        @endforeach
-                    </x-select>
-                    @endif
+            @if($isToday && $filteredShifts && $filteredShifts->count() > 0)
+                <x-select class="text-sm w-full sm:w-auto" wire:model.live.debounce.250ms='filterShift'>
+                    <option value="">@lang('app.showAll') @lang('modules.settings.operationalShifts')</option>
+                    @foreach ($filteredShifts as $shift)
+                        <option value="{{ $shift->id }}">
+                            {{ $shift->shift_name ?: __('modules.settings.shift') . ' #' . $shift->id }}
+                            ({{ $shift->start_time_display ?? $shift->start_time_local ?? $shift->start_time }} -
+                            {{ $shift->end_time_display ?? $shift->end_time_local ?? $shift->end_time }})
+                        </option>
+                    @endforeach
+                </x-select>
+            @endif
 
-                    <!-- Business Day Information Alert (Inline) - Only show if today is selected -->
-                    @if($isToday && $businessDayInfo)
-                    <div class="relative inline-block" x-data="{ showTooltip: false }">
-                        @if($businessDayInfo['extends_to_next_day'])
+            <!-- Business Day Information Alert (Inline) - Only show if today is selected -->
+            @if($isToday && $businessDayInfo)
+                <div class="relative inline-block" x-data="{ showTooltip: false }" @click.outside="showTooltip = false" @keydown.escape.window="showTooltip = false">
+                    @if($businessDayInfo['extends_to_next_day'])
+                    <div
+                        class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-pointer sm:cursor-help whitespace-nowrap"
+                        @mouseenter="if (window.innerWidth >= 640) showTooltip = true"
+                        @mouseleave="if (window.innerWidth >= 640) showTooltip = false"
+                        @click="if (window.innerWidth < 640) showTooltip = !showTooltip"
+                        @keydown.enter.prevent="showTooltip = !showTooltip"
+                        @keydown.space.prevent="showTooltip = !showTooltip"
+                        tabindex="0"
+                    >
+                    @else
+                    <div
+                        class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-900/20 dark:border-gray-800 cursor-pointer sm:cursor-help whitespace-nowrap"
+                        @mouseenter="if (window.innerWidth >= 640) showTooltip = true"
+                        @mouseleave="if (window.innerWidth >= 640) showTooltip = false"
+                        @click="if (window.innerWidth < 640) showTooltip = !showTooltip"
+                        @keydown.enter.prevent="showTooltip = !showTooltip"
+                        @keydown.space.prevent="showTooltip = !showTooltip"
+                        tabindex="0"
+                    >
+                    @endif
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
+                                @lang('modules.settings.businessDayInfo')
+                            </span>
+                        </div>
+                        <!-- Hover Tooltip -->
                         <div
-                            class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800 cursor-help whitespace-nowrap"
-                            @mouseenter="showTooltip = true"
-                            @mouseleave="showTooltip = false"
+                            x-show="showTooltip"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                            class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
+                            style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
+                            x-cloak
                         >
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <span class="text-xs font-medium text-blue-900 dark:text-blue-200">
-                                    @lang('modules.settings.businessDayInfo')
-                                </span>
-                            </div>
-                            <!-- Hover Tooltip -->
-                            <div
-                                x-show="showTooltip"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0"
-                                x-transition:enter-end="opacity-100"
-                                x-transition:leave="transition ease-in duration-150"
-                                x-transition:leave-start="opacity-100"
-                                x-transition:leave-end="opacity-0"
-                                class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                                style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                                x-cloak
-                            >
-                                <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                    <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                    <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                            <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
+                                <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
+                                <p class="mb-2 leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                    @if($businessDayInfo['extends_to_next_day'])
+                                    @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                                    @lang('app.to') {{ $businessDayInfo['end'] }}
+                                    (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
+                                    @else
+                                    @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
+                                    @if($businessDayInfo['start'] != $businessDayInfo['end'])
                                         @lang('app.to') {{ $businessDayInfo['end'] }}
-                                        (@lang('app.on') {{ \Carbon\Carbon::parse($businessDayInfo['end_date'])->translatedFormat(restaurant()->date_format ?? 'd-m-Y') }})
-                                    </p>
-                                    <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayExtendsInfo')
-                                    </p>
-                                </div>
-                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                                    @endif
+                                    @endif
+                                </p>
+                                <p class="text-gray-300 leading-relaxed mt-2 text-sm" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
+                                    @lang('modules.settings.businessDayExtendsInfo')
+                                </p>
                             </div>
+                            @if($businessDayInfo['extends_to_next_day'])
+                            <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                            @else
+                            <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
+                            @endif
                         </div>
-                        @else
-                        <div
-                            class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700 cursor-help whitespace-nowrap"
-                            @mouseenter="showTooltip = true"
-                            @mouseleave="showTooltip = false"
-                        >
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-gray-600 dark:text-gray-400 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <span class="text-xs font-medium text-gray-900 dark:text-gray-200">
-                                    @lang('modules.settings.businessDayInfo')
-                                </span>
-                            </div>
-                            <!-- Hover Tooltip -->
-                            <div
-                                x-show="showTooltip"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0"
-                                x-transition:enter-end="opacity-100"
-                                x-transition:leave="transition ease-in duration-150"
-                                x-transition:leave-start="opacity-100"
-                                x-transition:leave-end="opacity-0"
-                                class="absolute left-0 top-full mt-2 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50 pointer-events-none"
-                                style="display: none; width: 320px; max-width: 90vw; box-sizing: border-box; overflow: hidden;"
-                            >
-                                <div style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">
-                                    <p class="font-semibold mb-2 text-white" style="word-wrap: break-word; overflow-wrap: break-word; width: 100%;">@lang('modules.settings.businessDayInfo')</p>
-                                    <p class="leading-relaxed text-white" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; width: 100%;">
-                                        @lang('modules.settings.businessDayResetsAt', ['time' => $businessDayInfo['start']])
-                                        @if($businessDayInfo['start'] != $businessDayInfo['end'])
-                                            @lang('app.to') {{ $businessDayInfo['end'] }}
-                                        @endif
-                                    </p>
-                                </div>
-                                <div class="absolute -top-2 left-4 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-900"></div>
-                            </div>
-                        </div>
-                        @endif
                     </div>
-                    @endif
+                </div>
+            @endif
 
-            @if($canCreateOrder && $orderStats && ($orderStats['unlimited'] || $orderStats['current_count'] < $orderStats['order_limit']))
+            @if(!$isDeliveryExecutiveContext && $canCreateOrder && $orderStats && ($orderStats['unlimited'] || $orderStats['current_count'] < $orderStats['order_limit']))
                 <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
-                    <x-primary-link class="w-full sm:w-auto justify-center" wire:navigate href="{{ route('pos.index') }}">@lang('modules.order.newOrder')</x-primary-link>
+                    <x-primary-link class="w-full sm:w-auto justify-center" href="{{ route('pos.index') }}">@lang('modules.order.newOrder')</x-primary-link>
                     <x-button class="w-full sm:w-auto justify-center" wire:click="openMergeModal" type="button">@lang('modules.order.mergeOrder')</x-button>
                 </div>
             @endif
@@ -229,7 +235,20 @@
             <div class="space-y-4">
                 <div class="grid sm:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4" wire:key="orders-grid" wire:loading.class.delay="opacity-50">
                     @foreach ($orders as $item)
-                        <x-order.order-card :order='$item' wire:key='order-{{ $item->id }}' />
+                        @php
+                            $progressStatus = is_object($item->order_status) ? $item->order_status->value : $item->order_status;
+                            $isOutForDelivery = in_array((string) $progressStatus, ['out_for_delivery', 'reached_destination'], true);
+                            $isDelivered = in_array((string) $progressStatus, ['delivered', 'served'], true);
+                        @endphp
+                        <x-order.order-card
+                            :order='$item'
+                            wire:key='order-{{ $item->id }}'
+                            :showTrackButton="$isDeliveryExecutiveContext && $trackingEnabled && $item->order_type == 'delivery' && $isOutForDelivery"
+                            :showDeliveredButton="$isDeliveryExecutiveContext && $item->order_type == 'delivery' && $isDelivered"
+                            :trackEndpoint="$isDeliveryExecutiveContext && $trackingEnabled ? route('delivery-executives.tracking-data', ['delivery_executive' => $deliveryExecutiveId, 'order' => $item]) : null"
+                            :trackOrderLabel="'#' . $item->show_formatted_order_number"
+                            :showLiveBlink="$isDeliveryExecutiveContext && $trackingEnabled && $item->order_type == 'delivery' && $isOutForDelivery"
+                        />
                     @endforeach
                 </div>
                 @if($hasMore)
@@ -253,6 +272,46 @@
             </div>
             <!-- End Card Section -->
         </div>
+
+        @if ($isDeliveryExecutiveContext && $trackingEnabled)
+            <div x-show="trackModalOpen" class="fixed inset-0 z-50" style="display: none;">
+                <div class="absolute inset-0 bg-gray-900/50" @click="closeTrackModal()"></div>
+
+                <div x-show="trackModalOpen"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="translate-x-full"
+                    x-transition:enter-end="translate-x-0"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="translate-x-0"
+                    x-transition:leave-end="translate-x-full"
+                    class="absolute right-0 top-0 h-full w-full sm:max-w-3xl bg-white dark:bg-gray-800 shadow-xl flex flex-col">
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Order <span x-text="selectedOrderLabel"></span></h2>
+                        <button type="button" @click="closeTrackModal()" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+                            @lang('app.close')
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-hidden relative">
+                        <template x-if="trackingError">
+                            <div class="absolute top-4 left-4 right-4 z-10 p-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40" x-text="trackingError"></div>
+                        </template>
+
+                        <div x-show="lastUpdatedAt && !trackingError" style="display: none;" class="absolute top-4 right-4 z-10 px-3 py-2 rounded bg-white/90 dark:bg-gray-900/90 text-xs text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                            <span>@lang('app.lastUpdate'): </span><span x-text="lastUpdatedAt || '--'"></span>
+                        </div>
+
+                        <div id="executive-tracking-map" class="h-full w-full"></div>
+
+                        <template x-if="!isMapReady && !trackingError">
+                            <div class="h-full w-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                                @lang('app.loadingMap')
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        @endif
 
     {{-- Merge Order Modal --}}
     <x-dialog-modal wire:model.live="showMergeModal" maxWidth="4xl">
@@ -835,4 +894,7 @@
     </script>
     @endscript
 
+    @if ($isDeliveryExecutiveContext && $trackingEnabled)
+        @include('livewire.order.partials.delivery-executive-tracking-script')
+    @endif
 </div>

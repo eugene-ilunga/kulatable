@@ -18,6 +18,7 @@ class DeliveryExecutiveSeeder extends Seeder
             $customer = new DeliveryExecutive();
             $customer->branch_id = $branch->id;
             $customer->name = fake()->firstName() . ' ' . fake()->lastName();
+            $customer->email = fake()->unique()->safeEmail();
             $customer->phone = fake()->unique()->numerify('##########'); // 10 numbers only
             $customer->phone = preg_replace('/[^0-9]/', '', $customer->phone);
             $customer->phone_code = '91';
